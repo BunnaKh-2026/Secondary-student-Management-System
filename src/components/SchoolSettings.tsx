@@ -149,6 +149,9 @@ interface RawVillage {
 
 export default function SchoolSettings({ schoolInfo, onSave }: SchoolSettingsProps) {
   const [formData, setFormData] = useState<SchoolInfo>({ ...schoolInfo });
+  useEffect(() => {
+    setFormData({ ...schoolInfo });
+  }, [schoolInfo]);
   const [dbProvinces, setDbProvinces] = useState<RawProvince[]>([]);
   const [dbDistricts, setDbDistricts] = useState<RawDistrict[]>([]);
   const [dbCommunes, setDbCommunes] = useState<RawCommune[]>([]);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   GraduationCap, UserPlus, School, Search, Trash2, Edit2, 
@@ -272,6 +272,145 @@ const transliterateKhmerToLatin = (khText: string): string => {
   return mappedWords.join(' ').toUpperCase().replace(/\s+/g, ' ').trim();
 };
 
+interface RawProvince {
+  code: string;
+  name_kh: string;
+  name_en: string;
+}
+
+interface RawDistrict {
+  code: string;
+  province_code: string;
+  name_kh: string;
+  name_en: string;
+  type?: string;
+}
+
+interface RawCommune {
+  code: string;
+  district_code: string;
+  name_kh: string;
+  name_en: string;
+  type?: string;
+}
+
+interface RawVillage {
+  code: string;
+  commune_code: string;
+  name_kh: string;
+  name_en: string;
+  type?: string;
+}
+
+const CAMBODIAN_PROVINCES = [
+  'ភ្នំពេញ', 'ព្រះសីហនុ', 'សៀមរាប', 'បាត់ដំបង', 'កំពង់ចាម', 'កំពង់ធំ', 'កំពង់ឆ្នាំង', 'កំពង់ស្ពឺ', 'កណ្ដាល',
+  'តាកែវ', 'កំពត', 'កែប', 'ប៉ៃលិន', 'បន្ទាយមានជ័យ', 'ព្រះវិហារ', 'ស្ទឹងត្រែង', 'ក្រចេះ', 'មណ្ឌលគិរី',
+  'រតនគិរី', 'ឧត្ដរមានជ័យ', 'ពោធិ៍សាត់', 'កោះកុង', 'ព្រៃវែង', 'ស្វាយរៀង', 'ត្បូងឃ្មុំ'
+];
+
+interface LocationInfo {
+  districts: string[];
+  communes: Record<string, string[]>;
+  villages: Record<string, string[]>;
+}
+
+const LOCATION_DATA: Record<string, LocationInfo> = {
+  'ភ្នំពេញ': {
+    districts: ['ចំការមន', 'ដូនពេញ', '៧មករា', 'ទួលគោក', 'សែនសុខ', 'មានជ័យ', 'ឫស្សីកែវ', 'ច្បារអំពៅ', 'ពោធិ៍សែនជ័យ'],
+    communes: {
+      'ចំការមន': ['ទន្លេបាសាក់', 'បឹងកងកងទី១', 'បឹងត្របែក', 'ផ្សារដើមថ្កូវ'],
+      'ដូនពេញ': ['ផ្សារថ្មីទី១', 'ផ្សារថ្មីទី២', 'ផ្សារថ្មីទី៣', 'ចតុមុខ', 'ស្រះចក'],
+      '៧មករា': ['អូឫស្សីទី១', 'អូឫស្សីទី២', 'វាលវង់', 'មនោរម្យ'],
+      'ទួលគោក': ['ផ្សារដេប៉ូទី១', 'ផ្សារដេប៉ូទី២', 'ទឹកល្អក់ទី១', 'ទឹកល្អក់ទី២', 'បឹងកក់ទី១'],
+      'សែនសុខ': ['ភ្នំពេញថ្មី', 'ទឹកថ្លា', 'ឃ្មួញ', 'អូរបែកក្អម']
+    },
+    villages: {
+      'ទន្លេបាសាក់': ['ភូមិ១', 'ភូមិ២', 'ភូមិ៣', 'ភូមិ៤', 'ភូមិ៥'],
+      'បឹងកងកងទី១': ['ភូមិ១', 'ភូមិ២', 'ភូមិ៣'],
+      'ផ្សារថ្មីទី១': ['ភូមិ១', 'ភូមិ២'],
+      'ភ្នំពេញថ្មី': ['ភូមិទ្រុងមាន់', 'ភូមិចុងថ្នល់', 'ភូមិពោងពាយ'],
+      'ទឹកថ្លា': ['ភូមិចុងថ្នល់ខាងកើត', 'ភូមិចុងថ្នល់ខាងលិច', 'ភូមិផ្សារទឹកថ្លា']
+    }
+  },
+  'ព្រះសីហនុ': {
+    districts: ['ព្រះសីហនុ', 'ស្ទឹងហាវ', 'ព្រៃនប់', 'កំពង់សិលា'],
+    communes: {
+      'ព្រះសីហនុ': ['សង្កាត់លេខ១', 'សង្កាត់លេខ២', 'សង្កាត់លេខ៣', 'សង្កាត់លេខ៤'],
+      'ស្ទឹងហាវ': ['កំពេញ', 'ទំនប់រលក', 'អូរត្រេះ'],
+      'ព្រៃនប់': ['វាលរេញ', 'ទឹកល្អក់', 'ទួលទទឹង', 'ព្រៃនប់']
+    },
+    villages: {
+      'សង្កាត់លេខ៤': ['ភូមិ១', 'ភូមិ២', 'ភូមិ៣', 'ភូមិ៤', 'ភូមិ៥'],
+      'សង្កាត់លេខ៣': ['ភូមិ១', 'ភូមិ២', 'ភូមិ៣'],
+      'សង្កាត់លេខ២': ['ភូមិ១', 'ភូមិ២', 'ភូមិ៣'],
+      'សង្កាត់លេខ១': ['ភូមិ១', 'ភូមិ២', 'ភូមិ៣'],
+      'វាលរេញ': ['ភូមិវាលរេញ', 'ភូមិត្រពាំងធំ', 'ភូមិបឹងជំនីប']
+    }
+  },
+  'សៀមរាប': {
+    districts: ['សៀមរាប', 'ប្រាសាទបាគង', 'ស្រីស្នំ', 'អង្គរធំ', 'អង្គរជុំ', 'ពួក', 'សូទ្រនិគម'],
+    communes: {
+      'សៀមរាប': ['ស្លក្រាម', 'ស្វាយដង្គំ', 'គោកចក', 'សាលាកំរើក', 'ជ្រាវ'],
+      'ប្រាសាទបាគង': ['បាគង', 'បល្ល័ង្ក', 'រកា'],
+      'ពួក': ['ពួក', 'កែវពណ៌', 'ល្វា']
+    },
+    villages: {
+      'ស្លក្រាម': ['ភូមិមណ្ឌល១', 'ភូមិស្លក្រាម', 'ភូមិវត្តបូព៌', 'ភូមិទ្រាំង'],
+      'ស្វាយដង្គំ': ['ភូមិស្វាយដង្គំ', 'ភូមិសាលាកន្សែង', 'ភូមិវត្ដស្វាយ'],
+      'គោកចក': ['ភូមិវាល', 'ភូមិទក្សិណត្បូង', 'ភូមិគោកត្នោត']
+    }
+  },
+  'បាត់ដំបង': {
+    districts: ['បាត់ដំបង', 'សង្កែ', 'បាណន់', 'ឯកភ្នំ', 'រតនមណ្ឌល', 'មោងឫស្សី', 'ថ្មគោល'],
+    communes: {
+      'បាត់ដំបង': ['ស្វាយប៉ោ', 'វត្តគរ', 'ព្រែកព្រះស្ដេច', 'រតនៈ', 'ចំការសំរោង'],
+      'សង្កែ': ['កំពង់ព្រះ', 'កំពង់ពិល', 'រាំងកែសី'],
+      'បាណន់': ['កន្ទឺ២', 'ភ្នំសំពៅ', 'ស្នឹង']
+    },
+    villages: {
+      'ស្វាយប៉ោ': ['ភូមិព្រែកមហាទេព', 'ភូមិកំពង់ក្របី', 'ភូមិស្វាយប៉ោ'],
+      'វត្តគរ': ['ភូមិវត្តគរ', 'ភូមិដូនទាវ', 'ភូមិពាក់ស្បែក'],
+      'ព្រែកព្រះស្ដេច': ['ភូមិព្រែកព្រះស្ដេច', 'ភូមិចំការឫស្សី']
+    }
+  }
+};
+
+const getDistrictsForProvince = (prov: string): string[] => {
+  if (LOCATION_DATA[prov]) {
+    return [...LOCATION_DATA[prov].districts].map(d => {
+      if (prov === 'ភ្នំពេញ') return `ខណ្ឌ${d}`;
+      if (prov === 'ព្រះសីហនុ' && d === 'ព្រះសីហនុ') return `ក្រុង${d}`;
+      if (prov === 'សៀមរាប' && d === 'សៀមរាប') return `ក្រុង${d}`;
+      if (prov === 'បាត់ដំបង' && d === 'បាត់ដំបង') return `ក្រុង${d}`;
+      return `ស្រុក${d}`;
+    });
+  }
+  return [`ក្រុង${prov}`, `ស្រុកទី១`, `ស្រុកទី២`, `ស្រុកទី៣`].filter(Boolean);
+};
+
+const getCommunesForDistrict = (prov: string, dist: string): string[] => {
+  if (LOCATION_DATA[prov] && LOCATION_DATA[prov].communes[dist]) {
+    return [...LOCATION_DATA[prov].communes[dist]].map(c => {
+      const isSangkat = prov === 'ភ្នំពេញ' || dist.startsWith('ក្រុង') || dist.includes('ព្រះសីហនុ') || dist.includes('សៀមរាប') || dist.includes('បាត់ដំបង');
+      return isSangkat ? `សង្កាត់${c}` : `ឃុំ${c}`;
+    });
+  }
+  return [`សង្កាត់${dist}`, `ឃុំទី១`, `ឃុំទី២`, `ឃុំទី៣`].filter(Boolean);
+};
+
+const getVillagesForCommune = (prov: string, comm: string): string[] => {
+  if (LOCATION_DATA[prov] && LOCATION_DATA[prov].villages[comm]) {
+    return [...LOCATION_DATA[prov].villages[comm]].map(v => `ភូមិ${v}`);
+  }
+  return [`ភូមិ១`, `ភូមិ២`, `ភូមិ៣`, `ភូមិ៤`].filter(Boolean);
+};
+
+const normalizeName = (name: string): string => {
+  if (!name) return '';
+  const clean = name.replace(/\s+/g, '');
+  return clean.replace(/^(ស្រុក|ក្រុង|ខណ្ឌ|ឃុំ|សង្កាត់|ភូមិ)/, '');
+};
+
 export default function StudentManagement({
   students,
   classrooms,
@@ -283,6 +422,57 @@ export default function StudentManagement({
 }: StudentManagementProps) {
   // Navigation
   const [activeSubTab, setActiveSubTab] = useState<'classes_list' | 'classes' | 'students' | 'coefficients' | 'months'>(activeSubTabProp || 'students');
+
+  // Cambodian Location geometry gazetteer database states
+  const [dbProvinces, setDbProvinces] = useState<RawProvince[]>([]);
+  const [dbDistricts, setDbDistricts] = useState<RawDistrict[]>([]);
+  const [dbCommunes, setDbCommunes] = useState<RawCommune[]>([]);
+  const [dbVillages, setDbVillages] = useState<RawVillage[]>([]);
+  const [isGeoLoading, setIsGeoLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const fetchJson = async (url: string) => {
+      const r = await fetch(url);
+      if (!r.ok) {
+        throw new Error(`HTTP ${r.status} on ${url}`);
+      }
+      const text = await r.text();
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        throw new Error(`Invalid JSON response from ${url}`);
+      }
+    };
+
+    const fetchAllData = async () => {
+      setIsGeoLoading(true);
+      try {
+        const [pRes, dRes, cRes, vRes] = await Promise.all([
+          fetchJson('/data/provinces.json'),
+          fetchJson('/data/districts.json'),
+          fetchJson('/data/communes.json'),
+          fetchJson('/data/villages.json'),
+        ]);
+        if (active) {
+          setDbProvinces(Array.isArray(pRes) ? pRes : Object.values(pRes));
+          setDbDistricts(Array.isArray(dRes) ? dRes : Object.values(dRes));
+          setDbCommunes(Array.isArray(cRes) ? cRes : Object.values(cRes));
+          setDbVillages(Array.isArray(vRes) ? vRes : Object.values(vRes));
+        }
+      } catch (err) {
+        console.error('Failed to pre-fetch Cambodian geometry gazetteer in StudentManagement, using offline fallbacks:', err);
+      } finally {
+        if (active) {
+          setIsGeoLoading(false);
+        }
+      }
+    };
+    fetchAllData();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const [localSubjects, setLocalSubjects] = useState<{ [classroomId: string]: any[] }>({});
   const [localMonths, setLocalMonths] = useState<{ [classroomId: string]: string[] }>({});
@@ -422,6 +612,204 @@ export default function StudentManagement({
     parentPhone: '',
   });
   const [studentFormError, setStudentFormError] = useState<string | null>(null);
+
+  const provincesList = useMemo(() => {
+    if (dbProvinces.length > 0) {
+      const sorted = [...dbProvinces].sort((a, b) => {
+        const codeA = a.code || '';
+        const codeB = b.code || '';
+        return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+      });
+      return sorted.map(p => p.name_kh);
+    }
+    return CAMBODIAN_PROVINCES;
+  }, [dbProvinces]);
+
+  const pobDistrictsList = useMemo(() => {
+    if (!studentForm.pobProvince) return [];
+    if (dbProvinces.length > 0 && dbDistricts.length > 0) {
+      const pObj = dbProvinces.find(p => p.name_kh === studentForm.pobProvince || p.name_en === studentForm.pobProvince);
+      if (pObj) {
+        const filtered = dbDistricts.filter(d => d.province_code === pObj.code);
+        const sorted = filtered.sort((a, b) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true, sensitivity: 'base' }));
+        return sorted.map(d => {
+          const prefix = d.type ? d.type.trim() : 'ស្រុក';
+          return `${prefix}${d.name_kh.trim()}`;
+        });
+      }
+    }
+    return getDistrictsForProvince(studentForm.pobProvince);
+  }, [dbProvinces, dbDistricts, studentForm.pobProvince]);
+
+  const pobCommunesList = useMemo(() => {
+    if (!studentForm.pobProvince || !studentForm.pobDistrict) return [];
+    if (dbProvinces.length > 0 && dbDistricts.length > 0 && dbCommunes.length > 0) {
+      const pObj = dbProvinces.find(p => p.name_kh === studentForm.pobProvince || p.name_en === studentForm.pobProvince);
+      if (pObj) {
+        const dObj = dbDistricts.find(d => {
+          if (d.province_code !== pObj.code) return false;
+          return normalizeName(d.name_kh) === normalizeName(studentForm.pobDistrict) || d.name_en === studentForm.pobDistrict;
+        });
+        if (dObj) {
+          const filtered = dbCommunes.filter(c => c.district_code === dObj.code);
+          const sorted = filtered.sort((a, b) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true, sensitivity: 'base' }));
+          return sorted.map(c => {
+            const prefix = c.type ? c.type.trim() : 'ឃុំ';
+            return `${prefix}${c.name_kh.trim()}`;
+          });
+        }
+      }
+    }
+    return getCommunesForDistrict(studentForm.pobProvince, studentForm.pobDistrict);
+  }, [dbProvinces, dbDistricts, dbCommunes, studentForm.pobProvince, studentForm.pobDistrict]);
+
+  const pobVillagesList = useMemo(() => {
+    if (!studentForm.pobProvince || !studentForm.pobDistrict || !studentForm.pobCommune) return [];
+    if (dbProvinces.length > 0 && dbDistricts.length > 0 && dbCommunes.length > 0 && dbVillages.length > 0) {
+      const pObj = dbProvinces.find(p => p.name_kh === studentForm.pobProvince || p.name_en === studentForm.pobProvince);
+      if (pObj) {
+        const dObj = dbDistricts.find(d => {
+          if (d.province_code !== pObj.code) return false;
+          return normalizeName(d.name_kh) === normalizeName(studentForm.pobDistrict) || d.name_en === studentForm.pobDistrict;
+        });
+        if (dObj) {
+          const cObj = dbCommunes.find(c => {
+            if (c.district_code !== dObj.code) return false;
+            return normalizeName(c.name_kh) === normalizeName(studentForm.pobCommune) || c.name_en === studentForm.pobCommune;
+          });
+          if (cObj) {
+            const filtered = dbVillages.filter(v => v.commune_code === cObj.code);
+            const sorted = filtered.sort((a, b) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true, sensitivity: 'base' }));
+            return sorted.map(v => {
+              const prefix = v.type ? v.type.trim() : 'ភូមិ';
+              return `${prefix}${v.name_kh.trim()}`;
+            });
+          }
+        }
+      }
+    }
+    return getVillagesForCommune(studentForm.pobProvince, studentForm.pobCommune);
+  }, [dbProvinces, dbDistricts, dbCommunes, dbVillages, studentForm.pobProvince, studentForm.pobDistrict, studentForm.pobCommune]);
+
+  const currentAddressDistrictsList = useMemo(() => {
+    if (!studentForm.currentAddressProvince) return [];
+    if (dbProvinces.length > 0 && dbDistricts.length > 0) {
+      const pObj = dbProvinces.find(p => p.name_kh === studentForm.currentAddressProvince || p.name_en === studentForm.currentAddressProvince);
+      if (pObj) {
+        const filtered = dbDistricts.filter(d => d.province_code === pObj.code);
+        const sorted = filtered.sort((a, b) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true, sensitivity: 'base' }));
+        return sorted.map(d => {
+          const prefix = d.type ? d.type.trim() : 'ស្រុក';
+          return `${prefix}${d.name_kh.trim()}`;
+        });
+      }
+    }
+    return getDistrictsForProvince(studentForm.currentAddressProvince);
+  }, [dbProvinces, dbDistricts, studentForm.currentAddressProvince]);
+
+  const currentAddressCommunesList = useMemo(() => {
+    if (!studentForm.currentAddressProvince || !studentForm.currentAddressDistrict) return [];
+    if (dbProvinces.length > 0 && dbDistricts.length > 0 && dbCommunes.length > 0) {
+      const pObj = dbProvinces.find(p => p.name_kh === studentForm.currentAddressProvince || p.name_en === studentForm.currentAddressProvince);
+      if (pObj) {
+        const dObj = dbDistricts.find(d => {
+          if (d.province_code !== pObj.code) return false;
+          return normalizeName(d.name_kh) === normalizeName(studentForm.currentAddressDistrict) || d.name_en === studentForm.currentAddressDistrict;
+        });
+        if (dObj) {
+          const filtered = dbCommunes.filter(c => c.district_code === dObj.code);
+          const sorted = filtered.sort((a, b) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true, sensitivity: 'base' }));
+          return sorted.map(c => {
+            const prefix = c.type ? c.type.trim() : 'ឃុំ';
+            return `${prefix}${c.name_kh.trim()}`;
+          });
+        }
+      }
+    }
+    return getCommunesForDistrict(studentForm.currentAddressProvince, studentForm.currentAddressDistrict);
+  }, [dbProvinces, dbDistricts, dbCommunes, studentForm.currentAddressProvince, studentForm.currentAddressDistrict]);
+
+  const currentAddressVillagesList = useMemo(() => {
+    if (!studentForm.currentAddressProvince || !studentForm.currentAddressDistrict || !studentForm.currentAddressCommune) return [];
+    if (dbProvinces.length > 0 && dbDistricts.length > 0 && dbCommunes.length > 0 && dbVillages.length > 0) {
+      const pObj = dbProvinces.find(p => p.name_kh === studentForm.currentAddressProvince || p.name_en === studentForm.currentAddressProvince);
+      if (pObj) {
+        const dObj = dbDistricts.find(d => {
+          if (d.province_code !== pObj.code) return false;
+          return normalizeName(d.name_kh) === normalizeName(studentForm.currentAddressDistrict) || d.name_en === studentForm.currentAddressDistrict;
+        });
+        if (dObj) {
+          const cObj = dbCommunes.find(c => {
+            if (c.district_code !== dObj.code) return false;
+            return normalizeName(c.name_kh) === normalizeName(studentForm.currentAddressCommune) || c.name_en === studentForm.currentAddressCommune;
+          });
+          if (cObj) {
+            const filtered = dbVillages.filter(v => v.commune_code === cObj.code);
+            const sorted = filtered.sort((a, b) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true, sensitivity: 'base' }));
+            return sorted.map(v => {
+              const prefix = v.type ? v.type.trim() : 'ភូមិ';
+              return `${prefix}${v.name_kh.trim()}`;
+            });
+          }
+        }
+      }
+    }
+    return getVillagesForCommune(studentForm.currentAddressProvince, studentForm.currentAddressCommune);
+  }, [dbProvinces, dbDistricts, dbCommunes, dbVillages, studentForm.currentAddressProvince, studentForm.currentAddressDistrict, studentForm.currentAddressCommune]);
+
+  const handlePobProvinceChange = (provinceValue: string) => {
+    setStudentForm({
+      ...studentForm,
+      pobProvince: provinceValue,
+      pobDistrict: '',
+      pobCommune: '',
+      pobVillage: ''
+    });
+  };
+
+  const handlePobDistrictChange = (districtValue: string) => {
+    setStudentForm({
+      ...studentForm,
+      pobDistrict: districtValue,
+      pobCommune: '',
+      pobVillage: ''
+    });
+  };
+
+  const handlePobCommuneChange = (communeValue: string) => {
+    setStudentForm({
+      ...studentForm,
+      pobCommune: communeValue,
+      pobVillage: ''
+    });
+  };
+
+  const handleCurrentAddressProvinceChange = (provinceValue: string) => {
+    setStudentForm({
+      ...studentForm,
+      currentAddressProvince: provinceValue,
+      currentAddressDistrict: '',
+      currentAddressCommune: '',
+      currentAddressVillage: ''
+    });
+  };
+
+  const handleCurrentAddressDistrictChange = (districtValue: string) => {
+    setStudentForm({
+      ...studentForm,
+      currentAddressDistrict: districtValue,
+      currentAddressCommune: '',
+      currentAddressVillage: ''
+    });
+  };
+
+  const handleCurrentAddressCommuneChange = (communeValue: string) => {
+    setStudentForm({
+      ...studentForm,
+      currentAddressCommune: communeValue,
+      currentAddressVillage: ''
+    });
+  };
   const [hasManuallyEditedLatin, setHasManuallyEditedLatin] = useState(false);
   const [deletingStudent, setDeletingStudent] = useState<{ id: string; name: string } | null>(null);
 
@@ -2024,44 +2412,83 @@ export default function StudentManagement({
                 <span className="text-xs font-bold text-slate-700 block">ទីកន្លែងកំណើត</span>
                 <div className="grid grid-cols-2 gap-2 bg-slate-50/75 p-3.5 rounded-2xl border border-slate-100">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 block">ភូមិ</label>
-                    <input
-                      type="text"
-                      value={studentForm.pobVillage}
-                      onChange={e => setStudentForm({ ...studentForm, pobVillage: e.target.value })}
-                      placeholder="ឧ. ភូមិ៨"
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 block">ឃុំ/សង្កាត់</label>
-                    <input
-                      type="text"
-                      value={studentForm.pobCommune}
-                      onChange={e => setStudentForm({ ...studentForm, pobCommune: e.target.value })}
-                      placeholder="ឧ. សង្កាត់៤"
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
-                    />
+                    <label className="text-[10px] font-bold text-slate-500 block">រាជធានី/ខេត្ត</label>
+                    <select
+                      value={studentForm.pobProvince || ''}
+                      onChange={e => handlePobProvinceChange(e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer"
+                    >
+                      <option value="">ជ្រើសរើស</option>
+                      {(() => {
+                        const list = [...provincesList];
+                        if (studentForm.pobProvince && !list.includes(studentForm.pobProvince)) {
+                          list.unshift(studentForm.pobProvince);
+                        }
+                        return list.map(p => (
+                          <option key={p} value={p}>{p}</option>
+                        ));
+                      })()}
+                    </select>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-500 block">ស្រុក/ក្រុង/ខណ្ឌ</label>
-                    <input
-                      type="text"
-                      value={studentForm.pobDistrict}
-                      onChange={e => setStudentForm({ ...studentForm, pobDistrict: e.target.value })}
-                      placeholder="ឧ. ក្រុងព្រះសីហនុ"
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
-                    />
+                    <select
+                      value={studentForm.pobDistrict || ''}
+                      onChange={e => handlePobDistrictChange(e.target.value)}
+                      disabled={!studentForm.pobProvince}
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                    >
+                      <option value="">ជ្រើសរើស</option>
+                      {(() => {
+                        const list = [...pobDistrictsList];
+                        if (studentForm.pobDistrict && !list.includes(studentForm.pobDistrict)) {
+                          list.unshift(studentForm.pobDistrict);
+                        }
+                        return list.map(d => (
+                          <option key={d} value={d}>{d}</option>
+                        ));
+                      })()}
+                    </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 block">រាជធានី/ខេត្ត</label>
-                    <input
-                      type="text"
-                      value={studentForm.pobProvince}
-                      onChange={e => setStudentForm({ ...studentForm, pobProvince: e.target.value })}
-                      placeholder="ឧ. ព្រះសីហនុ"
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
-                    />
+                    <label className="text-[10px] font-bold text-slate-500 block">ឃុំ/សង្កាត់</label>
+                    <select
+                      value={studentForm.pobCommune || ''}
+                      onChange={e => handlePobCommuneChange(e.target.value)}
+                      disabled={!studentForm.pobDistrict}
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                    >
+                      <option value="">ជ្រើសរើស</option>
+                      {(() => {
+                        const list = [...pobCommunesList];
+                        if (studentForm.pobCommune && !list.includes(studentForm.pobCommune)) {
+                          list.unshift(studentForm.pobCommune);
+                        }
+                        return list.map(c => (
+                          <option key={c} value={c}>{c}</option>
+                        ));
+                      })()}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 block">ភូមិ</label>
+                    <select
+                      value={studentForm.pobVillage || ''}
+                      onChange={e => setStudentForm({ ...studentForm, pobVillage: e.target.value })}
+                      disabled={!studentForm.pobCommune}
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                    >
+                      <option value="">ជ្រើសរើស</option>
+                      {(() => {
+                        const list = [...pobVillagesList];
+                        if (studentForm.pobVillage && !list.includes(studentForm.pobVillage)) {
+                          list.unshift(studentForm.pobVillage);
+                        }
+                        return list.map(v => (
+                          <option key={v} value={v}>{v}</option>
+                        ));
+                      })()}
+                    </select>
                   </div>
                 </div>
               </div>
@@ -2070,44 +2497,83 @@ export default function StudentManagement({
                 <span className="text-xs font-bold text-slate-700 block">ទីលំនៅបច្ចុប្បន្ន</span>
                 <div className="grid grid-cols-2 gap-2 bg-slate-50/75 p-3.5 rounded-2xl border border-slate-100">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 block">ភូមិ</label>
-                    <input
-                      type="text"
-                      value={studentForm.currentAddressVillage}
-                      onChange={e => setStudentForm({ ...studentForm, currentAddressVillage: e.target.value })}
-                      placeholder="ឧ. ភូមិ២"
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 block">ឃុំ/សង្កាត់</label>
-                    <input
-                      type="text"
-                      value={studentForm.currentAddressCommune}
-                      onChange={e => setStudentForm({ ...studentForm, currentAddressCommune: e.target.value })}
-                      placeholder="ឧ. សង្កាត់២"
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
-                    />
+                    <label className="text-[10px] font-bold text-slate-500 block">រាជធានី/ខេត្ត</label>
+                    <select
+                      value={studentForm.currentAddressProvince || ''}
+                      onChange={e => handleCurrentAddressProvinceChange(e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer"
+                    >
+                      <option value="">ជ្រើសរើស</option>
+                      {(() => {
+                        const list = [...provincesList];
+                        if (studentForm.currentAddressProvince && !list.includes(studentForm.currentAddressProvince)) {
+                          list.unshift(studentForm.currentAddressProvince);
+                        }
+                        return list.map(p => (
+                          <option key={p} value={p}>{p}</option>
+                        ));
+                      })()}
+                    </select>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-500 block">ស្រុក/ក្រុង/ខណ្ឌ</label>
-                    <input
-                      type="text"
-                      value={studentForm.currentAddressDistrict}
-                      onChange={e => setStudentForm({ ...studentForm, currentAddressDistrict: e.target.value })}
-                      placeholder="ឧ. ក្រុងព្រះសីហនុ"
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
-                    />
+                    <select
+                      value={studentForm.currentAddressDistrict || ''}
+                      onChange={e => handleCurrentAddressDistrictChange(e.target.value)}
+                      disabled={!studentForm.currentAddressProvince}
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                    >
+                      <option value="">ជ្រើសរើស</option>
+                      {(() => {
+                        const list = [...currentAddressDistrictsList];
+                        if (studentForm.currentAddressDistrict && !list.includes(studentForm.currentAddressDistrict)) {
+                          list.unshift(studentForm.currentAddressDistrict);
+                        }
+                        return list.map(d => (
+                          <option key={d} value={d}>{d}</option>
+                        ));
+                      })()}
+                    </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 block">រាជធានី/ខេត្ត</label>
-                    <input
-                      type="text"
-                      value={studentForm.currentAddressProvince}
-                      onChange={e => setStudentForm({ ...studentForm, currentAddressProvince: e.target.value })}
-                      placeholder="ឧ. ព្រះសីហនុ"
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
-                    />
+                    <label className="text-[10px] font-bold text-slate-500 block">ឃុំ/សង្កាត់</label>
+                    <select
+                      value={studentForm.currentAddressCommune || ''}
+                      onChange={e => handleCurrentAddressCommuneChange(e.target.value)}
+                      disabled={!studentForm.currentAddressDistrict}
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                    >
+                      <option value="">ជ្រើសរើស</option>
+                      {(() => {
+                        const list = [...currentAddressCommunesList];
+                        if (studentForm.currentAddressCommune && !list.includes(studentForm.currentAddressCommune)) {
+                          list.unshift(studentForm.currentAddressCommune);
+                        }
+                        return list.map(c => (
+                          <option key={c} value={c}>{c}</option>
+                        ));
+                      })()}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 block">ភូមិ</label>
+                    <select
+                      value={studentForm.currentAddressVillage || ''}
+                      onChange={e => setStudentForm({ ...studentForm, currentAddressVillage: e.target.value })}
+                      disabled={!studentForm.currentAddressCommune}
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                    >
+                      <option value="">ជ្រើសរើស</option>
+                      {(() => {
+                        const list = [...currentAddressVillagesList];
+                        if (studentForm.currentAddressVillage && !list.includes(studentForm.currentAddressVillage)) {
+                          list.unshift(studentForm.currentAddressVillage);
+                        }
+                        return list.map(v => (
+                          <option key={v} value={v}>{v}</option>
+                        ));
+                      })()}
+                    </select>
                   </div>
                 </div>
               </div>

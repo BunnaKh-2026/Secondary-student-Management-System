@@ -1,5 +1,5 @@
 export interface SchoolInfo {
-  schoolType: 'អនុវិទ្យាល័យ' | 'វិទ្យាល័យ' | 'ផ្សេងៗ';
+  schoolType: 'អនុវិទ្យាល័យ' | 'វិទ្យាល័យ' | 'ផ្សេងៗ' | '';
   schoolName: string;
   schoolCode?: string;
   province: string;
@@ -7,7 +7,7 @@ export interface SchoolInfo {
   commune: string;
   village?: string;
   directorName: string;
-  directorGender: 'ប្រុស' | 'ស្រី';
+  directorGender: 'ប្រុស' | 'ស្រី' | '';
 }
 
 export interface Teacher {

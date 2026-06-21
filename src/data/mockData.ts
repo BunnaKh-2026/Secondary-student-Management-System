@@ -1,15 +1,15 @@
 import { SchoolInfo, Teacher, Classroom, Student, StudentScore, StudentAttendance, TeacherAttendance, HomeTeacherTask, PreStartConfig } from '../types';
 
 export const DEFAULT_SCHOOL_INFO: SchoolInfo = {
-  schoolType: 'វិទ្យាល័យ',
-  schoolName: 'វិទ្យាល័យ ហ៊ុន សែន មិត្ដភាព',
-  schoolCode: '180201',
+  schoolType: '',
+  schoolName: '',
+  schoolCode: '',
   province: '',
   district: '',
   commune: '',
   village: '',
-  directorName: 'ឯកឧត្ដម ប៉ែន សារឿន',
-  directorGender: 'ប្រុស',
+  directorName: '',
+  directorGender: '',
 };
 
 export const DEFAULT_TEACHERS: Teacher[] = [
@@ -253,7 +253,7 @@ export interface SystemState {
   htTasks: HomeTeacherTask[];
 }
 
-const STORAGE_KEY = 'secondary_school_management_state_prod_v2';
+const STORAGE_KEY = 'secondary_school_management_state_prod_v5';
 
 export function getSystemState(): SystemState {
   try {
