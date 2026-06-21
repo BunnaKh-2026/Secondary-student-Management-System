@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8b5cf6" />
+      <stop offset="100%" stop-color="#4c1d95" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+  </defs>
+  <!-- Background Circle with smooth purple gradient -->
+  <rect width="512" height="512" rx="128" fill="url(#purpleGrad)" />
+  
+  <!-- Stylized Elegant Temple Gables / School Building Motif -->
+  <path d="M256 90 L400 210 L112 210 Z" fill="#ffffff" opacity="0.15" />
+  
+  <!-- Outer glowing concentric border rings -->
+  <circle cx="256" cy="256" r="210" stroke="#ffffff" stroke-width="6" stroke-dasharray="16 12" fill="none" opacity="0.3" />
+  <circle cx="256" cy="256" r="190" stroke="#ffffff" stroke-width="2" fill="none" opacity="0.2" />
+
+  <!-- Main Open Book Graphic representing education and management -->
+  <path d="M120 280 C160 260 230 270 256 290 C282 270 352 260 392 280 L392 390 C352 370 282 380 256 395 C230 380 160 370 120 390 Z" fill="#ffffff" />
+  
+  <!-- Book spine line and page depth -->
+  <path d="M256 290 L256 395" stroke="#7c3aed" stroke-width="4" stroke-linecap="round" />
+  <path d="M112 284 C155 264 225 274 250 293" stroke="#e9d5ff" stroke-width="2" fill="none" />
+  <path d="M400 284 C357 264 287 274 262 293" stroke="#e9d5ff" stroke-width="2" fill="none" />
+
+  <!-- Graduation Cap / Scholar Icon -->
+  <polygon points="256,120 370,165 256,210 142,165" fill="url(#goldGrad)" />
+  <polygon points="256,120 370,165 256,210 142,165" fill="#ffffff" opacity="0.1" />
+  <rect x="251" y="200" width="10" height="42" rx="4" fill="url(#goldGrad)" />
+  
+  <!-- Graduation Tassel Hanging Down -->
+  <path d="M370 165 L385 220 L380 250 L390 250 L385 220 Z" fill="url(#goldGrad)" />
+  
+  <!-- Small sparkling stars around the design -->
+  <path d="M170 120 L174 128 L182 130 L174 132 L170 140 L166 132 L158 130 L166 128 Z" fill="#ffffff" opacity="0.8" />
+  <path d="M342 270 L345 275 L350 276 L345 277 L342 282 L339 277 L334 276 L339 275 Z" fill="#ffffff" opacity="0.8" />
+</svg>

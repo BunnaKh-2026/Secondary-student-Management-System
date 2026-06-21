@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Moul&family=Siemreap&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Khmer OS Siemreap", "Siemreap", "Kantumruy Pro", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Khmer OS Muol Light", "Moul", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Base resets to enforce User Font guidelines */
+body, html, input, select, textarea, button, table, td, th {
+  font-family: "Khmer OS Siemreap", "Siemreap", var(--font-sans);
+  font-weight: normal !important;
+}
+
+h1, h2, h3, h4, h5, h6, .font-title {
+  font-family: "Khmer OS Muol Light", "Moul", var(--font-serif) !important;
+  font-weight: normal !important;
+}
+
+/* Force regular font weight for text elements according to user requirement "មិនដាក់ bold" */
+span, p, div, a, li, label, strong, b, button, input, select {
+  font-weight: normal !important;
+}
+
+/* Ensure monospace elements keep their font-family, but still no bold */
+.font-mono {
+  font-family: var(--font-mono) !important;
+  font-weight: normal !important;
+}
+
+/* Enhances print styles to ensure proper page margin handling when downloading/printing IDs and Merits */
+@media print {
+  body {
+    background-color: white !important;
+    color: black !important;
+  }
+  /* Hide the entire master application structure */
+  #secondary-school-management-root > aside,
+  #secondary-school-management-root > div > header,
+  #secondary-school-management-root > div > main > div.print-hidden {
+    display: none !important;
+  }
+}
+
+/* Quick utility animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
