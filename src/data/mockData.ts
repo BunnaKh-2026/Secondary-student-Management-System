@@ -253,7 +253,7 @@ export interface SystemState {
   htTasks: HomeTeacherTask[];
 }
 
-const STORAGE_KEY = 'secondary_school_management_state_prod_v5';
+const STORAGE_KEY = 'secondary_school_management_state_prod_v6';
 
 export function getSystemState(): SystemState {
   try {
@@ -263,7 +263,7 @@ export function getSystemState(): SystemState {
       // Let's ensure backup attributes exist
       return {
         schoolInfo: parsed.schoolInfo || DEFAULT_SCHOOL_INFO,
-        teachers: parsed.teachers || DEFAULT_TEACHERS,
+        teachers: parsed.teachers || [],
         classrooms: parsed.classrooms || [],
         preStartConfigs: parsed.preStartConfigs || {},
         students: parsed.students || [],
@@ -280,7 +280,7 @@ export function getSystemState(): SystemState {
   // Initialize with empty defaults if none exists
   const defaultState: SystemState = {
     schoolInfo: DEFAULT_SCHOOL_INFO,
-    teachers: DEFAULT_TEACHERS,
+    teachers: [],
     classrooms: [],
     preStartConfigs: {},
     students: [],

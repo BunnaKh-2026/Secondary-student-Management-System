@@ -50,6 +50,10 @@ export default function TeacherManagement({
   // Active Teacher for Print ID Card
   const [selectedPrintTeacher, setSelectedPrintTeacher] = useState<Teacher | null>(null);
 
+  // Delete configuration
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [isDeleteAllOpen, setIsDeleteAllOpen] = useState(false);
+
   // QR Code generator references
   const canvasRefs = useRef<{ [key: string]: HTMLCanvasElement | null }>({});
 
@@ -172,11 +176,21 @@ export default function TeacherManagement({
   };
 
   const handleDeleteTeacher = (id: string, name: string) => {
-    if (confirm(`តើអ្នកពិតជាចង់លុបទិន្នន័យគ្រូខ្មែរឈ្មោះ "${name}" មែនទេ?`)) {
-      onUpdateTeachers(teachers.filter(t => t.id !== id));
-      // Close card view if was viewing deleted teacher
-      if (selectedPrintTeacher?.id === id) setSelectedPrintTeacher(null);
-    }
+    setDeleteTarget({ id, name });
+  };
+
+  const confirmDeleteTeacher = () => {
+    if (!deleteTarget) return;
+    const { id } = deleteTarget;
+    onUpdateTeachers(teachers.filter(t => t.id !== id));
+    if (selectedPrintTeacher?.id === id) setSelectedPrintTeacher(null);
+    setDeleteTarget(null);
+  };
+
+  const confirmDeleteAllTeachers = () => {
+    onUpdateTeachers([]);
+    setSelectedPrintTeacher(null);
+    setIsDeleteAllOpen(false);
   };
 
   const addResponsibility = () => {
@@ -271,10 +285,19 @@ export default function TeacherManagement({
           <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-xs flex flex-col sm:flex-row items-center justify-start gap-3">
             <button
               onClick={handleOpenAdd}
-              className="w-full sm:w-auto px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+              className="w-full sm:w-auto px-4 py-2 bg-white border border-purple-600 hover:bg-purple-50 text-purple-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
             >
-              <UserPlus className="w-4 h-4" />
+              <UserPlus className="w-4 h-4 text-purple-600" />
               ចុះឈ្មោះគ្រូថ្មី
+            </button>
+
+            <button
+              onClick={() => setIsDeleteAllOpen(true)}
+              disabled={teachers.length === 0}
+              className="w-full sm:w-auto px-4 py-2 bg-white border border-rose-600 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed text-rose-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-4 h-4 text-rose-600" />
+              លុបទិន្នន័យ
             </button>
 
             <div className="relative w-full sm:w-72">
@@ -296,7 +319,7 @@ export default function TeacherManagement({
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold text-xs uppercase">
+                  <tr className="bg-emerald-700 text-white font-bold text-xs uppercase" id="teachers-list-th-row">
                     <th className="px-4 py-3 text-center">អត្តសញ្ញាណ</th>
                     <th className="px-4 py-3">ឈ្មោះគ្រូ</th>
                     <th className="px-3 py-3 text-center">ភេទ</th>
@@ -316,7 +339,7 @@ export default function TeacherManagement({
                     filteredTeachers.map(t => (
                       <tr 
                         key={t.id} 
-                        className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors text-xs text-slate-700 font-medium"
+                        className="border-b border-emerald-600 hover:bg-slate-50/50 transition-colors text-xs text-slate-700 font-medium"
                       >
                         <td className="px-4 py-3 font-mono font-semibold text-teal-600 text-center bg-slate-50/30">
                           {t.idNumber}
@@ -345,7 +368,7 @@ export default function TeacherManagement({
                             <button
                               onClick={() => handleDeleteTeacher(t.id, t.name)}
                               title="លុបទិន្នន័យគ្រូ"
-                              className="p-1.5 text-rose-600 hover:bg-rose-55 rounded-lg transition-colors cursor-pointer"
+                              className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -433,79 +456,89 @@ export default function TeacherManagement({
           </div>
 
           {/* Table logging */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 font-bold text-xs uppercase">
-                  <th className="px-4 py-3 text-center">អត្តលេខ</th>
-                  <th className="px-4 py-3">ឈ្មោះបុគ្គលិក</th>
-                  <th className="px-4 py-3">មុខវិជ្ជា/តួនាទី</th>
-                  <th className="px-4 py-3 text-center">ស្ថានភាពវត្តមាន</th>
-                  <th className="px-4 py-3">ចំណាំ/មូលហេតុ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {teachers.map(t => {
-                  const att = teacherAttendance.find(a => a.teacherId === t.id && a.date === selectedAttDate);
-                  return (
-                    <tr 
-                      key={t.id} 
-                      className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors text-xs text-slate-700 font-medium"
-                    >
-                      <td className="px-4 py-3 font-mono text-center text-slate-500">{t.idNumber}</td>
-                      <td className="px-4 py-3 font-bold text-slate-800">{t.name}</td>
-                      <td className="px-4 py-3 text-slate-500">{t.role} ({t.subject})</td>
-                      <td className="px-4 py-3">
-                        <div className="flex justify-center items-center gap-1.5">
-                          <button
-                            onClick={() => handleMarkAttendance(t.id, 'វត្តមាន')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${
-                              att?.status === 'វត្តមាន'
-                                ? 'bg-emerald-600 text-white shadow-xs'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                            }`}
-                          >
-                            វត្តមាន (វ)
-                          </button>
-                          <button
-                            onClick={() => handleMarkAttendance(t.id, 'ច្បាប់')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${
-                              att?.status === 'ច្បាប់'
-                                ? 'bg-sky-600 text-white shadow-xs'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                            }`}
-                          >
-                            ច្បាប់ (ច)
-                          </button>
-                          <button
-                            onClick={() => handleMarkAttendance(t.id, 'អវត្តមាន')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${
-                              att?.status === 'អវត្តមាន'
-                                ? 'bg-rose-600 text-white shadow-xs'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                            }`}
-                          >
-                            អវត្តមាន (អ)
-                          </button>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <input
-                          type="text"
-                          value={att?.reason || ''}
-                          onChange={e => handleMarkAttendance(t.id, att?.status || 'វត្តមាន', e.target.value)}
-                          placeholder="មូលហេតុអវត្តមាន ឬ ស្លាកចំណាំ..."
-                          className="w-full px-2 py-1 bg-slate-50/70 border border-slate-100 text-xs rounded-md focus:bg-white focus:border-teal-400 outline-none"
-                        />
+          <div className="bg-white rounded-xl border border-slate-100 shadow-xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-emerald-700 text-white font-bold text-xs uppercase" id="teacher-attendance-th-row">
+                    <th className="px-4 py-3 text-center">អត្តលេខ</th>
+                    <th className="px-4 py-3">ឈ្មោះបុគ្គលិក</th>
+                    <th className="px-4 py-3">មុខវិជ្ជា/តួនាទី</th>
+                    <th className="px-4 py-3 text-center">ស្ថានភាពវត្តមាន</th>
+                    <th className="px-4 py-3">ចំណាំ/មូលហេតុ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {teachers.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-12 text-center text-slate-400 text-xs font-semibold">
+                        មិនទាន់មានទិន្នន័យគ្រូបង្រៀននៅក្នុងប្រព័ន្ធឡើយ។
                       </td>
                     </tr>
-                  );
-                })}
+                  ) : (
+                    teachers.map(t => {
+                      const att = teacherAttendance.find(a => a.teacherId === t.id && a.date === selectedAttDate);
+                      return (
+                        <tr 
+                          key={t.id} 
+                          className="border-b border-emerald-600 hover:bg-slate-50/50 transition-colors text-xs text-slate-700 font-medium"
+                        >
+                          <td className="px-4 py-3 font-mono text-center font-semibold text-teal-600 bg-slate-50/30">{t.idNumber}</td>
+                        <td className="px-4 py-3 font-bold text-slate-800">{t.name}</td>
+                        <td className="px-4 py-3 text-slate-600 font-semibold">{t.role} ({t.subject})</td>
+                        <td className="px-4 py-3">
+                          <div className="flex justify-center items-center gap-1.5">
+                            <button
+                              onClick={() => handleMarkAttendance(t.id, 'វត្តមាន')}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                                att?.status === 'វត្តមាន'
+                                  ? 'bg-emerald-600 text-white shadow-xs'
+                                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                              }`}
+                            >
+                              វត្តមាន (វ)
+                            </button>
+                            <button
+                              onClick={() => handleMarkAttendance(t.id, 'ច្បាប់')}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                                att?.status === 'ច្បាប់'
+                                  ? 'bg-sky-600 text-white shadow-xs'
+                                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                              }`}
+                            >
+                              ច្បាប់ (ច)
+                            </button>
+                            <button
+                              onClick={() => handleMarkAttendance(t.id, 'អវត្តមាន')}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                                att?.status === 'អវត្តមាន'
+                                  ? 'bg-rose-600 text-white shadow-xs'
+                                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                              }`}
+                            >
+                              អវត្តមាន (អ)
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="text"
+                            value={att?.reason || ''}
+                            onChange={e => handleMarkAttendance(t.id, att?.status || 'វត្តមាន', e.target.value)}
+                            placeholder="មូលហេតុអវត្តមាន ឬ ស្លាកចំណាំ..."
+                            className="w-full px-2 py-1 bg-slate-50/70 border border-slate-100 text-xs rounded-md focus:bg-white focus:border-teal-400 outline-none"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
         </div>
-      )}
+      </div>
+    )}
 
       {/* FORM MODAL FOR CREATE/EDIT TEACHER */}
       {isFormOpen && (
@@ -868,6 +901,72 @@ export default function TeacherManagement({
 
             <div className="w-full border-t border-dashed border-slate-300 pt-3 text-[10px] text-slate-400 italic">
               ហត្ថលេខានាយកសាលា និងត្រា
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SINGLE TEACHER DELETE CONFIRMATION MODAL */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full overflow-hidden border border-slate-100 shadow-xl p-6 space-y-4">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="p-2 bg-rose-50 rounded-full">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <h3 className="font-bold text-slate-800 text-base font-sans">បញ្ជាក់ការលុបព័ត៌មាន</h3>
+            </div>
+            <p className="text-slate-600 text-xs font-semibold leading-relaxed">
+              តើអ្នកពិតជាចង់លុបទិន្នន័យគ្រូបង្រៀនឈ្មោះ <span className="font-extrabold text-slate-950">"{deleteTarget.name}"</span> មែនទេ? សកម្មភាពនេះមិនអាចត្រឡប់ក្រោយវិញបានឡើយ។
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-705 rounded-xl text-xs font-bold cursor-pointer transition-colors"
+              >
+                បោះបង់
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteTeacher}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors"
+              >
+                យល់ព្រមលុប
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ALL TEACHERS DELETE CONFIRMATION MODAL */}
+      {isDeleteAllOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full overflow-hidden border border-slate-100 shadow-xl p-6 space-y-4">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="p-2 bg-rose-50 rounded-full">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <h3 className="font-bold text-slate-800 text-base font-sans">បញ្ជាក់ការលុបទិន្នន័យទាំងអស់</h3>
+            </div>
+            <p className="text-slate-600 text-xs font-semibold leading-relaxed">
+              តើអ្នកពិតជាចង់លុបទិន្នន័យគ្រូបង្រៀនទាំងអស់មែនទេ? សកម្មភាពនេះនឹងលុបគ្រូទាំងអស់ចេញពីប្រព័ន្ធ ហើយមិនអាចត្រឡប់ក្រោយវិញបានឡើយ។
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsDeleteAllOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-705 rounded-xl text-xs font-bold cursor-pointer transition-colors"
+               >
+                បោះបង់
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteAllTeachers}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors"
+              >
+                យល់ព្រមលុបទាំងអស់
+              </button>
             </div>
           </div>
         </div>

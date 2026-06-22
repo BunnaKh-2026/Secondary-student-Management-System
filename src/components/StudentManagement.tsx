@@ -6,6 +6,12 @@ import {
   AlertTriangle, IdCard, Save
 } from 'lucide-react';
 import { Student, Classroom, SchoolInfo } from '../types';
+import { 
+  getProvincesList, 
+  getDistrictsForProvince, 
+  getCommunesForDistrict, 
+  getVillagesForCommune 
+} from '../data/locationData';
 
 export const DEFAULT_SUBJECTS = [
   { id: '1', name: 'ភាសាខ្មែរ', coefficient: 2, isActive: true },
@@ -272,145 +278,6 @@ const transliterateKhmerToLatin = (khText: string): string => {
   return mappedWords.join(' ').toUpperCase().replace(/\s+/g, ' ').trim();
 };
 
-interface RawProvince {
-  code: string;
-  name_kh: string;
-  name_en: string;
-}
-
-interface RawDistrict {
-  code: string;
-  province_code: string;
-  name_kh: string;
-  name_en: string;
-  type?: string;
-}
-
-interface RawCommune {
-  code: string;
-  district_code: string;
-  name_kh: string;
-  name_en: string;
-  type?: string;
-}
-
-interface RawVillage {
-  code: string;
-  commune_code: string;
-  name_kh: string;
-  name_en: string;
-  type?: string;
-}
-
-const CAMBODIAN_PROVINCES = [
-  'ភ្នំពេញ', 'ព្រះសីហនុ', 'សៀមរាប', 'បាត់ដំបង', 'កំពង់ចាម', 'កំពង់ធំ', 'កំពង់ឆ្នាំង', 'កំពង់ស្ពឺ', 'កណ្ដាល',
-  'តាកែវ', 'កំពត', 'កែប', 'ប៉ៃលិន', 'បន្ទាយមានជ័យ', 'ព្រះវិហារ', 'ស្ទឹងត្រែង', 'ក្រចេះ', 'មណ្ឌលគិរី',
-  'រតនគិរី', 'ឧត្ដរមានជ័យ', 'ពោធិ៍សាត់', 'កោះកុង', 'ព្រៃវែង', 'ស្វាយរៀង', 'ត្បូងឃ្មុំ'
-];
-
-interface LocationInfo {
-  districts: string[];
-  communes: Record<string, string[]>;
-  villages: Record<string, string[]>;
-}
-
-const LOCATION_DATA: Record<string, LocationInfo> = {
-  'ភ្នំពេញ': {
-    districts: ['ចំការមន', 'ដូនពេញ', '៧មករា', 'ទួលគោក', 'សែនសុខ', 'មានជ័យ', 'ឫស្សីកែវ', 'ច្បារអំពៅ', 'ពោធិ៍សែនជ័យ'],
-    communes: {
-      'ចំការមន': ['ទន្លេបាសាក់', 'បឹងកងកងទី១', 'បឹងត្របែក', 'ផ្សារដើមថ្កូវ'],
-      'ដូនពេញ': ['ផ្សារថ្មីទី១', 'ផ្សារថ្មីទី២', 'ផ្សារថ្មីទី៣', 'ចតុមុខ', 'ស្រះចក'],
-      '៧មករា': ['អូឫស្សីទី១', 'អូឫស្សីទី២', 'វាលវង់', 'មនោរម្យ'],
-      'ទួលគោក': ['ផ្សារដេប៉ូទី១', 'ផ្សារដេប៉ូទី២', 'ទឹកល្អក់ទី១', 'ទឹកល្អក់ទី២', 'បឹងកក់ទី១'],
-      'សែនសុខ': ['ភ្នំពេញថ្មី', 'ទឹកថ្លា', 'ឃ្មួញ', 'អូរបែកក្អម']
-    },
-    villages: {
-      'ទន្លេបាសាក់': ['ភូមិ១', 'ភូមិ២', 'ភូមិ៣', 'ភូមិ៤', 'ភូមិ៥'],
-      'បឹងកងកងទី១': ['ភូមិ១', 'ភូមិ២', 'ភូមិ៣'],
-      'ផ្សារថ្មីទី១': ['ភូមិ១', 'ភូមិ២'],
-      'ភ្នំពេញថ្មី': ['ភូមិទ្រុងមាន់', 'ភូមិចុងថ្នល់', 'ភូមិពោងពាយ'],
-      'ទឹកថ្លា': ['ភូមិចុងថ្នល់ខាងកើត', 'ភូមិចុងថ្នល់ខាងលិច', 'ភូមិផ្សារទឹកថ្លា']
-    }
-  },
-  'ព្រះសីហនុ': {
-    districts: ['ព្រះសីហនុ', 'ស្ទឹងហាវ', 'ព្រៃនប់', 'កំពង់សិលា'],
-    communes: {
-      'ព្រះសីហនុ': ['សង្កាត់លេខ១', 'សង្កាត់លេខ២', 'សង្កាត់លេខ៣', 'សង្កាត់លេខ៤'],
-      'ស្ទឹងហាវ': ['កំពេញ', 'ទំនប់រលក', 'អូរត្រេះ'],
-      'ព្រៃនប់': ['វាលរេញ', 'ទឹកល្អក់', 'ទួលទទឹង', 'ព្រៃនប់']
-    },
-    villages: {
-      'សង្កាត់លេខ៤': ['ភូមិ១', 'ភូមិ២', 'ភូមិ៣', 'ភូមិ៤', 'ភូមិ៥'],
-      'សង្កាត់លេខ៣': ['ភូមិ១', 'ភូមិ២', 'ភូមិ៣'],
-      'សង្កាត់លេខ២': ['ភូមិ១', 'ភូមិ២', 'ភូមិ៣'],
-      'សង្កាត់លេខ១': ['ភូមិ១', 'ភូមិ២', 'ភូមិ៣'],
-      'វាលរេញ': ['ភូមិវាលរេញ', 'ភូមិត្រពាំងធំ', 'ភូមិបឹងជំនីប']
-    }
-  },
-  'សៀមរាប': {
-    districts: ['សៀមរាប', 'ប្រាសាទបាគង', 'ស្រីស្នំ', 'អង្គរធំ', 'អង្គរជុំ', 'ពួក', 'សូទ្រនិគម'],
-    communes: {
-      'សៀមរាប': ['ស្លក្រាម', 'ស្វាយដង្គំ', 'គោកចក', 'សាលាកំរើក', 'ជ្រាវ'],
-      'ប្រាសាទបាគង': ['បាគង', 'បល្ល័ង្ក', 'រកា'],
-      'ពួក': ['ពួក', 'កែវពណ៌', 'ល្វា']
-    },
-    villages: {
-      'ស្លក្រាម': ['ភូមិមណ្ឌល១', 'ភូមិស្លក្រាម', 'ភូមិវត្តបូព៌', 'ភូមិទ្រាំង'],
-      'ស្វាយដង្គំ': ['ភូមិស្វាយដង្គំ', 'ភូមិសាលាកន្សែង', 'ភូមិវត្ដស្វាយ'],
-      'គោកចក': ['ភូមិវាល', 'ភូមិទក្សិណត្បូង', 'ភូមិគោកត្នោត']
-    }
-  },
-  'បាត់ដំបង': {
-    districts: ['បាត់ដំបង', 'សង្កែ', 'បាណន់', 'ឯកភ្នំ', 'រតនមណ្ឌល', 'មោងឫស្សី', 'ថ្មគោល'],
-    communes: {
-      'បាត់ដំបង': ['ស្វាយប៉ោ', 'វត្តគរ', 'ព្រែកព្រះស្ដេច', 'រតនៈ', 'ចំការសំរោង'],
-      'សង្កែ': ['កំពង់ព្រះ', 'កំពង់ពិល', 'រាំងកែសី'],
-      'បាណន់': ['កន្ទឺ២', 'ភ្នំសំពៅ', 'ស្នឹង']
-    },
-    villages: {
-      'ស្វាយប៉ោ': ['ភូមិព្រែកមហាទេព', 'ភូមិកំពង់ក្របី', 'ភូមិស្វាយប៉ោ'],
-      'វត្តគរ': ['ភូមិវត្តគរ', 'ភូមិដូនទាវ', 'ភូមិពាក់ស្បែក'],
-      'ព្រែកព្រះស្ដេច': ['ភូមិព្រែកព្រះស្ដេច', 'ភូមិចំការឫស្សី']
-    }
-  }
-};
-
-const getDistrictsForProvince = (prov: string): string[] => {
-  if (LOCATION_DATA[prov]) {
-    return [...LOCATION_DATA[prov].districts].map(d => {
-      if (prov === 'ភ្នំពេញ') return `ខណ្ឌ${d}`;
-      if (prov === 'ព្រះសីហនុ' && d === 'ព្រះសីហនុ') return `ក្រុង${d}`;
-      if (prov === 'សៀមរាប' && d === 'សៀមរាប') return `ក្រុង${d}`;
-      if (prov === 'បាត់ដំបង' && d === 'បាត់ដំបង') return `ក្រុង${d}`;
-      return `ស្រុក${d}`;
-    });
-  }
-  return [`ក្រុង${prov}`, `ស្រុកទី១`, `ស្រុកទី២`, `ស្រុកទី៣`].filter(Boolean);
-};
-
-const getCommunesForDistrict = (prov: string, dist: string): string[] => {
-  if (LOCATION_DATA[prov] && LOCATION_DATA[prov].communes[dist]) {
-    return [...LOCATION_DATA[prov].communes[dist]].map(c => {
-      const isSangkat = prov === 'ភ្នំពេញ' || dist.startsWith('ក្រុង') || dist.includes('ព្រះសីហនុ') || dist.includes('សៀមរាប') || dist.includes('បាត់ដំបង');
-      return isSangkat ? `សង្កាត់${c}` : `ឃុំ${c}`;
-    });
-  }
-  return [`សង្កាត់${dist}`, `ឃុំទី១`, `ឃុំទី២`, `ឃុំទី៣`].filter(Boolean);
-};
-
-const getVillagesForCommune = (prov: string, comm: string): string[] => {
-  if (LOCATION_DATA[prov] && LOCATION_DATA[prov].villages[comm]) {
-    return [...LOCATION_DATA[prov].villages[comm]].map(v => `ភូមិ${v}`);
-  }
-  return [`ភូមិ១`, `ភូមិ២`, `ភូមិ៣`, `ភូមិ៤`].filter(Boolean);
-};
-
-const normalizeName = (name: string): string => {
-  if (!name) return '';
-  const clean = name.replace(/\s+/g, '');
-  return clean.replace(/^(ស្រុក|ក្រុង|ខណ្ឌ|ឃុំ|សង្កាត់|ភូមិ)/, '');
-};
-
 export default function StudentManagement({
   students,
   classrooms,
@@ -422,57 +289,6 @@ export default function StudentManagement({
 }: StudentManagementProps) {
   // Navigation
   const [activeSubTab, setActiveSubTab] = useState<'classes_list' | 'classes' | 'students' | 'coefficients' | 'months'>(activeSubTabProp || 'students');
-
-  // Cambodian Location geometry gazetteer database states
-  const [dbProvinces, setDbProvinces] = useState<RawProvince[]>([]);
-  const [dbDistricts, setDbDistricts] = useState<RawDistrict[]>([]);
-  const [dbCommunes, setDbCommunes] = useState<RawCommune[]>([]);
-  const [dbVillages, setDbVillages] = useState<RawVillage[]>([]);
-  const [isGeoLoading, setIsGeoLoading] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    const fetchJson = async (url: string) => {
-      const r = await fetch(url);
-      if (!r.ok) {
-        throw new Error(`HTTP ${r.status} on ${url}`);
-      }
-      const text = await r.text();
-      try {
-        return JSON.parse(text);
-      } catch (e) {
-        throw new Error(`Invalid JSON response from ${url}`);
-      }
-    };
-
-    const fetchAllData = async () => {
-      setIsGeoLoading(true);
-      try {
-        const [pRes, dRes, cRes, vRes] = await Promise.all([
-          fetchJson('/data/provinces.json'),
-          fetchJson('/data/districts.json'),
-          fetchJson('/data/communes.json'),
-          fetchJson('/data/villages.json'),
-        ]);
-        if (active) {
-          setDbProvinces(Array.isArray(pRes) ? pRes : Object.values(pRes));
-          setDbDistricts(Array.isArray(dRes) ? dRes : Object.values(dRes));
-          setDbCommunes(Array.isArray(cRes) ? cRes : Object.values(cRes));
-          setDbVillages(Array.isArray(vRes) ? vRes : Object.values(vRes));
-        }
-      } catch (err) {
-        console.error('Failed to pre-fetch Cambodian geometry gazetteer in StudentManagement, using offline fallbacks:', err);
-      } finally {
-        if (active) {
-          setIsGeoLoading(false);
-        }
-      }
-    };
-    fetchAllData();
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const [localSubjects, setLocalSubjects] = useState<{ [classroomId: string]: any[] }>({});
   const [localMonths, setLocalMonths] = useState<{ [classroomId: string]: string[] }>({});
@@ -614,148 +430,32 @@ export default function StudentManagement({
   const [studentFormError, setStudentFormError] = useState<string | null>(null);
 
   const provincesList = useMemo(() => {
-    if (dbProvinces.length > 0) {
-      const sorted = [...dbProvinces].sort((a, b) => {
-        const codeA = a.code || '';
-        const codeB = b.code || '';
-        return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
-      });
-      return sorted.map(p => p.name_kh);
-    }
-    return CAMBODIAN_PROVINCES;
-  }, [dbProvinces]);
+    return getProvincesList();
+  }, []);
 
   const pobDistrictsList = useMemo(() => {
-    if (!studentForm.pobProvince) return [];
-    if (dbProvinces.length > 0 && dbDistricts.length > 0) {
-      const pObj = dbProvinces.find(p => p.name_kh === studentForm.pobProvince || p.name_en === studentForm.pobProvince);
-      if (pObj) {
-        const filtered = dbDistricts.filter(d => d.province_code === pObj.code);
-        const sorted = filtered.sort((a, b) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true, sensitivity: 'base' }));
-        return sorted.map(d => {
-          const prefix = d.type ? d.type.trim() : 'ស្រុក';
-          return `${prefix}${d.name_kh.trim()}`;
-        });
-      }
-    }
     return getDistrictsForProvince(studentForm.pobProvince);
-  }, [dbProvinces, dbDistricts, studentForm.pobProvince]);
+  }, [studentForm.pobProvince]);
 
   const pobCommunesList = useMemo(() => {
-    if (!studentForm.pobProvince || !studentForm.pobDistrict) return [];
-    if (dbProvinces.length > 0 && dbDistricts.length > 0 && dbCommunes.length > 0) {
-      const pObj = dbProvinces.find(p => p.name_kh === studentForm.pobProvince || p.name_en === studentForm.pobProvince);
-      if (pObj) {
-        const dObj = dbDistricts.find(d => {
-          if (d.province_code !== pObj.code) return false;
-          return normalizeName(d.name_kh) === normalizeName(studentForm.pobDistrict) || d.name_en === studentForm.pobDistrict;
-        });
-        if (dObj) {
-          const filtered = dbCommunes.filter(c => c.district_code === dObj.code);
-          const sorted = filtered.sort((a, b) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true, sensitivity: 'base' }));
-          return sorted.map(c => {
-            const prefix = c.type ? c.type.trim() : 'ឃុំ';
-            return `${prefix}${c.name_kh.trim()}`;
-          });
-        }
-      }
-    }
     return getCommunesForDistrict(studentForm.pobProvince, studentForm.pobDistrict);
-  }, [dbProvinces, dbDistricts, dbCommunes, studentForm.pobProvince, studentForm.pobDistrict]);
+  }, [studentForm.pobProvince, studentForm.pobDistrict]);
 
   const pobVillagesList = useMemo(() => {
-    if (!studentForm.pobProvince || !studentForm.pobDistrict || !studentForm.pobCommune) return [];
-    if (dbProvinces.length > 0 && dbDistricts.length > 0 && dbCommunes.length > 0 && dbVillages.length > 0) {
-      const pObj = dbProvinces.find(p => p.name_kh === studentForm.pobProvince || p.name_en === studentForm.pobProvince);
-      if (pObj) {
-        const dObj = dbDistricts.find(d => {
-          if (d.province_code !== pObj.code) return false;
-          return normalizeName(d.name_kh) === normalizeName(studentForm.pobDistrict) || d.name_en === studentForm.pobDistrict;
-        });
-        if (dObj) {
-          const cObj = dbCommunes.find(c => {
-            if (c.district_code !== dObj.code) return false;
-            return normalizeName(c.name_kh) === normalizeName(studentForm.pobCommune) || c.name_en === studentForm.pobCommune;
-          });
-          if (cObj) {
-            const filtered = dbVillages.filter(v => v.commune_code === cObj.code);
-            const sorted = filtered.sort((a, b) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true, sensitivity: 'base' }));
-            return sorted.map(v => {
-              const prefix = v.type ? v.type.trim() : 'ភូមិ';
-              return `${prefix}${v.name_kh.trim()}`;
-            });
-          }
-        }
-      }
-    }
-    return getVillagesForCommune(studentForm.pobProvince, studentForm.pobCommune);
-  }, [dbProvinces, dbDistricts, dbCommunes, dbVillages, studentForm.pobProvince, studentForm.pobDistrict, studentForm.pobCommune]);
+    return getVillagesForCommune(studentForm.pobProvince, studentForm.pobDistrict, studentForm.pobCommune);
+  }, [studentForm.pobProvince, studentForm.pobDistrict, studentForm.pobCommune]);
 
   const currentAddressDistrictsList = useMemo(() => {
-    if (!studentForm.currentAddressProvince) return [];
-    if (dbProvinces.length > 0 && dbDistricts.length > 0) {
-      const pObj = dbProvinces.find(p => p.name_kh === studentForm.currentAddressProvince || p.name_en === studentForm.currentAddressProvince);
-      if (pObj) {
-        const filtered = dbDistricts.filter(d => d.province_code === pObj.code);
-        const sorted = filtered.sort((a, b) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true, sensitivity: 'base' }));
-        return sorted.map(d => {
-          const prefix = d.type ? d.type.trim() : 'ស្រុក';
-          return `${prefix}${d.name_kh.trim()}`;
-        });
-      }
-    }
     return getDistrictsForProvince(studentForm.currentAddressProvince);
-  }, [dbProvinces, dbDistricts, studentForm.currentAddressProvince]);
+  }, [studentForm.currentAddressProvince]);
 
   const currentAddressCommunesList = useMemo(() => {
-    if (!studentForm.currentAddressProvince || !studentForm.currentAddressDistrict) return [];
-    if (dbProvinces.length > 0 && dbDistricts.length > 0 && dbCommunes.length > 0) {
-      const pObj = dbProvinces.find(p => p.name_kh === studentForm.currentAddressProvince || p.name_en === studentForm.currentAddressProvince);
-      if (pObj) {
-        const dObj = dbDistricts.find(d => {
-          if (d.province_code !== pObj.code) return false;
-          return normalizeName(d.name_kh) === normalizeName(studentForm.currentAddressDistrict) || d.name_en === studentForm.currentAddressDistrict;
-        });
-        if (dObj) {
-          const filtered = dbCommunes.filter(c => c.district_code === dObj.code);
-          const sorted = filtered.sort((a, b) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true, sensitivity: 'base' }));
-          return sorted.map(c => {
-            const prefix = c.type ? c.type.trim() : 'ឃុំ';
-            return `${prefix}${c.name_kh.trim()}`;
-          });
-        }
-      }
-    }
     return getCommunesForDistrict(studentForm.currentAddressProvince, studentForm.currentAddressDistrict);
-  }, [dbProvinces, dbDistricts, dbCommunes, studentForm.currentAddressProvince, studentForm.currentAddressDistrict]);
+  }, [studentForm.currentAddressProvince, studentForm.currentAddressDistrict]);
 
   const currentAddressVillagesList = useMemo(() => {
-    if (!studentForm.currentAddressProvince || !studentForm.currentAddressDistrict || !studentForm.currentAddressCommune) return [];
-    if (dbProvinces.length > 0 && dbDistricts.length > 0 && dbCommunes.length > 0 && dbVillages.length > 0) {
-      const pObj = dbProvinces.find(p => p.name_kh === studentForm.currentAddressProvince || p.name_en === studentForm.currentAddressProvince);
-      if (pObj) {
-        const dObj = dbDistricts.find(d => {
-          if (d.province_code !== pObj.code) return false;
-          return normalizeName(d.name_kh) === normalizeName(studentForm.currentAddressDistrict) || d.name_en === studentForm.currentAddressDistrict;
-        });
-        if (dObj) {
-          const cObj = dbCommunes.find(c => {
-            if (c.district_code !== dObj.code) return false;
-            return normalizeName(c.name_kh) === normalizeName(studentForm.currentAddressCommune) || c.name_en === studentForm.currentAddressCommune;
-          });
-          if (cObj) {
-            const filtered = dbVillages.filter(v => v.commune_code === cObj.code);
-            const sorted = filtered.sort((a, b) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true, sensitivity: 'base' }));
-            return sorted.map(v => {
-              const prefix = v.type ? v.type.trim() : 'ភូមិ';
-              return `${prefix}${v.name_kh.trim()}`;
-            });
-          }
-        }
-      }
-    }
-    return getVillagesForCommune(studentForm.currentAddressProvince, studentForm.currentAddressCommune);
-  }, [dbProvinces, dbDistricts, dbCommunes, dbVillages, studentForm.currentAddressProvince, studentForm.currentAddressDistrict, studentForm.currentAddressCommune]);
+    return getVillagesForCommune(studentForm.currentAddressProvince, studentForm.currentAddressDistrict, studentForm.currentAddressCommune);
+  }, [studentForm.currentAddressProvince, studentForm.currentAddressDistrict, studentForm.currentAddressCommune]);
 
   const handlePobProvinceChange = (provinceValue: string) => {
     setStudentForm({
