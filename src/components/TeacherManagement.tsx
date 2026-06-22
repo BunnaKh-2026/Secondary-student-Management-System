@@ -22,8 +22,30 @@ export default function TeacherManagement({
   onUpdateAttendance,
   activeSubTab = 'list',
 }: TeacherManagementProps) {
-  // Search & Filter
+   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Toast state
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'info' = 'success') => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    setToast({ message, type });
+    toastTimeoutRef.current = setTimeout(() => {
+      setToast(null);
+    }, 4000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Modal / Form States
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -164,6 +186,7 @@ export default function TeacherManagement({
       // Update
       const updated = teachers.map(t => t.id === editingTeacher.id ? { ...t, ...formData } : t);
       onUpdateTeachers(updated);
+      showToast(`បានកែសម្រួលព័ត៌មានគ្រូបង្រៀនឈ្មោះ "${formData.name}" ដោយជោគជ័យ។`);
     } else {
       // Create new
       const newTch: Teacher = {
@@ -171,6 +194,7 @@ export default function TeacherManagement({
         ...formData,
       };
       onUpdateTeachers([...teachers, newTch]);
+      showToast(`បានចុះឈ្មោះគ្រូបង្រៀនថ្មីឈ្មោះ "${formData.name}" ទទួលបានជោគជ័យ!`);
     }
     setIsFormOpen(false);
   };
@@ -272,50 +296,62 @@ export default function TeacherManagement({
   return (
     <div id="school-teachers-section" className="space-y-6">
       {/* Tab Header Selector */}
-      <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-xs">
-        <div className="space-y-1">
-          <h1 className="text-xl font-bold text-slate-800 font-sans">{header.title}</h1>
-          <p className="text-slate-500 text-xs sm:text-sm font-semibold">{header.desc}</p>
+      {activeSubTab !== 'list' && (
+        <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-xs">
+          <div className="space-y-1">
+            <h1 className="text-xl font-bold text-slate-800 font-sans">{header.title}</h1>
+            <p className="text-slate-500 text-xs sm:text-sm font-semibold">{header.desc}</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ៣.១-៣.២ SUBTAB: TEACHERS LIST & IDENTITY BADGES */}
       {activeSubTab === 'list' && (
-        <div className="space-y-4">
-          <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-xs flex flex-col sm:flex-row items-center justify-start gap-3">
-            <button
-              onClick={handleOpenAdd}
-              className="w-full sm:w-auto px-4 py-2 bg-white border border-purple-600 hover:bg-purple-50 text-purple-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-            >
-              <UserPlus className="w-4 h-4 text-purple-600" />
-              ចុះឈ្មោះគ្រូថ្មី
-            </button>
-
-            <button
-              onClick={() => setIsDeleteAllOpen(true)}
-              disabled={teachers.length === 0}
-              className="w-full sm:w-auto px-4 py-2 bg-white border border-rose-600 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed text-rose-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-            >
-              <Trash2 className="w-4 h-4 text-rose-600" />
-              លុបទិន្នន័យ
-            </button>
-
-            <div className="relative w-full sm:w-72">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <Search className="w-4 h-4" />
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-5">
+          {/* Integrated Header Container */}
+          <div className="border-b border-slate-100 pb-4 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <h1 className="text-lg font-bold text-slate-800 tracking-tight">ព័ត៌មានគ្រូបង្រៀន</h1>
+            
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+              {/* Search input placed directly on the left of action buttons */}
+              <div className="relative w-full sm:w-48">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <Search className="w-4 h-4" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="ស្វែងរកគ្រូ"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="block w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:ring-1 focus:ring-teal-500 outline-none"
+                />
               </div>
-              <input
-                type="text"
-                placeholder="ស្វែងរកគ្រូ (ឈ្មោះ មុខវិជ្ជា លេខកូដ...)"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="block w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:ring-1 focus:ring-teal-500 outline-none"
-              />
+
+              <div className="flex gap-2 w-full sm:w-auto shrink-0">
+                <button
+                  type="button"
+                  onClick={handleOpenAdd}
+                  className="flex-1 sm:flex-none px-4 py-2 bg-white border border-purple-600 hover:bg-purple-50 text-purple-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                >
+                  <UserPlus className="w-4 h-4 text-purple-600 shrink-0" />
+                  ចុះឈ្មោះគ្រូថ្មី
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsDeleteAllOpen(true)}
+                  disabled={teachers.length === 0}
+                  className="flex-1 sm:flex-none px-4 py-2 bg-white border border-rose-600 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed text-rose-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4 text-rose-600 shrink-0" />
+                  លុបទិន្នន័យ
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* List Table */}
-          <div className="bg-white rounded-xl border border-slate-100 shadow-xs overflow-hidden">
+          {/* List Table - Integrated under the same white container */}
+          <div className="border border-slate-100 rounded-none overflow-hidden shadow-xs">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -969,6 +1005,24 @@ export default function TeacherManagement({
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {/* TOAST NOTIFICATION FEEDBACK */}
+      {toast && (
+        <div className="fixed bottom-5 right-5 z-[200] flex bg-white border-l-4 border-emerald-500 shadow-xl rounded-xl p-4 items-center gap-3 max-w-sm border border-slate-100 transition-all duration-300 transform scale-100 animate-in fade-in slide-in-from-bottom-4">
+          <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-full shrink-0">
+            <CheckCircle className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-slate-800 text-xs font-bold font-sans">ជោគជ័យ</p>
+            <p className="text-slate-600 text-[11px] font-semibold">{toast.message}</p>
+          </div>
+          <button 
+            onClick={() => setToast(null)}
+            className="text-slate-350 hover:text-slate-500 ml-auto focus:outline-none cursor-pointer p-0.5 hover:bg-slate-50 rounded-md transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
     </div>

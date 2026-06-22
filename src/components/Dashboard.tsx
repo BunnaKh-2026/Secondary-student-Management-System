@@ -13,6 +13,78 @@ interface DashboardProps {
   onNavigate: (tab: string, activeId?: string) => void;
 }
 
+function getKhmerLunarDate(gregorianDate: Date): string {
+  const khmerWeekdays = ['អាទិត្យ', 'ចន្ទ', 'អង្គារ', 'ពុធ', 'ព្រហស្បតិ៍', 'សុក្រ', 'សៅរ៍'];
+  const khmerMonths = ['មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា', 'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'];
+  
+  const toKhmerDigits = (num: number | string): string => {
+    const digits: { [key: string]: string } = {
+      '0': '០', '1': '១', '2': '២', '3': '៣', '4': '៤', '5': '៥', '6': '៦', '7': '៧', '8': '៨', '9': '៩'
+    };
+    return String(num).split('').map(char => digits[char] || char).join('');
+  };
+
+  const dayOfWeek = khmerWeekdays[gregorianDate.getDay()];
+  const solarDay = toKhmerDigits(gregorianDate.getDate());
+  const solarMonth = khmerMonths[gregorianDate.getMonth()];
+  const solarYear = toKhmerDigits(gregorianDate.getFullYear());
+
+  const zodiac = "ឆ្នាំមមី";
+  const era = "អដ្ឋស័ក";
+  const BE = "ព.ស.២៥៧០";
+
+  const refMidnight = new Date(2026, 5, 15);
+  const currentMidnight = new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), gregorianDate.getDate());
+  
+  const diffTime = currentMidnight.getTime() - refMidnight.getTime();
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+  let lunarMonth = "";
+  let lunarDayStr = "";
+  
+  if (diffDays >= 0) {
+    if (diffDays < 30) {
+      lunarMonth = "ខែបឋមាសាឍ";
+      lunarDayStr = getDayOfCycle(diffDays, 30);
+    } else if (diffDays < 60) {
+      lunarMonth = "ខែទុតិយាសាឍ";
+      lunarDayStr = getDayOfCycle(diffDays - 30, 30);
+    } else if (diffDays < 89) {
+      lunarMonth = "ខែស្រាពណ៍";
+      lunarDayStr = getDayOfCycle(diffDays - 60, 29);
+    } else if (diffDays < 119) {
+      lunarMonth = "ខែភទ្របទ";
+      lunarDayStr = getDayOfCycle(diffDays - 89, 30);
+    } else if (diffDays < 148) {
+      lunarMonth = "ខែអស្សុជ";
+      lunarDayStr = getDayOfCycle(diffDays - 119, 29);
+    } else {
+      lunarMonth = "ខែកត្តិក";
+      lunarDayStr = getDayOfCycle(diffDays - 148, 30);
+    }
+  } else {
+    if (diffDays >= -29) {
+      lunarMonth = "ខែជេស្ឋ";
+      lunarDayStr = getDayOfCycle(diffDays + 29, 29);
+    } else {
+      lunarMonth = "ខែពិសាខ";
+      lunarDayStr = getDayOfCycle(diffDays + 59, 30);
+    }
+  }
+
+  function getDayOfCycle(index: number, monthLength: number): string {
+    const dayNum = index + 1;
+    if (dayNum <= 15) {
+      return `${toKhmerDigits(dayNum)}កើត`;
+    } else {
+      const waningDay = dayNum - 15;
+      return `${toKhmerDigits(waningDay)}រោច`;
+    }
+  }
+
+  return `ថ្ងៃ${dayOfWeek} ${lunarDayStr} ${lunarMonth} ${zodiac} ${era} ${BE} ត្រូវនឹងថ្ងៃទី${solarDay} ខែ${solarMonth} គ.ស.${solarYear}`;
+}
+
 export default function Dashboard({
   teachers,
   students,
@@ -55,23 +127,16 @@ export default function Dashboard({
   return (
     <div id="school-dashboard-view" className="space-y-6">
       {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-emerald-600 to-teal-700 rounded-2xl p-6 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-2">
+      <div className="bg-gradient-to-r from-emerald-600 to-teal-700 rounded-2xl p-6 text-white shadow-sm flex flex-col justify-center gap-2">
+        <div className="flex items-center gap-2.5">
+          <School className="w-5 h-5 text-yellow-300" />
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight">
             {schoolInfo.schoolName || "ប្រព័ន្ធគ្រប់គ្រងសាលារៀនមធ្យមសិក្សា"}
           </h1>
-          <p className="text-emerald-100 font-medium text-sm md:text-base">
-            សូមស្វាគមន៍មកកាន់ប្រព័ន្ធគ្រប់គ្រងការងាររដ្ឋបាល និងលទ្ធផលសិក្សារបស់សាលា
-          </p>
         </div>
-        <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-xl border border-white/20 text-right">
-          <div className="flex items-center gap-2 text-emerald-100 text-xs font-mono font-semibold mb-1">
-            <Calendar className="w-3.5 h-3.5 text-yellow-300 animate-pulse" />
-            <span>កាលបរិច្ឆេទថ្ងៃនេះ</span>
-          </div>
-          <div className="text-xs leading-relaxed md:text-sm font-semibold text-white">
-            {formattedDateKh}
-          </div>
+        <div className="text-xs md:text-sm text-emerald-100/90 font-semibold pl-7 flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-yellow-300 shrink-0" />
+          <span>{getKhmerLunarDate(new Date())}</span>
         </div>
       </div>
 

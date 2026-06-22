@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { School, CheckCircle, Hash } from 'lucide-react';
+import { School, CheckCircle, Hash, Trash2 } from 'lucide-react';
 import { SchoolInfo } from '../types';
 import { 
   getProvincesList, 
@@ -15,6 +15,8 @@ interface SchoolSettingsProps {
 
 export default function SchoolSettings({ schoolInfo, onSave }: SchoolSettingsProps) {
   const [formData, setFormData] = useState<SchoolInfo>({ ...schoolInfo });
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+
   useEffect(() => {
     setFormData({ ...schoolInfo });
   }, [schoolInfo]);
@@ -73,17 +75,40 @@ export default function SchoolSettings({ schoolInfo, onSave }: SchoolSettingsPro
     onSave(updated);
   };
 
+  const handleConfirmDelete = () => {
+    const emptyInfo: SchoolInfo = {
+      schoolType: '',
+      schoolName: '',
+      schoolCode: '',
+      province: '',
+      district: '',
+      commune: '',
+      village: '',
+      directorName: '',
+      directorGender: 'ប្រុស'
+    };
+    setFormData(emptyInfo);
+    onSave(emptyInfo);
+    setIsConfirmDeleteOpen(false);
+  };
+
   return (
     <div id="school-settings-section" className="w-full max-w-7xl mx-auto space-y-6 md:max-w-none">
-      {/* Intro Header */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-xl font-medium text-slate-850 tracking-tight">ព័ត៌មានសាលារៀន</h1>
-          <p className="text-slate-500 text-xs sm:text-sm font-medium">គ្រប់គ្រងព័ត៌មានទូទៅរបស់សាលារៀន</p>
-        </div>
-      </div>
-
       <div className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden">
+        {/* Card Header integrated with the form block */}
+        <div className="border-b border-slate-100 p-6 flex flex-wrap gap-4 items-center justify-between">
+          <h1 className="text-lg font-bold text-slate-800 tracking-tight">ព័ត៌មានសាលារៀន</h1>
+          <button
+            type="button"
+            onClick={() => setIsConfirmDeleteOpen(true)}
+            className="px-4 py-2 bg-white hover:bg-rose-50 border border-rose-300 text-rose-600 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-1.5"
+            id="delete-school-info-btn"
+          >
+            <Trash2 className="w-4 h-4 text-rose-600 shrink-0" />
+            លុបទិន្នន័យ
+          </button>
+        </div>
+
         {/* Form Fields */}
         <div className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
@@ -265,6 +290,40 @@ export default function SchoolSettings({ schoolInfo, onSave }: SchoolSettingsPro
           </div>
         </div>
       </div>
+
+      {isConfirmDeleteOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-[9999] animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="p-2 bg-rose-50 text-rose-600 rounded-full">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900">បញ្ជាក់ការលុបទិន្នន័យ</h3>
+            </div>
+            
+            <p className="text-slate-600 text-xs leading-relaxed font-semibold">
+              តើអ្នកពិតជាចង់លុបទិន្នន័យព័ត៌មានសាលារៀននេះមែនទេ? រាល់ព័ត៌មានដែលបានកំណត់ទាំងអស់នឹងត្រូវលុបសម្អាតឡើងវិញ។
+            </p>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsConfirmDeleteOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition duration-150 cursor-pointer"
+              >
+                បោះបង់
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition duration-150 cursor-pointer"
+              >
+                យល់ព្រមលុប
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

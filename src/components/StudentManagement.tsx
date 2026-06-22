@@ -294,6 +294,28 @@ export default function StudentManagement({
   const [localMonths, setLocalMonths] = useState<{ [classroomId: string]: string[] }>({});
   const [successToast, setSuccessToast] = useState<{ message: string, classroomId: string } | null>(null);
 
+  // Toast state for student registration
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'info' = 'success') => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    setToast({ message, type });
+    toastTimeoutRef.current = setTimeout(() => {
+      setToast(null);
+    }, 4000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     const subs: { [key: string]: any[] } = {};
     const mons: { [key: string]: string[] } = {};
@@ -792,12 +814,14 @@ export default function StudentManagement({
     if (editingStudent) {
       const updated = students.map(s => s.id === editingStudent.id ? { ...s, ...finalFormData } : s);
       onUpdateStudents(updated);
+      showToast(`បានកែសម្រួលព័ត៌មានសិស្សឈ្មោះ "${finalFormData.nameKhmer}" ដោយជោគជ័យ។`);
     } else {
       const newStd: Student = {
         id: `STD-${Date.now()}`,
         ...finalFormData,
       };
       onUpdateStudents([...students, newStd]);
+      showToast(`បានចុះឈ្មោះសិស្សថ្មីឈ្មោះ "${finalFormData.nameKhmer}" ទទួលបានជោគជ័យ!`);
     }
     setIsStudentModalOpen(false);
   };
@@ -856,15 +880,24 @@ export default function StudentManagement({
   return (
     <div id="school-students-section" className="space-y-6">
       {/* Header Panel with White Background "ក្បាលទំព័រ ត្រូវបន្ថែមផ្ទៃសពីខាងក្រោយ" */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-1">
-        <h1 className={`font-medium text-slate-850 tracking-tight ${header.title === 'បញ្ជីថ្នាក់រៀន' ? 'text-lg' : 'text-xl'}`}>{header.title}</h1>
-        <p className="text-slate-500 text-xs sm:text-sm font-medium">{header.desc}</p>
-      </div>
+      {activeSubTab !== 'classes_list' && (
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-1">
+          <h1 className={`font-medium text-slate-850 tracking-tight ${header.title === 'បញ្ជីថ្នាក់រៀន' ? 'text-lg' : 'text-xl'}`}>{header.title}</h1>
+          <p className="text-slate-500 text-xs sm:text-sm font-medium">{header.desc}</p>
+        </div>
+      )}
 
       {/* ៤.០. SUBTAB: CLASSES MANAGEMENT (បញ្ជីថ្នាក់) */}
       {activeSubTab === 'classes_list' && (
         <div className="w-full bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-4 flex flex-col justify-between animate-fade-in text-slate-750">
-          <div className="border-b border-slate-100 pb-3 flex flex-wrap gap-2 items-center justify-between">
+          <div className="border-b border-slate-100 pb-4 flex flex-wrap gap-4 items-center justify-between">
+            <div className="flex items-center gap-3">
+              <h1 className="text-lg font-bold text-slate-800 tracking-tight">បញ្ជីថ្នាក់រៀន</h1>
+              <span className="px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full text-xs font-bold font-sans" id="classroom-list-total">
+                សរុប ៖ {classrooms.length} ថ្នាក់
+              </span>
+            </div>
+            
             <div className="flex gap-2">
               <button
                 onClick={() => setIsCreateClassListModalOpen(true)}
@@ -883,9 +916,6 @@ export default function StudentManagement({
                 លុបទិន្នន័យ
               </button>
             </div>
-            <span className="px-3 py-1 bg-white text-emerald-600 border border-emerald-500 rounded-full text-xs font-bold font-sans" id="classroom-list-total">
-              សរុប ៖ {classrooms.length} ថ្នាក់
-            </span>
           </div>
 
           {/* CLASSROOM LIST DIRECTORY CREATION FORM MODAL */}
@@ -1108,8 +1138,9 @@ export default function StudentManagement({
             document.body
           )}
 
+          <div className="border border-slate-100 rounded-none overflow-hidden shadow-xs">
             <div className="overflow-x-auto">
-              <table className="w-full table-auto text-left whitespace-nowrap">
+              <table className="w-full table-auto text-left whitespace-nowrap border-collapse">
                 <thead>
                   <tr className="bg-emerald-700 text-white text-xs font-semibold tracking-wider border-b border-emerald-800" id="classroom-list-th-row">
                     <th className="py-3 px-4 text-center font-bold">ល.រ</th>
@@ -1183,10 +1214,9 @@ export default function StudentManagement({
                 </tbody>
               </table>
             </div>
+          </div>
 
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100/70 text-[10px] text-slate-400 leading-relaxed font-semibold italic">
-              * បញ្ជាក់៖ រាល់ថ្នាក់ដែលត្រូវបានបង្កើតនៅទីនេះ នឹងបង្ហាញផ្ទាំងគ្រប់គ្រងពិន្ទុ និងការបញ្ចូលវត្តមាននៅផ្នែក "គ្រប់គ្រងថ្នាក់រៀន"។
-            </div>
+
 
             {/* EDIT modal portal */}
             {editingClassroom && createPortal(
@@ -2490,6 +2520,24 @@ export default function StudentManagement({
               ប័ណ្ណផ្លូវការសម្រាប់វត្តមានសិស្ស
             </div>
           </div>
+        </div>
+      )}
+      {/* TOAST NOTIFICATION FEEDBACK */}
+      {toast && (
+        <div className="fixed bottom-5 right-5 z-[200] flex bg-white border-l-4 border-emerald-500 shadow-xl rounded-xl p-4 items-center gap-3 max-w-sm border border-slate-100 transition-all duration-300 transform scale-100 animate-in fade-in slide-in-from-bottom-4">
+          <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-full shrink-0">
+            <CheckCircle className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-slate-800 text-xs font-bold font-sans">ជោគជ័យ</p>
+            <p className="text-slate-600 text-[11px] font-semibold">{toast.message}</p>
+          </div>
+          <button 
+            onClick={() => setToast(null)}
+            className="text-slate-350 hover:text-slate-500 ml-auto focus:outline-none cursor-pointer p-0.5 hover:bg-slate-50 rounded-md transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
     </div>

@@ -231,140 +231,139 @@ export default function App() {
           {/* Navigation Items (Khmer Characters corresponding strictly to Requirements) */}
           <nav className="pl-1.5 pr-2.5 pt-4 pb-4 space-y-0.5 flex-1">
 
-            {/* ១. ផ្ទាំងទំព័រដើម (Dashboard) */}
-            <button
-              onClick={() => handleNavigate('dashboard')}
-              className={`w-full flex items-center gap-2 px-2 py-1.75 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'dashboard' && !selectedClassroomId
-                  ? 'bg-teal-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              <LayoutDashboard className="w-4 h-4 shrink-0" />
-              ទំព័រដើម
-            </button>
+            {!selectedClassroomId && (
+              <>
+                {/* ១. ផ្ទាំងទំព័រដើម (Dashboard) */}
+                <button
+                  onClick={() => handleNavigate('dashboard')}
+                  className={`w-full flex items-center gap-2 px-2 py-1.75 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    activeTab === 'dashboard' && !selectedClassroomId
+                      ? 'bg-teal-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <LayoutDashboard className="w-4 h-4 shrink-0" />
+                  ទំព័រដើម
+                </button>
 
-            {/* ២. កំណត់ព័ត៌មាន (Settings) */}
-            <button
-              onClick={() => handleNavigate('settings')}
-              className={`w-full flex items-center gap-2 px-2 py-1.75 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'settings'
-                  ? 'bg-teal-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              <Settings className="w-4 h-4 shrink-0" />
-              ព័ត៌មានសាលា
-            </button>
+                {/* ២. កំណត់ព័ត៌មាន (Settings) */}
+                <button
+                  onClick={() => handleNavigate('settings')}
+                  className={`w-full flex items-center gap-2 px-2 py-1.75 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    activeTab === 'settings'
+                      ? 'bg-teal-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <Settings className="w-4 h-4 shrink-0" />
+                  ព័ត៌មានសាលា
+                </button>
 
-            {/* ៣. បញ្ជីថ្នាក់រៀន (Class list) */}
-            <button
-              onClick={() => {
-                handleNavigate('students');
-                setActiveStudentSubTab('classes_list');
-              }}
-              className={`w-full flex items-center gap-2 px-2 py-1.75 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'students' && activeStudentSubTab === 'classes_list' && !selectedClassroomId
-                  ? 'bg-teal-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              <School className="w-4 h-4 shrink-0" />
-              បញ្ជីថ្នាក់រៀន
-            </button>
+                {/* ៣. បញ្ជីថ្នាក់រៀន (Class list) */}
+                <button
+                  onClick={() => {
+                    handleNavigate('students');
+                    setActiveStudentSubTab('classes_list');
+                  }}
+                  className={`w-full flex items-center gap-2 px-2 py-1.75 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    activeTab === 'students' && activeStudentSubTab === 'classes_list' && !selectedClassroomId
+                      ? 'bg-teal-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <School className="w-4 h-4 shrink-0" />
+                  បញ្ជីថ្នាក់រៀន
+                </button>
 
-            {/* ៤. បញ្ជីឈ្មោះគ្រូ (Teacher list) */}
-            <button
-              onClick={() => {
-                handleNavigate('teachers');
-                setActiveTeacherSubTab('list');
-              }}
-              className={`w-full flex items-center gap-2 px-2 py-1.75 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'teachers' && activeTeacherSubTab === 'list'
-                  ? 'bg-teal-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              <Users className="w-4 h-4 shrink-0" />
-              បញ្ជីឈ្មោះគ្រូ
-            </button>
+                {/* ៤. បញ្ជីឈ្មោះគ្រូ (Teacher list) */}
+                <button
+                  onClick={() => {
+                    handleNavigate('teachers');
+                    setActiveTeacherSubTab('list');
+                  }}
+                  className={`w-full flex items-center gap-2 px-2 py-1.75 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    activeTab === 'teachers' && activeTeacherSubTab === 'list'
+                      ? 'bg-teal-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <Users className="w-4 h-4 shrink-0" />
+                  បញ្ជីឈ្មោះគ្រូ
+                </button>
 
 
-            {/* បញ្ជីឈ្មោះសិស្ស (Student List) */}
-            <button
-              onClick={() => {
-                handleNavigate('students');
-                setActiveStudentSubTab('students');
-              }}
-              className={`w-full flex items-center gap-2 px-2 py-1.75 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'students' && activeStudentSubTab === 'students' && !selectedClassroomId
-                  ? 'bg-teal-600 text-white shadow-xs font-extrabold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              <GraduationCap className="w-4 h-4 shrink-0" />
-              បញ្ជីឈ្មោះសិស្ស
-            </button>
+                {/* បញ្ជីឈ្មោះសិស្ស (Student List) */}
+                <button
+                  onClick={() => {
+                    handleNavigate('students');
+                    setActiveStudentSubTab('students');
+                  }}
+                  className={`w-full flex items-center gap-2 px-2 py-1.75 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    activeTab === 'students' && activeStudentSubTab === 'students' && !selectedClassroomId
+                      ? 'bg-teal-600 text-white shadow-xs font-extrabold'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <GraduationCap className="w-4 h-4 shrink-0" />
+                  បញ្ជីឈ្មោះសិស្ស
+                </button>
 
-            {/* ប៊ូតុង មេគុណ (Coefficients) */}
-            <button
-              onClick={() => {
-                handleNavigate('students', 'coefficients');
-              }}
-              className={`w-full flex items-center gap-2 px-2 py-1.75 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'students' && activeStudentSubTab === 'coefficients' && !selectedClassroomId
-                  ? 'bg-teal-600 text-white shadow-xs font-extrabold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              <Percent className="w-4 h-4 shrink-0" />
-              មេគុណ
-            </button>
+                {/* ប៊ូតុង មេគុណ (Coefficients) */}
+                <button
+                  onClick={() => {
+                    handleNavigate('students', 'coefficients');
+                  }}
+                  className={`w-full flex items-center gap-2 px-2 py-1.75 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    activeTab === 'students' && activeStudentSubTab === 'coefficients' && !selectedClassroomId
+                      ? 'bg-teal-600 text-white shadow-xs font-extrabold'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <Percent className="w-4 h-4 shrink-0" />
+                  មេគុណ
+                </button>
 
-            {/* ប៊ូតុង ខែយកពិន្ទុ (Months) */}
-            <button
-              onClick={() => {
-                handleNavigate('students', 'months');
-              }}
-              className={`w-full flex items-center gap-2 px-2 py-1.75 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'students' && activeStudentSubTab === 'months' && !selectedClassroomId
-                  ? 'bg-teal-600 text-white shadow-xs font-extrabold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              <Calendar className="w-4 h-4 shrink-0" />
-              ខែយកពិន្ទុ
-            </button>
+                {/* ប៊ូតុង ខែយកពិន្ទុ (Months) */}
+                <button
+                  onClick={() => {
+                    handleNavigate('students', 'months');
+                  }}
+                  className={`w-full flex items-center gap-2 px-2 py-1.75 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    activeTab === 'students' && activeStudentSubTab === 'months' && !selectedClassroomId
+                      ? 'bg-teal-600 text-white shadow-xs font-extrabold'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <Calendar className="w-4 h-4 shrink-0" />
+                  ខែយកពិន្ទុ
+                </button>
 
-            {/* ប៊ូតុង គ្រប់គ្រងថ្នាក់ (Classroom management) */}
-            <button
-              onClick={() => {
-                handleNavigate('students', 'classes');
-              }}
-              className={`w-full flex items-center gap-2 px-2 py-1.75 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'students' && activeStudentSubTab === 'classes' && !selectedClassroomId
-                  ? 'bg-teal-600 text-white shadow-xs font-extrabold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              <School className="w-4 h-4 shrink-0" />
-              គ្រប់គ្រងថ្នាក់
-            </button>
+                {/* ប៊ូតុង គ្រប់គ្រងថ្នាក់ (Classroom management) */}
+                <button
+                  onClick={() => {
+                    handleNavigate('students', 'classes');
+                  }}
+                  className={`w-full flex items-center gap-2 px-2 py-1.75 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    activeTab === 'students' && activeStudentSubTab === 'classes' && !selectedClassroomId
+                      ? 'bg-teal-600 text-white shadow-xs font-extrabold'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <School className="w-4 h-4 shrink-0" />
+                  គ្រប់គ្រងថ្នាក់
+                </button>
+              </>
+            )}
 
             {selectedClassroomId && (
               <div className="pt-2.5 border-t border-slate-200 mt-2.5 space-y-1">
-                <div className="flex items-center gap-1.5 px-2 mb-1.5">
-                  <button
-                    onClick={() => handleNavigate('students', 'classes')}
-                    className="p-1 hover:bg-slate-100 text-slate-500 hover:text-slate-900 rounded-lg transition duration-150 cursor-pointer border border-slate-200 bg-white shadow-xs flex items-center justify-center shrink-0"
-                    title="ត្រឡប់ក្រោយ"
-                  >
-                    <ArrowLeft className="w-3.5 h-3.5" />
-                  </button>
-                  <span className="text-[12px] font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">
-                    ថ្នាក់សកម្មបច្ចុប្បន្ន
-                  </span>
-                </div>
+                <button
+                  onClick={() => handleNavigate('students', 'classes')}
+                  className="w-full flex items-center gap-2 px-2 py-2 bg-orange-50 hover:bg-orange-100 border border-orange-300 rounded-xl text-xs font-bold text-orange-600 transition-all cursor-pointer whitespace-nowrap mb-1.5"
+                >
+                  <ArrowLeft className="w-4 h-4 shrink-0 text-orange-600" />
+                  ត្រឡប់ក្រោយ
+                </button>
                 <div className="relative px-1">
                   <select
                     value={selectedClassroomId || ''}
