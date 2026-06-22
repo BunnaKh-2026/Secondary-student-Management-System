@@ -12,6 +12,14 @@ import {
   getCommunesForDistrict, 
   getVillagesForCommune 
 } from '../data/locationData';
+import { 
+  STANDARD_SUBJECTS_LAYOUT, 
+  getSubjectCategoryKey, 
+  getDefaultSubjectsForClass, 
+  getStandardSubjectsForCategory, 
+  getClassroomsForCategory,
+  SubjectLayoutItem
+} from '../data/subjectLayouts';
 
 export const DEFAULT_SUBJECTS = [
   { id: '1', name: 'ភាសាខ្មែរ', coefficient: 2, isActive: true },
@@ -292,6 +300,7 @@ export default function StudentManagement({
 
   const [localSubjects, setLocalSubjects] = useState<{ [classroomId: string]: any[] }>({});
   const [localMonths, setLocalMonths] = useState<{ [classroomId: string]: string[] }>({});
+  const [categorySubjects, setCategorySubjects] = useState<{ [catId: string]: any[] }>({});
   const [successToast, setSuccessToast] = useState<{ message: string, classroomId: string } | null>(null);
 
   // Toast state for student registration
@@ -327,6 +336,49 @@ export default function StudentManagement({
     
     setLocalSubjects(subs);
     setLocalMonths(mons);
+
+    // Initialize category subjects for each category active in the school
+    const categoriesList = [
+      { id: 'G7', name: 'កម្រិតថ្នាក់ទី៧' },
+      { id: 'G8', name: 'កម្រិតថ្នាក់ទី៨' },
+      { id: 'G9', name: 'កម្រិតថ្នាក់ទី៩' },
+      { id: 'G10', name: 'កម្រិតថ្នាក់ទី១០' },
+      { id: 'G11_SC', name: 'កម្រិតថ្នាក់ទី១១ (វិទ្យាសាស្ត្រ)' },
+      { id: 'G11_SS', name: 'កម្រិតថ្នាក់ទី១១ (សង្គម)' },
+      { id: 'G12_SC', name: 'កម្រិតថ្នាក់ទី១២ (វិទ្យាសាស្ត្រ)' },
+      { id: 'G12_SS', name: 'កម្រិតថ្នាក់ទី១២ (សង្គម)' }
+    ];
+
+    const updatedCategorySubjects: { [catId: string]: any[] } = {};
+
+    categoriesList.forEach(cat => {
+      const clsInCat = getClassroomsForCategory(cat.id, classrooms);
+      if (clsInCat.length === 0) return;
+
+      // Find any classroom that has subjects configured
+      const customizedClass = clsInCat.find(c => c.preStartConfig?.subjects && c.preStartConfig.subjects.length > 0);
+      const defaultLayout = getStandardSubjectsForCategory(cat.id);
+      const existingSubjects = customizedClass?.preStartConfig?.subjects || [];
+
+      // Merge layouts
+      const merged = defaultLayout.map(def => {
+        const match = existingSubjects.find(ex => ex.name === def.name || ex.id === def.id);
+        if (match) {
+          const maxScore = match.maxScore !== undefined ? match.maxScore : (match.coefficient !== undefined ? match.coefficient * 50 : def.maxScore);
+          return {
+            ...def,
+            isActive: match.isActive !== undefined ? match.isActive : def.isActive,
+            maxScore,
+            coefficient: maxScore / 50,
+          };
+        }
+        return def;
+      });
+
+      updatedCategorySubjects[cat.id] = merged;
+    });
+
+    setCategorySubjects(updatedCategorySubjects);
   }, [classrooms]);
 
   const handleSaveClassroomConfig = (classId: string, updatedSubjects: any[]) => {
@@ -357,6 +409,72 @@ export default function StudentManagement({
       classroomId: classId
     });
     setTimeout(() => setSuccessToast(null), 3000);
+  };
+
+  const handleCategoryToggleSub = (catId: string, subId: string) => {
+    setCategorySubjects(prev => {
+      const current = prev[catId] || [];
+      const updated = current.map(s => s.id === subId ? { ...s, isActive: !s.isActive } : s);
+      return { ...prev, [catId]: updated };
+    });
+  };
+
+  const handleCategoryMaxScoreChange = (catId: string, subId: string, val: number) => {
+    setCategorySubjects(prev => {
+      const current = prev[catId] || [];
+      const updated = current.map(s => {
+        if (s.id === subId) {
+          const maxVal = Math.max(0, val);
+          return { 
+            ...s, 
+            maxScore: maxVal,
+            coefficient: maxVal / 50
+          };
+        }
+        return s;
+      });
+      return { ...prev, [catId]: updated };
+    });
+  };
+
+  const handleSaveCategoryConfig = (catId: string, catName: string) => {
+    const updatedSubs = categorySubjects[catId];
+    if (!updatedSubs) return;
+
+    const catClassrooms = getClassroomsForCategory(catId, classrooms);
+    const catClassIds = catClassrooms.map(c => c.id);
+
+    const updatedClassrooms = classrooms.map(c => {
+      if (catClassIds.includes(c.id)) {
+        const preStartConfig = c.preStartConfig || {
+          classroomId: c.id,
+          homeTeacherName: '',
+          academicYear: '២០២៥-២០២៦',
+          semester1Months: ['វិច្ឆិកា', 'ធ្នូ', 'មករា', 'កុម្ភៈ', 'មីនា'],
+          semester2Months: ['មេសា', 'ឧសភា', 'មិថុនា', 'កក្កដា', 'សីហា'],
+          activeMonthsForAverage: ['វិច្ឆិកា', 'ធ្នូ', 'មករា', 'កុម្ភៈ', 'មីនា'],
+          subjects: []
+        };
+        return {
+          ...c,
+          preStartConfig: {
+            ...preStartConfig,
+            subjects: updatedSubs
+          }
+        };
+      }
+      return c;
+    });
+
+    onUpdateClassrooms(updatedClassrooms);
+
+    setSuccessToast({
+      message: `រក្សាទុកកម្មវិធីសិក្សាសម្រាប់ "${catName}" រួចរាល់!`,
+      classroomId: catId
+    });
+    setTimeout(() => {
+      setSuccessToast(null);
+    }, 4000);
   };
 
   const handleSaveClassroomMonths = (classId: string, updatedMonths: string[]) => {
@@ -859,7 +977,7 @@ export default function StudentManagement({
       case 'coefficients':
         return {
           title: 'មុខវិជ្ជា ពិន្ទុអតិបរមា និងមេគុណ',
-          desc: 'កំណត់ និងគ្រប់គ្រងមេគុណមុខវិជ្ជាតាមថ្នាក់នីមួយៗសម្រាប់គណនាមធ្យមភាគពិន្ទុ',
+          desc: '',
         };
       case 'months':
         return {
@@ -883,7 +1001,7 @@ export default function StudentManagement({
       {activeSubTab !== 'classes_list' && activeSubTab !== 'students' && (
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-1">
           <h1 className={`font-medium text-slate-850 tracking-tight ${header.title === 'បញ្ជីថ្នាក់រៀន' ? 'text-lg' : 'text-xl'}`}>{header.title}</h1>
-          <p className="text-slate-500 text-xs sm:text-sm font-medium">{header.desc}</p>
+          {header.desc && <p className="text-slate-500 text-xs sm:text-sm font-medium">{header.desc}</p>}
         </div>
       )}
 
@@ -1509,90 +1627,115 @@ export default function StudentManagement({
       {/* ៤.៣. SUBTAB: SUBJECT COEFFICIENTS MANAGEMENT */}
       {activeSubTab === 'coefficients' && (
         <div className="space-y-6 animate-fade-in">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {classrooms.map(cls => {
-              const currentSubs = localSubjects[cls.id] || cls.preStartConfig?.subjects || DEFAULT_SUBJECTS;
-              const hasToast = successToast?.classroomId === cls.id && successToast?.message.includes('មេគុណ');
+          {/* Header Description */}
+          <div className="bg-gradient-to-r from-violet-50 to-indigo-50 border border-violet-100 p-4 rounded-xl text-slate-700 text-xs font-medium leading-relaxed shadow-2xs">
+            ✨ <span className="font-bold text-violet-800">ការណែនាំ៖</span> រាល់ការកែប្រែនឹងត្រូវកំណត់ និងអនុវត្តទៅតាម <span className="font-bold">កម្រិតថ្នាក់ និងប្រភេទនៃថ្នាក់</span> នីមួយៗរួមគ្នា។ បើសាលាមិនមានកម្រិតថ្នាក់ខាងក្រោមណាមួយឡើយ នោះវានឹងមិនត្រូវបានបង្ហាញទេ។ រាល់ការកែប្រែ «ពិន្ទុអតិបរមា» នឹងគណនា «មេគុណ» ដោយស្វ័យប្រវត្តិតាមការយកពិន្ទុអតិបរមាចែកនឹង ៥០។
+          </div>
 
-              const handleToggleSub = (subId: string) => {
-                const updated = currentSubs.map(s => s.id === subId ? { ...s, isActive: !s.isActive } : s);
-                setLocalSubjects(prev => ({ ...prev, [cls.id]: updated }));
-              };
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {[
+              { id: 'G7', name: 'កម្រិតថ្នាក់ទី៧' },
+              { id: 'G8', name: 'កម្រិតថ្នាក់ទី៨' },
+              { id: 'G9', name: 'កម្រិតថ្នាក់ទី៩' },
+              { id: 'G10', name: 'កម្រិតថ្នាក់ទី១០' },
+              { id: 'G11_SC', name: 'កម្រិតថ្នាក់ទី១១ (វិទ្យាសាស្ត្រ)' },
+              { id: 'G11_SS', name: 'កម្រិតថ្នាក់ទី១១ (សង្គម)' },
+              { id: 'G12_SC', name: 'កម្រិតថ្នាក់ទី១២ (វិទ្យាសាស្ត្រ)' },
+              { id: 'G12_SS', name: 'កម្រិតថ្នាក់ទី១២ (សង្គម)' }
+            ]
+              .map(cat => {
+                const catClassrooms = getClassroomsForCategory(cat.id, classrooms);
+                // ONLY show if classrooms exist for this category
+                if (catClassrooms.length === 0) return null;
 
-              const handleValChange = (subId: string, val: number) => {
-                const updated = currentSubs.map(s => s.id === subId ? { ...s, coefficient: val } : s);
-                setLocalSubjects(prev => ({ ...prev, [cls.id]: updated }));
-              };
+                const currentSubs = categorySubjects[cat.id] || [];
+                const hasToast = successToast?.classroomId === cat.id;
 
-              return (
-                <div key={cls.id} className="bg-white rounded-2xl border border-slate-100 shadow-xs hover:shadow-md transition-all overflow-hidden flex flex-col justify-between">
-                  <div className="p-5 space-y-4">
-                    <div className="flex justify-between items-start border-b border-slate-100 pb-3">
-                      <div>
-                        <span className="text-[10px] bg-purple-50 text-purple-700 font-extrabold px-2.5 py-1 rounded-lg uppercase tracking-wide">
-                          កម្រិតថ្នាក់៖ ទី {cls.grade}
-                        </span>
-                        <h3 className="text-lg font-extrabold text-slate-800 mt-1">{cls.name}</h3>
-                      </div>
-                      <span className="text-xs font-semibold text-slate-400">
-                        គ្រូ៖ {cls.preStartConfig?.homeTeacherName || 'មិនទាន់កំណត់'}
-                      </span>
-                    </div>
-
-                    <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-                      {currentSubs.map(s => (
-                        <div key={s.id} className="flex items-center justify-between p-2.5 rounded-xl border border-slate-50 bg-slate-50/20 text-xs">
-                          <label className="flex items-center gap-2 cursor-pointer font-bold select-none text-slate-700">
-                            <input
-                              type="checkbox"
-                              checked={s.isActive}
-                              onChange={() => handleToggleSub(s.id)}
-                              className="w-4 h-4 text-teal-600 border-slate-200 focus:ring-teal-500 rounded cursor-pointer"
-                            />
-                            <span className={s.isActive ? 'text-slate-800' : 'text-slate-400 line-through'}>
-                              {s.name}
-                            </span>
-                          </label>
-
-                          {s.isActive && (
-                            <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-2 py-1">
-                              <span className="text-[9px] font-bold text-slate-400">មេគុណ:</span>
-                              <input
-                                type="number"
-                                step="0.5"
-                                min="1"
-                                max="4"
-                                value={s.coefficient}
-                                onChange={e => handleValChange(s.id, parseFloat(e.target.value) || 1)}
-                                className="w-10 text-center font-extrabold text-teal-600 outline-none text-xs"
-                              />
-                            </div>
-                          )}
+                return (
+                  <div key={cat.id} className="bg-white rounded-xl border border-slate-200/80 shadow-xs hover:shadow-xs transition-all overflow-hidden flex flex-col justify-between">
+                    <div className="p-5 space-y-4">
+                      {/* Header with Category Name & Affected Classes */}
+                      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-3 gap-2">
+                        <div>
+                          <span className="text-[10px] bg-violet-50 text-violet-700 font-extrabold px-2.5 py-1 rounded-md uppercase tracking-wide">
+                            កម្រិតថ្នាក់ និងប្រភេទថ្នាក់
+                          </span>
+                          <h3 className="text-base font-extrabold text-slate-800 mt-1">{cat.name}</h3>
                         </div>
-                      ))}
-                    </div>
-                  </div>
+                        <div className="text-right">
+                          <div className="text-[10px] font-bold text-slate-400">ថ្នាក់អនុវត្ត ({catClassrooms.length})</div>
+                          <div className="text-xs font-bold text-violet-600 bg-violet-50/50 border border-violet-100 px-2 py-0.5 rounded-lg mt-0.5 inline-block">
+                            {catClassrooms.map(c => c.name).join(', ')}
+                          </div>
+                        </div>
+                      </div>
 
-                  <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
-                    <div>
-                      {hasToast && (
-                        <span className="text-xs font-bold text-emerald-600 flex items-center gap-1 animate-pulse">
-                          <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
-                          បានរក្សាទុក!
-                        </span>
-                      )}
+                      {/* 2-Column Responsive Matrix of 24 Subjects */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 max-h-[460px] overflow-y-auto pr-1">
+                        {currentSubs.map(s => {
+                          const mx = s.maxScore !== undefined ? s.maxScore : 50;
+                          return (
+                            <div key={s.id} className="flex items-center justify-between p-2 rounded-lg border border-slate-100 bg-slate-50/20 text-xs hover:bg-slate-50 transition-all">
+                              <label className="flex items-center gap-2 cursor-pointer font-bold select-none text-slate-700 max-w-[130px] sm:max-w-none">
+                                <input
+                                  type="checkbox"
+                                  checked={s.isActive}
+                                  onChange={() => handleCategoryToggleSub(cat.id, s.id)}
+                                  className="w-4 h-4 text-violet-600 border-slate-200 focus:ring-violet-500 rounded cursor-pointer"
+                                />
+                                <span className={s.isActive ? 'text-slate-800 font-extrabold animate-fade-in' : 'text-slate-400 line-through'}>
+                                  {s.name}
+                                </span>
+                              </label>
+
+                              {s.isActive && (
+                                <div className="flex items-center gap-1">
+                                  {/* Max Score Input */}
+                                  <div className="flex items-center bg-white border border-slate-200 rounded-lg px-1.5 py-0.5 shrink-0">
+                                    <span className="text-[8px] font-bold text-slate-400 mr-1">ពិន្ទុ:</span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="500"
+                                      value={mx === 0 ? '' : mx}
+                                      onChange={e => handleCategoryMaxScoreChange(cat.id, s.id, parseFloat(e.target.value) || 0)}
+                                      className="w-10 text-center font-extrabold text-violet-750 outline-none text-[11px] font-sans"
+                                    />
+                                  </div>
+                                  
+                                  {/* Calculated Coefficient Indicator */}
+                                  <div className="text-[10px] font-extrabold bg-violet-50 text-violet-700 border border-violet-100 rounded-md px-1.5 py-1 select-none whitespace-nowrap">
+                                    {`× ${(mx / 50).toFixed(1).replace(/\.0$/, '')}`}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <button
-                      onClick={() => handleSaveClassroomConfig(cls.id, currentSubs)}
-                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
-                    >
-                      <Save className="w-3.5 h-3.5" />
-                      រក្សាទុក
-                    </button>
+
+                    <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        {hasToast && (
+                          <span className="text-xs font-bold text-emerald-600 flex items-center gap-1.5 animate-pulse">
+                            <CheckCircle className="w-4.5 h-4.5 text-emerald-500 shrink-0" />
+                            បានរក្សាទុក!
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleSaveCategoryConfig(cat.id, cat.name)}
+                        className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        រក្សាទុកកម្រិតនេះ
+                      </button>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+              .filter(Boolean)}
           </div>
         </div>
       )}

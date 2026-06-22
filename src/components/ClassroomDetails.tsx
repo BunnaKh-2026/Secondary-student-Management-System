@@ -7,6 +7,7 @@ import {
   Classroom, Student, StudentScore, StudentAttendance, 
   HomeTeacherTask, PreStartConfig, SubjectConfig, SchoolInfo 
 } from '../types';
+import { getDefaultSubjectsForClass } from '../data/subjectLayouts';
 
 interface ClassroomDetailsProps {
   classroom: Classroom;
@@ -54,18 +55,7 @@ export default function ClassroomDetails({
       semester1Months: ['វិច្ឆិកា', 'ធ្នូ', 'មករា', 'កុម្ភៈ', 'មីនា'],
       semester2Months: ['មេសា', 'ឧសភា', 'មិថុនា', 'កក្កដា', 'សីហា'],
       activeMonthsForAverage: ['វិច្ឆិកា', 'ធ្នូ'],
-      subjects: [
-        { id: '1', name: 'ភាសាខ្មែរ', coefficient: 2, isActive: true },
-        { id: '2', name: 'គណិតវិទ្យា', coefficient: 2, isActive: true },
-        { id: '3', name: 'រូបវិទ្យា', coefficient: 1.5, isActive: true },
-        { id: '4', name: 'គីមីវិទ្យា', coefficient: 1.5, isActive: true },
-        { id: '5', name: 'ជីវវិទ្យា', coefficient: 1, isActive: true },
-        { id: '6', name: 'ប្រវត្តិវិទ្យា', coefficient: 1, isActive: true },
-        { id: '7', name: 'ភូមិវិទ្យា', coefficient: 1, isActive: true },
-        { id: '8', name: 'សីលធម៌-ពលរដ្ឋ', coefficient: 1, isActive: true },
-        { id: '9', name: 'ភាសាបរទេស (អង់គ្លេស)', coefficient: 1, isActive: true },
-        { id: '10', name: 'ព័ត៌មានវិទ្យា', coefficient: 1, isActive: true },
-      ],
+      subjects: getDefaultSubjectsForClass(classroom.grade, classroom.classType),
     };
   }, [classroom]);
 
@@ -626,12 +616,17 @@ export default function ClassroomDetails({
                     <tr className="bg-slate-50 border-b border-slate-150 text-slate-600 font-bold text-xs uppercase">
                       <th className="px-4 py-3 text-center w-12 bg-slate-100/50">លេខរៀង</th>
                       <th className="px-4 py-3 w-40">ឈ្មោះសិស្សខ្មែរ</th>
-                      {activeConfigSubjects.map(sub => (
-                        <th key={sub.id} className="px-3 py-3 text-center min-w-[90px]">
-                          <div>{sub.name}</div>
-                          <div className="text-[10px] text-slate-400 font-medium">មេគុណ {sub.coefficient}</div>
-                        </th>
-                      ))}
+                      {activeConfigSubjects.map(sub => {
+                        const mx = sub.maxScore || (sub.coefficient * 50);
+                        return (
+                          <th key={sub.id} className="px-3 py-3 text-center min-w-[100px]">
+                            <div className="whitespace-nowrap">{sub.name}</div>
+                            <div className="text-[10px] text-slate-400 font-medium whitespace-nowrap mt-0.5">
+                              {mx} ពិន្ទុ - មេគុណ {sub.coefficient}
+                            </div>
+                          </th>
+                        );
+                      })}
                     </tr>
                   </thead>
                   <tbody>
@@ -642,6 +637,7 @@ export default function ClassroomDetails({
                         
                         {activeConfigSubjects.map(sub => {
                           const val = editingScoresLocal[s.id]?.[sub.id] || '';
+                          const mx = sub.maxScore || (sub.coefficient * 50);
                           return (
                             <td key={sub.id} className="px-3 py-2">
                               <input
@@ -653,7 +649,7 @@ export default function ClassroomDetails({
                                   cpy[s.id][sub.id] = e.target.value;
                                   setEditingScoresLocal(cpy);
                                 }}
-                                placeholder="0-50"
+                                placeholder={`0-${mx}`}
                                 className="w-full px-2 py-1 bg-slate-50 border border-slate-200 text-center text-xs font-semibold rounded-md focus:bg-white focus:border-teal-500 outline-none"
                               />
                             </td>
