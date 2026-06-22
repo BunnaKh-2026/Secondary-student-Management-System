@@ -320,7 +320,7 @@ export default function App() {
                   }`}
                 >
                   <Percent className="w-4 h-4 shrink-0" />
-                  មេគុណ
+                  មុខវិជ្ជានិងពិន្ទុ
                 </button>
 
                 {/* ប៊ូតុង ខែយកពិន្ទុ (Months) */}
@@ -335,7 +335,7 @@ export default function App() {
                   }`}
                 >
                   <Calendar className="w-4 h-4 shrink-0" />
-                  ខែយកពិន្ទុ
+                  ខែក្នុងឆមាស
                 </button>
 
                 {/* ប៊ូតុង គ្រប់គ្រងថ្នាក់ (Classroom management) */}
@@ -350,7 +350,7 @@ export default function App() {
                   }`}
                 >
                   <School className="w-4 h-4 shrink-0" />
-                  គ្រប់គ្រងថ្នាក់
+                  គ្រប់គ្រងថ្នាក់រៀន
                 </button>
               </>
             )}

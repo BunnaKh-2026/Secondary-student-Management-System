@@ -858,7 +858,7 @@ export default function StudentManagement({
         };
       case 'coefficients':
         return {
-          title: 'មេគុណតាមថ្នាក់',
+          title: 'មុខវិជ្ជា ពិន្ទុអតិបរមា និងមេគុណ',
           desc: 'កំណត់ និងគ្រប់គ្រងមេគុណមុខវិជ្ជាតាមថ្នាក់នីមួយៗសម្រាប់គណនាមធ្យមភាគពិន្ទុ',
         };
       case 'months':
@@ -880,7 +880,7 @@ export default function StudentManagement({
   return (
     <div id="school-students-section" className="space-y-6">
       {/* Header Panel with White Background "ក្បាលទំព័រ ត្រូវបន្ថែមផ្ទៃសពីខាងក្រោយ" */}
-      {activeSubTab !== 'classes_list' && (
+      {activeSubTab !== 'classes_list' && activeSubTab !== 'students' && (
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-1">
           <h1 className={`font-medium text-slate-850 tracking-tight ${header.title === 'បញ្ជីថ្នាក់រៀន' ? 'text-lg' : 'text-xl'}`}>{header.title}</h1>
           <p className="text-slate-500 text-xs sm:text-sm font-medium">{header.desc}</p>
@@ -1684,33 +1684,14 @@ export default function StudentManagement({
 
       {/* ៤.១. SUBTAB: STUDENT PROFILE CARDS DIRECTORY */}
       {activeSubTab === 'students' && (
-        <div className="space-y-4 animate-fade-in">
-          {/* Search & Class filter */}
-          <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-5 animate-fade-in text-slate-755">
+          {/* Integrated Header Container */}
+          <div className="border-b border-slate-100 pb-4 flex flex-col xl:flex-row gap-4 items-center justify-between">
+            <h1 className="text-lg font-bold text-slate-800 tracking-tight">ព័ត៌មានសិស្ស</h1>
             
-            {/* Added left-most button */}
-            <div className="w-full md:w-auto flex flex-wrap items-center gap-2">
-              <button
-                onClick={handleOpenAddStudent}
-                className="w-full sm:w-auto px-4 py-2 bg-white border border-purple-600 text-purple-600 hover:bg-purple-50 hover:text-purple-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer whitespace-nowrap animate-pulse-once"
-                id="btn-add-student"
-              >
-                <UserPlus className="w-4 h-4 text-purple-600" />
-                បន្ថែមសិស្សថ្មី
-              </button>
-              <button
-                onClick={() => setIsDeleteAllStudentsConfirmOpen(true)}
-                className="w-full sm:w-auto px-4 py-2 bg-white border border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer whitespace-nowrap"
-                id="btn-clear-all-students"
-              >
-                <Trash2 className="w-4 h-4 text-red-600" />
-                លុបទិន្នន័យ
-              </button>
-            </div>
-
-            {/* Middle search and select */}
-            <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full md:flex-1 justify-center">
-              <div className="relative w-full md:max-w-xs">
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
+              {/* Search box */}
+              <div className="relative w-full sm:w-44">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                   <Search className="w-4 h-4" />
                 </div>
@@ -1724,7 +1705,8 @@ export default function StudentManagement({
                 />
               </div>
 
-              <div className="flex items-center gap-2 w-auto">
+              {/* Classroom dropdown filter */}
+              <div className="flex items-center gap-2 shrink-0">
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">ថ្នាក់៖</span>
                 <select
                   value={classFilter}
@@ -1737,28 +1719,33 @@ export default function StudentManagement({
                   ))}
                 </select>
               </div>
-            </div>
 
-            {/* Right-most print button */}
-            <div className="w-full md:w-auto">
-              <button
-                onClick={() => {
-                  if (!selectedPrintStudent && students.length > 0) {
-                    setSelectedPrintStudent(students[0]);
-                  }
-                  setIsBadgeModalOpen(true);
-                }}
-                className="w-full sm:w-auto px-4 py-2 bg-white border border-blue-600 hover:bg-blue-50 text-blue-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer whitespace-nowrap"
-              >
-                <IdCard className="w-4 h-4 text-blue-600" />
-                ប័ណ្ណសម្គាល់ខ្លួន
-              </button>
+              {/* Action buttons */}
+              <div className="flex gap-2 w-full sm:w-auto shrink-0">
+                <button
+                  type="button"
+                  onClick={handleOpenAddStudent}
+                  className="flex-1 sm:flex-none px-4 py-2 bg-white border border-purple-600 text-purple-600 hover:bg-purple-50 hover:text-purple-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer whitespace-nowrap animate-pulse-once"
+                  id="btn-add-student"
+                >
+                  <UserPlus className="w-4 h-4 text-purple-600 shrink-0" />
+                  បន្ថែមសិស្សថ្មី
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsDeleteAllStudentsConfirmOpen(true)}
+                  className="flex-1 sm:flex-none px-4 py-2 bg-white border border-red-500 text-red-600 hover:bg-rose-50 hover:text-red-750 disabled:opacity-50 disabled:cursor-not-allowed text-red-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer whitespace-nowrap"
+                  id="btn-clear-all-students"
+                >
+                  <Trash2 className="w-4 h-4 text-red-600 shrink-0" />
+                  លុបទិន្នន័យ
+                </button>
+              </div>
             </div>
-
           </div>
 
           {/* Students Table */}
-          <div className="bg-white rounded-xl border border-slate-100 shadow-xs overflow-hidden">
+          <div className="border border-slate-100 rounded-none overflow-hidden shadow-xs">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -1801,16 +1788,6 @@ export default function StudentManagement({
                           <td className="px-4 py-3"><span className="font-bold text-slate-600">{cls?.name || '---'}</span></td>
                           <td className="px-4 py-3">
                             <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                onClick={() => {
-                                  setSelectedPrintStudent(s);
-                                  setIsBadgeModalOpen(true);
-                                }}
-                                title="បោះពុម្ពប័ណ្ណសម្គាល់ខ្លួនសិស្ស"
-                                className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg cursor-pointer"
-                              >
-                                <Printer className="w-3.5 h-3.5" />
-                              </button>
                               <button
                                 onClick={() => handleOpenEditStudent(s)}
                                 title="កែសម្រួលទិន្នន័យផ្ទាល់ខ្លួន"
