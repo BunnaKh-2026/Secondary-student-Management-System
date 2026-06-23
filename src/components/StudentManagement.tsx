@@ -1002,6 +1002,8 @@ export default function StudentManagement({
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-1">
           <h1 className={`font-medium text-slate-850 tracking-tight ${header.title === 'បញ្ជីថ្នាក់រៀន' ? 'text-lg' : 'text-xl'}`}>{header.title}</h1>
           {header.desc && <p className="text-slate-500 text-xs sm:text-sm font-medium">{header.desc}</p>}
+          
+
         </div>
       )}
 
@@ -1627,11 +1629,6 @@ export default function StudentManagement({
       {/* ៤.៣. SUBTAB: SUBJECT COEFFICIENTS MANAGEMENT */}
       {activeSubTab === 'coefficients' && (
         <div className="space-y-6 animate-fade-in">
-          {/* Header Description */}
-          <div className="bg-gradient-to-r from-violet-50 to-indigo-50 border border-violet-100 p-4 rounded-xl text-slate-700 text-xs font-medium leading-relaxed shadow-2xs">
-            ✨ <span className="font-bold text-violet-800">ការណែនាំ៖</span> រាល់ការកែប្រែនឹងត្រូវកំណត់ និងអនុវត្តទៅតាម <span className="font-bold">កម្រិតថ្នាក់ និងប្រភេទនៃថ្នាក់</span> នីមួយៗរួមគ្នា។ បើសាលាមិនមានកម្រិតថ្នាក់ខាងក្រោមណាមួយឡើយ នោះវានឹងមិនត្រូវបានបង្ហាញទេ។ រាល់ការកែប្រែ «ពិន្ទុអតិបរមា» នឹងគណនា «មេគុណ» ដោយស្វ័យប្រវត្តិតាមការយកពិន្ទុអតិបរមាចែកនឹង ៥០។
-          </div>
-
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {[
               { id: 'G7', name: 'កម្រិតថ្នាក់ទី៧' },
@@ -1670,48 +1667,79 @@ export default function StudentManagement({
                         </div>
                       </div>
 
-                      {/* 2-Column Responsive Matrix of 24 Subjects */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 max-h-[460px] overflow-y-auto pr-1">
-                        {currentSubs.map(s => {
-                          const mx = s.maxScore !== undefined ? s.maxScore : 50;
-                          return (
-                            <div key={s.id} className="flex items-center justify-between p-2 rounded-lg border border-slate-100 bg-slate-50/20 text-xs hover:bg-slate-50 transition-all">
-                              <label className="flex items-center gap-2 cursor-pointer font-bold select-none text-slate-700 max-w-[130px] sm:max-w-none">
-                                <input
-                                  type="checkbox"
-                                  checked={s.isActive}
-                                  onChange={() => handleCategoryToggleSub(cat.id, s.id)}
-                                  className="w-4 h-4 text-violet-600 border-slate-200 focus:ring-violet-500 rounded cursor-pointer"
-                                />
-                                <span className={s.isActive ? 'text-slate-800 font-extrabold animate-fade-in' : 'text-slate-400 line-through'}>
-                                  {s.name}
-                                </span>
-                              </label>
-
-                              {s.isActive && (
-                                <div className="flex items-center gap-1">
-                                  {/* Max Score Input */}
-                                  <div className="flex items-center bg-white border border-slate-200 rounded-lg px-1.5 py-0.5 shrink-0">
-                                    <span className="text-[8px] font-bold text-slate-400 mr-1">ពិន្ទុ:</span>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max="500"
-                                      value={mx === 0 ? '' : mx}
-                                      onChange={e => handleCategoryMaxScoreChange(cat.id, s.id, parseFloat(e.target.value) || 0)}
-                                      className="w-10 text-center font-extrabold text-violet-750 outline-none text-[11px] font-sans"
-                                    />
-                                  </div>
+                      {/* Table of Subjects (Single layout / under each other, compact length) */}
+                      <div className="max-h-[460px] overflow-y-auto pr-1 border border-slate-100 rounded-lg shadow-2xs">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead>
+                            <tr className="bg-slate-50 border-b border-slate-100 text-slate-600 font-bold select-none sticky top-0 z-10">
+                              <th className="p-2 text-center w-10">ល.រ</th>
+                              <th className="p-2 text-center w-12">ជ្រើសរើស</th>
+                              <th className="p-2">មុខវិជ្ជា</th>
+                              <th className="p-2 text-center w-24">ពិន្ទុអតិបរមា</th>
+                              <th className="p-2 text-center w-16">មេគុណ</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {currentSubs.map((s, idx) => {
+                              const mx = s.maxScore !== undefined ? s.maxScore : 50;
+                              return (
+                                <tr 
+                                  key={s.id} 
+                                  className={`border-b border-slate-50 hover:bg-slate-50/50 transition-colors ${s.isActive ? 'text-slate-800' : 'text-slate-400 bg-slate-50/10'}`}
+                                >
+                                  {/* Index column */}
+                                  <td className="p-2 text-center font-bold text-slate-500 font-sans">{idx + 1}</td>
                                   
-                                  {/* Calculated Coefficient Indicator */}
-                                  <div className="text-[10px] font-extrabold bg-violet-50 text-violet-700 border border-violet-100 rounded-md px-1.5 py-1 select-none whitespace-nowrap">
-                                    {`× ${(mx / 50).toFixed(1).replace(/\.0$/, '')}`}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
+                                  {/* Checkbox column */}
+                                  <td className="p-2 text-center">
+                                    <input
+                                      type="checkbox"
+                                      checked={s.isActive}
+                                      onChange={() => handleCategoryToggleSub(cat.id, s.id)}
+                                      className="w-4 h-4 text-violet-600 border-slate-200 focus:ring-violet-500 rounded cursor-pointer"
+                                    />
+                                  </td>
+
+                                  {/* Subject name column */}
+                                  <td className="p-2 font-bold font-sans">
+                                    <span className={s.isActive ? 'text-slate-800 font-extrabold' : 'line-through text-slate-350'}>
+                                      {s.name}
+                                    </span>
+                                  </td>
+
+                                  {/* Max Score Input column */}
+                                  <td className="p-2 text-center">
+                                    {s.isActive ? (
+                                      <div className="inline-flex items-center justify-center bg-white border border-slate-200 rounded-md px-1 py-0.5">
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          max="500"
+                                          value={mx === 0 ? '' : mx}
+                                          onChange={e => handleCategoryMaxScoreChange(cat.id, s.id, parseFloat(e.target.value) || 0)}
+                                          className="w-10 text-center font-extrabold text-violet-700 outline-none text-[11px] font-sans"
+                                        />
+                                      </div>
+                                    ) : (
+                                      <span className="text-[10px] text-slate-300 font-bold">-</span>
+                                    )}
+                                  </td>
+
+                                  {/* Calculated Coefficient column */}
+                                  <td className="p-2 text-center">
+                                    {s.isActive ? (
+                                      <span className="text-[10px] font-extrabold bg-violet-50 text-violet-700 border border-violet-100 rounded-md px-1.5 py-0.5 select-none font-sans inline-block">
+                                        {`${(mx / 50).toFixed(1).replace(/\.0$/, '')}`}
+                                      </span>
+                                    ) : (
+                                      <span className="text-[10px] text-slate-300 font-bold">-</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       </div>
                     </div>
 
