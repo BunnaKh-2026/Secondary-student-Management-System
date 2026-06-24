@@ -1,7 +1,7 @@
-import provincesJson from '../../public/data/provinces.json';
-import districtsJson from '../../public/data/districts.json';
-import communesJson from '../../public/data/communes.json';
-import villagesJson from '../../public/data/villages.json';
+import provincesJson from './provinces.json';
+import districtsJson from './districts.json';
+import communesJson from './communes.json';
+import villagesJson from './villages.json';
 
 export interface RawProvince {
   code: string;

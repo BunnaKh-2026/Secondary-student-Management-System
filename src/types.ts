@@ -21,6 +21,14 @@ export interface Teacher {
   role: string; // Position/Role
   responsibilities: string[]; // Specific duties
   photoUrl?: string; // Optional custom avatar
+  salaryRank?: string; // កាំប្រាក់
+  framework?: string; // ក្របខ័ណ្ឌ
+  teachingSubjects?: string; // មុខវិជ្ជាបង្រៀន
+  classCharge?: string; // បន្ទុកថ្នាក់
+  ethnicity?: string; // ជនជាតិភាគតិច
+  educationLevel?: string; // កម្រិតវប្បធម៌
+  joinDate?: string; // ថ្ងៃចូលបម្រើការងារ
+  yearsOfService?: number; // ចំនួនឆ្នាំបម្រើការងារ
 }
 
 export interface TeacherAttendance {

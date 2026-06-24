@@ -8,6 +8,10 @@
 }
 
 /* Base resets to enforce User Font guidelines */
+html, body {
+  overflow-x: hidden;
+}
+
 body, html, input, select, textarea, button, table, td, th {
   font-family: "Khmer OS Siemreap", "Siemreap", var(--font-sans);
   font-weight: normal !important;

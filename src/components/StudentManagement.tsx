@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { 
   GraduationCap, UserPlus, School, Search, Trash2, Edit2, 
   Printer, Plus, X, ArrowRight, Table, Phone, MapPin, Calendar, CheckCircle,
-  AlertTriangle, IdCard, Save
+  AlertTriangle, IdCard, Save, GripVertical, RotateCcw
 } from 'lucide-react';
 import { Student, Classroom, SchoolInfo } from '../types';
 import { 
@@ -303,9 +303,21 @@ export default function StudentManagement({
   const [categorySubjects, setCategorySubjects] = useState<{ [catId: string]: any[] }>({});
   const [successToast, setSuccessToast] = useState<{ message: string, classroomId: string } | null>(null);
 
+  // Drag and Drop state for subject coefficients reordering
+  const [draggingInfo, setDraggingInfo] = useState<{ catId: string; index: number } | null>(null);
+  const [dragOverInfo, setDragOverInfo] = useState<{ catId: string; index: number } | null>(null);
+
+  // Subject deleting / adding / restoring states
+  const [subjectToDelete, setSubjectToDelete] = useState<{ catId: string; subId: string; subName: string } | null>(null);
+  const [categoryToRestore, setCategoryToRestore] = useState<{ catId: string; catName: string } | null>(null);
+  const [addingSubjectCatId, setAddingSubjectCatId] = useState<string | null>(null);
+  const [newSubjectName, setNewSubjectName] = useState('');
+  const [newSubjectMaxScore, setNewSubjectMaxScore] = useState<number | string>(50);
+
   // Toast state for student registration
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const successToastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const showToast = (message: string, type: 'success' | 'info' = 'success') => {
     if (toastTimeoutRef.current) {
@@ -321,6 +333,9 @@ export default function StudentManagement({
     return () => {
       if (toastTimeoutRef.current) {
         clearTimeout(toastTimeoutRef.current);
+      }
+      if (successToastTimeoutRef.current) {
+        clearTimeout(successToastTimeoutRef.current);
       }
     };
   }, []);
@@ -415,32 +430,12 @@ export default function StudentManagement({
     setCategorySubjects(prev => {
       const current = prev[catId] || [];
       const updated = current.map(s => s.id === subId ? { ...s, isActive: !s.isActive } : s);
+      autoSaveCategorySubjects(catId, updated);
       return { ...prev, [catId]: updated };
     });
   };
 
-  const handleCategoryMaxScoreChange = (catId: string, subId: string, val: number) => {
-    setCategorySubjects(prev => {
-      const current = prev[catId] || [];
-      const updated = current.map(s => {
-        if (s.id === subId) {
-          const maxVal = Math.max(0, val);
-          return { 
-            ...s, 
-            maxScore: maxVal,
-            coefficient: maxVal / 50
-          };
-        }
-        return s;
-      });
-      return { ...prev, [catId]: updated };
-    });
-  };
-
-  const handleSaveCategoryConfig = (catId: string, catName: string) => {
-    const updatedSubs = categorySubjects[catId];
-    if (!updatedSubs) return;
-
+  const autoSaveCategorySubjects = (catId: string, updatedSubs: any[]) => {
     const catClassrooms = getClassroomsForCategory(catId, classrooms);
     const catClassIds = catClassrooms.map(c => c.id);
 
@@ -468,13 +463,158 @@ export default function StudentManagement({
 
     onUpdateClassrooms(updatedClassrooms);
 
+    if (successToastTimeoutRef.current) {
+      clearTimeout(successToastTimeoutRef.current);
+    }
     setSuccessToast({
-      message: `រក្សាទុកកម្មវិធីសិក្សាសម្រាប់ "${catName}" រួចរាល់!`,
+      message: `បានរក្សាទុកដោយស្វ័យប្រវត្តិ!`,
       classroomId: catId
     });
-    setTimeout(() => {
+    successToastTimeoutRef.current = setTimeout(() => {
       setSuccessToast(null);
-    }, 4000);
+    }, 2000);
+  };
+
+  const autoSaveCategoryMonths = (catId: string, updatedSem1: string[], updatedSem2: string[]) => {
+    const catClassrooms = getClassroomsForCategory(catId, classrooms);
+    const catClassIds = catClassrooms.map(c => c.id);
+
+    const updatedClassrooms = classrooms.map(c => {
+      if (catClassIds.includes(c.id)) {
+        const preStartConfig = c.preStartConfig || {
+          classroomId: c.id,
+          homeTeacherName: '',
+          academicYear: '២០២៥-២០២៦',
+          semester1Months: ['វិច្ឆិកា', 'ធ្នូ', 'មករា', 'កុម្ភៈ', 'មីនា'],
+          semester2Months: ['មេសា', 'ឧសភា', 'មិថុនា', 'កក្កដា', 'សីហា'],
+          activeMonthsForAverage: ['វិច្ឆិកា', 'ធ្នូ', 'មករា', 'កុម្ភៈ', 'មីនា'],
+          subjects: []
+        };
+        return {
+          ...c,
+          preStartConfig: {
+            ...preStartConfig,
+            semester1Months: updatedSem1,
+            semester2Months: updatedSem2,
+            activeMonthsForAverage: [...updatedSem1, ...updatedSem2]
+          }
+        };
+      }
+      return c;
+    });
+
+    onUpdateClassrooms(updatedClassrooms);
+
+    if (successToastTimeoutRef.current) {
+      clearTimeout(successToastTimeoutRef.current);
+    }
+    setSuccessToast({
+      message: `បានរក្សាទុកដោយស្វ័យប្រវត្តិ!`,
+      classroomId: catId
+    });
+    successToastTimeoutRef.current = setTimeout(() => {
+      setSuccessToast(null);
+    }, 2000);
+  };
+
+  const handleCategoryMaxScoreChange = (catId: string, subId: string, val: number) => {
+    setCategorySubjects(prev => {
+      const current = prev[catId] || [];
+      const updated = current.map(s => {
+        if (s.id === subId) {
+          const maxVal = Math.max(0, val);
+          return { 
+            ...s, 
+            maxScore: maxVal,
+            coefficient: maxVal / 50
+          };
+        }
+        return s;
+      });
+      autoSaveCategorySubjects(catId, updated);
+      return { ...prev, [catId]: updated };
+    });
+  };
+
+  const handleDragEnd = () => {
+    setDraggingInfo(null);
+    setDragOverInfo(null);
+  };
+
+  const handleDropRow = (targetCatId: string, targetIndex: number) => {
+    if (!draggingInfo || draggingInfo.catId !== targetCatId) return;
+    const sourceIndex = draggingInfo.index;
+    if (sourceIndex === targetIndex) return;
+
+    setCategorySubjects(prev => {
+      const current = prev[targetCatId] || [];
+      const updated = [...current];
+      const [movedItem] = updated.splice(sourceIndex, 1);
+      updated.splice(targetIndex, 0, movedItem);
+      autoSaveCategorySubjects(targetCatId, updated);
+      return { ...prev, [targetCatId]: updated };
+    });
+
+    setDraggingInfo(null);
+    setDragOverInfo(null);
+  };
+
+  const handleAddSubject = (catId: string) => {
+    if (!newSubjectName.trim()) return;
+    const maxScore = parseFloat(newSubjectMaxScore as string) || 0;
+    if (maxScore <= 0) return;
+
+    const newSub = {
+      id: 'sub_custom_' + Date.now(),
+      name: newSubjectName.trim(),
+      isActive: true,
+      maxScore,
+      coefficient: maxScore / 50
+    };
+
+    setCategorySubjects(prev => {
+      const current = prev[catId] || [];
+      // Avoid duplicate names if they exist
+      if (current.some(s => s.name.toLowerCase() === newSubjectName.trim().toLowerCase())) {
+        showToast('ឈ្មោះមុខវិជ្ជាមានរួចហើយ!', 'info');
+        return prev;
+      }
+      const updated = [...current, newSub];
+      autoSaveCategorySubjects(catId, updated);
+      return {
+        ...prev,
+        [catId]: updated
+      };
+    });
+
+    setNewSubjectName('');
+    setNewSubjectMaxScore(50);
+    setAddingSubjectCatId(null);
+    showToast('បានបន្ថែមមុខវិជ្ជាថ្មី!');
+  };
+
+  const handleDeleteSubject = (catId: string, subId: string) => {
+    setCategorySubjects(prev => {
+      const current = prev[catId] || [];
+      const updated = current.filter(s => s.id !== subId);
+      autoSaveCategorySubjects(catId, updated);
+      return { ...prev, [catId]: updated };
+    });
+    setSubjectToDelete(null);
+    showToast('បានលុបមុខវិជ្ជាពីបញ្ជី!');
+  };
+
+  const handleRestoreDefaultSubjects = (catId: string) => {
+    const defaultLayout = getStandardSubjectsForCategory(catId);
+    setCategorySubjects(prev => {
+      autoSaveCategorySubjects(catId, defaultLayout);
+      return {
+        ...prev,
+        [catId]: defaultLayout
+      };
+    });
+    setCategoryToRestore(null);
+    showToast('បានស្ដារមុខវិជ្ជាដើមឡើងវិញ!');
   };
 
   const handleSaveClassroomMonths = (classId: string, updatedMonths: string[]) => {
@@ -981,8 +1121,8 @@ export default function StudentManagement({
         };
       case 'months':
         return {
-          title: 'ខែយកពិន្ទុ',
-          desc: 'ប្ដូរ ឬជ្រើសរើសខែទាំងឡាយណាដែលត្រូវយកមកគណនាមធ្យមភាគពិន្ទុសម្រាប់ថ្នាក់នីមួយៗ',
+          title: 'ខែយកពិន្ទុប្រចាំខែក្នុងឆមាស',
+          desc: '',
         };
       case 'students':
       default:
@@ -996,14 +1136,12 @@ export default function StudentManagement({
   const header = getHeaderDetails();
 
   return (
-    <div id="school-students-section" className="space-y-6">
+    <div id="school-students-section" className="space-y-6 w-full max-w-full overflow-hidden">
       {/* Header Panel with White Background "ក្បាលទំព័រ ត្រូវបន្ថែមផ្ទៃសពីខាងក្រោយ" */}
-      {activeSubTab !== 'classes_list' && activeSubTab !== 'students' && (
+      {activeSubTab !== 'classes_list' && activeSubTab !== 'students' && activeSubTab !== 'coefficients' && activeSubTab !== 'months' && activeSubTab !== 'classes' && (
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-1">
           <h1 className={`font-medium text-slate-850 tracking-tight ${header.title === 'បញ្ជីថ្នាក់រៀន' ? 'text-lg' : 'text-xl'}`}>{header.title}</h1>
           {header.desc && <p className="text-slate-500 text-xs sm:text-sm font-medium">{header.desc}</p>}
-          
-
         </div>
       )}
 
@@ -1280,8 +1418,8 @@ export default function StudentManagement({
                   ) : (
                     classrooms.map((cls, idx) => {
                       const calculatedGrade = cls.grade;
-                      const calculatedGroup = cls.classGroup || cls.name.replace(/[^a-zA-Z]/g, '').trim() || 'A';
-                      const calculatedType = cls.classType || (cls.name.includes('(SC)') ? 'វិទ្យាសាស្ត្រ (SC)' : cls.name.includes('(SS)') ? 'សង្គម (SS)' : 'ទូទៅ');
+                      const calculatedGroup = cls.classGroup || (cls.name || '').replace(/[^a-zA-Z]/g, '').trim() || 'A';
+                      const calculatedType = cls.classType || ((cls.name || '').includes('(SC)') ? 'វិទ្យាសាស្ត្រ (SC)' : (cls.name || '').includes('(SS)') ? 'សង្គម (SS)' : 'ទូទៅ');
                       return (
                         <tr key={cls.id} className="border-b border-emerald-600 hover:bg-slate-50/50 transition-colors">
                           <td className="py-3 px-4 text-center font-bold text-slate-400">{idx + 1}</td>
@@ -1575,7 +1713,13 @@ export default function StudentManagement({
 
       {/* ៤.២. SUBTAB: CLASSROOMS DIRECTORY */}
       {activeSubTab === 'classes' && (
-        <div className="space-y-6">
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-6 animate-fade-in text-slate-750">
+          {/* Unified Header inside the white container */}
+          <div className="border-b border-slate-100 pb-4">
+            <h1 className="text-xl font-extrabold text-slate-800 tracking-tight">{header.title}</h1>
+            {header.desc && <p className="text-slate-500 text-xs sm:text-sm font-medium mt-1">{header.desc}</p>}
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {classrooms.map(cls => {
               const classStds = students.filter(s => s.classroomId === cls.id);
@@ -1583,17 +1727,17 @@ export default function StudentManagement({
               return (
                 <div 
                   key={cls.id}
-                  className="bg-white rounded-2xl border border-slate-100 hover:border-teal-300 shadow-xs hover:shadow-md transition-all divide-y divide-slate-100 overflow-hidden"
+                  className="bg-white rounded-2xl border border-slate-200 hover:border-teal-300 shadow-xs hover:shadow-md transition-all divide-y divide-slate-100 overflow-hidden"
                 >
                   {/* Class Identity Panel */}
                   <div className="p-4 space-y-2">
                     <div className="flex justify-between items-start">
-                      <span className="text-[10px] bg-teal-50 text-teal-800 font-extrabold px-2.5 py-1 rounded-lg uppercase tracking-wide">
-                        កម្រិតថ្នាក់៖ ទី {cls.grade}
+                      <span className="text-[10px] bg-teal-50 text-teal-800 font-extrabold px-2.5 py-1 rounded-lg uppercase tracking-wide whitespace-nowrap">
+                        កម្រិតថ្នាក់ទី {cls.grade}
                       </span>
                     </div>
 
-                    <h3 className="text-lg font-extrabold text-slate-800">
+                    <h3 className="text-base font-extrabold text-slate-800 truncate whitespace-nowrap">
                       {cls.name}
                     </h3>
 
@@ -1615,7 +1759,7 @@ export default function StudentManagement({
                       onClick={() => onSelectClassroom(cls.id)}
                       className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer whitespace-nowrap"
                     >
-                      គ្រប់គ្រងពិន្ទុ និងវត្តមានសិស្ស
+                      ពិន្ទុនិងវត្តមាន
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -1628,7 +1772,12 @@ export default function StudentManagement({
 
       {/* ៤.៣. SUBTAB: SUBJECT COEFFICIENTS MANAGEMENT */}
       {activeSubTab === 'coefficients' && (
-        <div className="space-y-6 animate-fade-in">
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-6 animate-fade-in text-slate-750">
+          {/* Unified Header inside the white container */}
+          <div className="border-b border-slate-100 pb-4">
+            <h1 className="text-xl font-extrabold text-slate-800 tracking-tight">{header.title}</h1>
+          </div>
+
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {[
               { id: 'G7', name: 'កម្រិតថ្នាក់ទី៧' },
@@ -1652,31 +1801,28 @@ export default function StudentManagement({
                   <div key={cat.id} className="bg-white rounded-xl border border-slate-200/80 shadow-xs hover:shadow-xs transition-all overflow-hidden flex flex-col justify-between">
                     <div className="p-5 space-y-4">
                       {/* Header with Category Name & Affected Classes */}
-                      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-3 gap-2">
-                        <div>
-                          <span className="text-[10px] bg-violet-50 text-violet-700 font-extrabold px-2.5 py-1 rounded-md uppercase tracking-wide">
-                            កម្រិតថ្នាក់ និងប្រភេទថ្នាក់
+                      <div className="border-b border-slate-100 pb-3">
+                        <h3 className="text-base font-extrabold text-slate-800">{cat.name}</h3>
+                        <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs">
+                          <span className="font-extrabold text-slate-700">
+                            ថ្នាក់អនុវត្ត ({catClassrooms.length})៖
                           </span>
-                          <h3 className="text-base font-extrabold text-slate-800 mt-1">{cat.name}</h3>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-[10px] font-bold text-slate-400">ថ្នាក់អនុវត្ត ({catClassrooms.length})</div>
-                          <div className="text-xs font-bold text-violet-600 bg-violet-50/50 border border-violet-100 px-2 py-0.5 rounded-lg mt-0.5 inline-block">
-                            {catClassrooms.map(c => c.name).join(', ')}
-                          </div>
+                          <span className="font-extrabold text-violet-700 bg-violet-100/80 border border-violet-200 px-2 py-0.5 rounded-md shadow-2xs">
+                            {catClassrooms.map(c => (c.name || '').replace(/^ថ្នាក់ទី\s*/, '')).join(', ')}
+                          </span>
                         </div>
                       </div>
 
                       {/* Table of Subjects (Single layout / under each other, compact length) */}
-                      <div className="max-h-[460px] overflow-y-auto pr-1 border border-slate-100 rounded-lg shadow-2xs">
-                        <table className="w-full text-left text-xs border-collapse">
+                      <div className="max-h-[460px] overflow-x-auto overflow-y-auto pr-1 border border-slate-100 rounded-lg shadow-2xs">
+                        <table className="w-full min-w-[400px] text-left text-xs border-collapse">
                           <thead>
-                            <tr className="bg-slate-50 border-b border-slate-100 text-slate-600 font-bold select-none sticky top-0 z-10">
-                              <th className="p-2 text-center w-10">ល.រ</th>
-                              <th className="p-2 text-center w-12">ជ្រើសរើស</th>
-                              <th className="p-2">មុខវិជ្ជា</th>
-                              <th className="p-2 text-center w-24">ពិន្ទុអតិបរមា</th>
-                              <th className="p-2 text-center w-16">មេគុណ</th>
+                            <tr className="bg-emerald-700 text-white font-extrabold select-none sticky top-0 z-10 whitespace-nowrap" id="coefficients-list-th-row">
+                              <th className="p-2 text-center w-14 border-r border-emerald-800 whitespace-nowrap">ល.រ</th>
+                              <th className="p-2 text-left w-36 max-w-[150px] border-r border-emerald-800 whitespace-nowrap">មុខវិជ្ជា</th>
+                              <th className="p-2 text-center w-24 border-r border-emerald-800 whitespace-nowrap">ពិន្ទុអតិបរមា</th>
+                              <th className="p-2 text-center w-16 border-r border-emerald-800 whitespace-nowrap">មេគុណ</th>
+                              <th className="p-2 text-center w-14 text-white whitespace-nowrap">លុប</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1685,55 +1831,81 @@ export default function StudentManagement({
                               return (
                                 <tr 
                                   key={s.id} 
-                                  className={`border-b border-slate-50 hover:bg-slate-50/50 transition-colors ${s.isActive ? 'text-slate-800' : 'text-slate-400 bg-slate-50/10'}`}
+                                  draggable={true}
+                                  onDragStart={(e) => {
+                                    const target = e.target as HTMLElement;
+                                    if (target.closest('input') || target.closest('button')) {
+                                      e.preventDefault();
+                                      return;
+                                    }
+                                    setDraggingInfo({ catId: cat.id, index: idx });
+                                  }}
+                                  onDragOver={(e) => {
+                                    if (draggingInfo && draggingInfo.catId === cat.id) {
+                                      e.preventDefault();
+                                      if (dragOverInfo?.index !== idx) {
+                                        setDragOverInfo({ catId: cat.id, index: idx });
+                                      }
+                                    }
+                                  }}
+                                  onDrop={() => {
+                                    if (draggingInfo && draggingInfo.catId === cat.id) {
+                                      handleDropRow(cat.id, idx);
+                                    }
+                                  }}
+                                  onDragEnd={handleDragEnd}
+                                  className={`border-b border-slate-50 transition-all duration-150 group/row whitespace-nowrap
+                                    text-slate-800
+                                    ${draggingInfo?.catId === cat.id && draggingInfo?.index === idx ? 'opacity-40 bg-violet-50/20' : ''}
+                                    ${dragOverInfo?.catId === cat.id && dragOverInfo?.index === idx ? 'bg-violet-50/40 border-y-2 border-violet-200' : 'hover:bg-slate-50/50'}
+                                  `}
                                 >
-                                  {/* Index column */}
-                                  <td className="p-2 text-center font-bold text-slate-500 font-sans">{idx + 1}</td>
-                                  
-                                  {/* Checkbox column */}
-                                  <td className="p-2 text-center">
-                                    <input
-                                      type="checkbox"
-                                      checked={s.isActive}
-                                      onChange={() => handleCategoryToggleSub(cat.id, s.id)}
-                                      className="w-4 h-4 text-violet-600 border-slate-200 focus:ring-violet-500 rounded cursor-pointer"
-                                    />
+                                  {/* Index column with grip handle */}
+                                  <td className="p-2 text-center font-bold text-slate-500 font-sans select-none whitespace-nowrap">
+                                    <div className="flex items-center justify-center gap-1">
+                                      <GripVertical className="w-3.5 h-3.5 text-slate-400 group-hover/row:text-violet-500 hover:text-violet-600 transition-colors cursor-grab active:cursor-grabbing shrink-0" />
+                                      <span>{idx + 1}</span>
+                                    </div>
                                   </td>
 
                                   {/* Subject name column */}
-                                  <td className="p-2 font-bold font-sans">
-                                    <span className={s.isActive ? 'text-slate-800 font-extrabold' : 'line-through text-slate-350'}>
+                                  <td className="p-2 font-bold font-sans whitespace-nowrap w-36 max-w-[150px] overflow-hidden text-ellipsis" title={s.name}>
+                                    <span className="text-slate-800 font-extrabold">
                                       {s.name}
                                     </span>
                                   </td>
 
                                   {/* Max Score Input column */}
-                                  <td className="p-2 text-center">
-                                    {s.isActive ? (
-                                      <div className="inline-flex items-center justify-center bg-white border border-slate-200 rounded-md px-1 py-0.5">
-                                        <input
-                                          type="number"
-                                          min="0"
-                                          max="500"
-                                          value={mx === 0 ? '' : mx}
-                                          onChange={e => handleCategoryMaxScoreChange(cat.id, s.id, parseFloat(e.target.value) || 0)}
-                                          className="w-10 text-center font-extrabold text-violet-700 outline-none text-[11px] font-sans"
-                                        />
-                                      </div>
-                                    ) : (
-                                      <span className="text-[10px] text-slate-300 font-bold">-</span>
-                                    )}
+                                  <td className="p-2 text-center whitespace-nowrap">
+                                    <div className="inline-flex items-center justify-center bg-white border border-slate-200 rounded-md px-1 py-0.5">
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max="500"
+                                        value={mx === 0 ? '' : mx}
+                                        onChange={e => handleCategoryMaxScoreChange(cat.id, s.id, parseFloat(e.target.value) || 0)}
+                                        className="w-10 text-center font-extrabold text-violet-700 outline-none text-[11px] font-sans"
+                                      />
+                                    </div>
                                   </td>
 
                                   {/* Calculated Coefficient column */}
-                                  <td className="p-2 text-center">
-                                    {s.isActive ? (
-                                      <span className="text-[10px] font-extrabold bg-violet-50 text-violet-700 border border-violet-100 rounded-md px-1.5 py-0.5 select-none font-sans inline-block">
-                                        {`${(mx / 50).toFixed(1).replace(/\.0$/, '')}`}
-                                      </span>
-                                    ) : (
-                                      <span className="text-[10px] text-slate-300 font-bold">-</span>
-                                    )}
+                                  <td className="p-2 text-center whitespace-nowrap">
+                                    <span className="text-[10px] font-extrabold bg-violet-50 text-violet-700 border border-violet-100 rounded-md px-1.5 py-0.5 select-none font-sans inline-block whitespace-nowrap">
+                                      {`${(mx / 50).toFixed(1).replace(/\.0$/, '')}`}
+                                    </span>
+                                  </td>
+
+                                  {/* Delete action column */}
+                                  <td className="p-2 text-center whitespace-nowrap">
+                                    <button
+                                      type="button"
+                                      onClick={() => setSubjectToDelete({ catId: cat.id, subId: s.id, subName: s.name })}
+                                      className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                      title="លុបមុខវិជ្ជា"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
                                   </td>
                                 </tr>
                               );
@@ -1748,17 +1920,33 @@ export default function StudentManagement({
                         {hasToast && (
                           <span className="text-xs font-bold text-emerald-600 flex items-center gap-1.5 animate-pulse">
                             <CheckCircle className="w-4.5 h-4.5 text-emerald-500 shrink-0" />
-                            បានរក្សាទុក!
+                            បានរក្សាទុកដោយស្វ័យប្រវត្តិ!
                           </span>
                         )}
                       </div>
-                      <button
-                        onClick={() => handleSaveCategoryConfig(cat.id, cat.name)}
-                        className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-                      >
-                        <Save className="w-3.5 h-3.5" />
-                        រក្សាទុកកម្រិតនេះ
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAddingSubjectCatId(cat.id);
+                            setNewSubjectName('');
+                            setNewSubjectMaxScore(50);
+                          }}
+                          className="px-3 py-2 bg-white hover:bg-blue-50/50 text-blue-600 border border-blue-500 rounded-lg text-xs font-extrabold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5 text-blue-600" />
+                          បន្ថែមមុខវិជ្ជា
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCategoryToRestore({ catId: cat.id, catName: cat.name })}
+                          className="px-3 py-2 bg-white hover:bg-rose-50 text-rose-600 border border-slate-200 hover:border-rose-200 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                          title="ស្ដារមុខវិជ្ជាដើមឡើងវិញ"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+                          ស្ដារមុខវិជ្ជាដើម
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -1770,82 +1958,134 @@ export default function StudentManagement({
 
       {/* ៤.៤. SUBTAB: SCORING MONTHS CONFIGURATION */}
       {activeSubTab === 'months' && (
-        <div className="space-y-6 animate-fade-in">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {classrooms.map(cls => {
-              const currentMons = localMonths[cls.id] || cls.preStartConfig?.activeMonthsForAverage || ['វិច្ឆិកា', 'ធ្នូ', 'មករា', 'កុម្ភៈ', 'មីនា'];
-              const hasToast = successToast?.classroomId === cls.id && successToast?.message.includes('ខែ');
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-6 animate-fade-in text-slate-755">
+          {/* Unified Header inside the white container */}
+          <div className="border-b border-slate-100 pb-4">
+            <h1 className="text-xl font-extrabold text-slate-800 tracking-tight">{header.title}</h1>
+          </div>
 
-              const semester1Months = cls.preStartConfig?.semester1Months || ['វិច្ឆិកា', 'ធ្នូ', 'មករា', 'កុម្ភៈ', 'មីនា'];
-              const semester2Months = cls.preStartConfig?.semester2Months || ['មេសា', 'ឧសភា', 'មិថុនា', 'កក្កដា', 'សីហា'];
-              const allPossibleMonths = [...semester1Months, ...semester2Months];
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {[
+              { id: 'G7', name: 'កម្រិតថ្នាក់ទី៧' },
+              { id: 'G8', name: 'កម្រិតថ្នាក់ទី៨' },
+              { id: 'G9', name: 'កម្រិតថ្នាក់ទី៩' },
+              { id: 'G10', name: 'កម្រិតថ្នាក់ទី១០' },
+              { id: 'G11_SC', name: 'កម្រិតថ្នាក់ទី១១ (វិទ្យាសាស្ត្រ)' },
+              { id: 'G11_SS', name: 'កម្រិតថ្នាក់ទី១១ (សង្គម)' },
+              { id: 'G12_SC', name: 'កម្រិតថ្នាក់ទី១២ (វិទ្យាសាស្ត្រ)' },
+              { id: 'G12_SS', name: 'កម្រិតថ្នាក់ទី១២ (សង្គម)' }
+            ].map(cat => {
+              const catClassrooms = getClassroomsForCategory(cat.id, classrooms);
+              if (catClassrooms.length === 0) return null;
 
-              const handleToggleMonth = (mName: string) => {
-                let updated: string[];
-                if (currentMons.includes(mName)) {
-                  updated = currentMons.filter(m => m !== mName);
-                } else {
-                  updated = [...currentMons, mName];
-                }
-                setLocalMonths(prev => ({ ...prev, [cls.id]: updated }));
+              const refClass = catClassrooms[0];
+              const sem1 = refClass?.preStartConfig?.semester1Months || ['វិច្ឆិកា', 'ធ្នូ', 'មករា', 'កុម្ភៈ', 'មីនា'];
+              const sem2 = refClass?.preStartConfig?.semester2Months || ['មេសា', 'ឧសភា', 'មិថុនា', 'កក្កដា', 'សីហា'];
+
+              const sem1Slots = Array.from({ length: 6 }, (_, i) => sem1[i] || '');
+              const sem2Slots = Array.from({ length: 6 }, (_, i) => sem2[i] || '');
+
+              const hasToast = successToast?.classroomId === cat.id;
+
+              const khmerMonthsOptions = [
+                'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ', 'មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា', 'កក្កដា', 'សីហា'
+              ];
+
+              const toKhmerNumeral = (num: number): string => {
+                const khmerNumerals = ['០', '១', '២', '៣', '៤', '៥', '៦', '៧', '៨', '៩'];
+                return num.toString().split('').map(digit => {
+                  const d = parseInt(digit);
+                  return isNaN(d) ? digit : khmerNumerals[d];
+                }).join('');
               };
 
               return (
-                <div key={cls.id} className="bg-white rounded-2xl border border-slate-100 shadow-xs hover:shadow-md transition-all overflow-hidden flex flex-col justify-between">
-                  <div className="p-5 space-y-4">
-                    <div className="flex justify-between items-start border-b border-slate-100 pb-3">
-                      <div>
-                        <span className="text-[10px] bg-teal-50 text-teal-700 font-extrabold px-2.5 py-1 rounded-lg uppercase tracking-wide">
-                          កម្រិតថ្នាក់៖ ទី {cls.grade}
-                        </span>
-                        <h3 className="text-lg font-extrabold text-slate-800 mt-1">{cls.name}</h3>
-                      </div>
-                      <span className="text-xs font-semibold text-slate-400">
-                        គ្រូ៖ {cls.preStartConfig?.homeTeacherName || 'មិនទាន់កំណត់'}
-                      </span>
-                    </div>
-
-                    <div className="space-y-3">
-                      <label className="text-xs font-bold text-slate-500">ជ្រើសរើសខែដើម្បីយកពិន្ទុមកបូកបញ្ចូលមធ្យមពិន្ទុ៖</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {allPossibleMonths.map(mon => {
-                          const isSelected = currentMons.includes(mon);
-                          return (
-                            <button
-                              key={mon}
-                              type="button"
-                              onClick={() => handleToggleMonth(mon)}
-                              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all text-center border cursor-pointer select-none truncate ${
-                                isSelected
-                                  ? 'bg-teal-600 border-teal-600 text-white shadow-xs'
-                                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800'
-                              }`}
-                            >
-                              {mon} {isSelected ? '✓' : ''}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
-                    <div>
-                      {hasToast && (
-                        <span className="text-xs font-bold text-emerald-600 flex items-center gap-1 animate-pulse">
-                          <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
-                          បានរក្សាទុក!
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => handleSaveClassroomMonths(cls.id, currentMons)}
-                      className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
-                    >
-                      <Save className="w-3.5 h-3.5" />
-                      រក្សាទុក
-                    </button>
-                  </div>
+                <div key={cat.id} className="border border-slate-300 rounded-lg overflow-hidden shadow-2xs bg-white relative max-w-[240px] w-full mx-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="bg-emerald-700 border-b border-emerald-800">
+                        <th colSpan={2} className="py-2.5 px-3 text-center text-sm text-white" style={{ fontFamily: '"Khmer OS Muol Light", "Moul", serif', fontWeight: 'normal' }}>
+                          <div className="flex justify-center items-center gap-2">
+                            <span>{cat.name}</span>
+                            {hasToast && (
+                              <span className="text-[10px] bg-white/20 text-white px-1.5 py-0.5 rounded font-extrabold animate-pulse">
+                                បានរក្សាទុក!
+                              </span>
+                            )}
+                          </div>
+                        </th>
+                      </tr>
+                      <tr className="bg-emerald-600 border-b border-emerald-700 text-xs text-white font-bold">
+                        <th className="py-2 px-3 text-center border-r border-emerald-700 w-1/2">
+                          ឆមាសទី១
+                        </th>
+                        <th className="py-2 px-3 text-center w-1/2">
+                          ឆមាសទី២
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Array.from({ length: 6 }).map((_, rowIndex) => {
+                        const m1 = sem1Slots[rowIndex];
+                        const m2 = sem2Slots[rowIndex];
+                        return (
+                          <tr key={rowIndex} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50/40 transition-colors">
+                            {/* Semester 1 Select */}
+                            <td className="p-0 border-r border-slate-300 text-center">
+                              <select
+                                value={m1}
+                                onChange={(e) => {
+                                  const newVal = e.target.value;
+                                  const updatedSem1Slots = [...sem1Slots];
+                                  updatedSem1Slots[rowIndex] = newVal;
+                                  const updatedSem1 = updatedSem1Slots.filter(m => m !== '');
+                                  autoSaveCategoryMonths(cat.id, updatedSem1, sem2);
+                                }}
+                                className={`w-full py-2 text-center text-xs font-bold bg-transparent border-0 outline-none focus:ring-0 focus:outline-none cursor-pointer appearance-none ${
+                                  m1 ? 'text-blue-600' : 'text-red-500'
+                                }`}
+                              >
+                                <option value="" className="text-red-500 font-bold">ជ្រើសរើស</option>
+                                {khmerMonthsOptions.map(mon => (
+                                  <option key={mon} value={mon} className="text-slate-700 font-bold">{mon}</option>
+                                ))}
+                              </select>
+                            </td>
+                            {/* Semester 2 Select */}
+                            <td className="p-0 text-center">
+                              <select
+                                value={m2}
+                                onChange={(e) => {
+                                  const newVal = e.target.value;
+                                  const updatedSem2Slots = [...sem2Slots];
+                                  updatedSem2Slots[rowIndex] = newVal;
+                                  const updatedSem2 = updatedSem2Slots.filter(m => m !== '');
+                                  autoSaveCategoryMonths(cat.id, sem1, updatedSem2);
+                                }}
+                                className={`w-full py-2 text-center text-xs font-bold bg-transparent border-0 outline-none focus:ring-0 focus:outline-none cursor-pointer appearance-none ${
+                                  m2 ? 'text-blue-600' : 'text-red-500'
+                                }`}
+                              >
+                                <option value="" className="text-red-500 font-bold">ជ្រើសរើស</option>
+                                {khmerMonthsOptions.map(mon => (
+                                  <option key={mon} value={mon} className="text-slate-700 font-bold">{mon}</option>
+                                ))}
+                              </select>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {/* Total counts of selected months */}
+                      <tr className="bg-slate-100 border-t border-slate-300 text-xs text-slate-700 font-semibold">
+                        <td className="py-2.5 px-3 text-center border-r border-slate-300 font-extrabold text-slate-800">
+                          {toKhmerNumeral(sem1.length)} ខែ
+                        </td>
+                        <td className="py-2.5 px-3 text-center font-extrabold text-slate-800">
+                          {toKhmerNumeral(sem2.length)} ខែ
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               );
             })}
@@ -1855,48 +2095,61 @@ export default function StudentManagement({
 
       {/* ៤.១. SUBTAB: STUDENT PROFILE CARDS DIRECTORY */}
       {activeSubTab === 'students' && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-5 animate-fade-in text-slate-755">
+        <div className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs space-y-5 animate-fade-in text-slate-755 w-full max-w-full overflow-hidden">
           {/* Integrated Header Container */}
-          <div className="border-b border-slate-100 pb-4 flex flex-col xl:flex-row gap-4 items-center justify-between">
-            <h1 className="text-lg font-bold text-slate-800 tracking-tight">ព័ត៌មានសិស្ស</h1>
+          <div className="border-b border-slate-100 pb-4 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 w-full">
+            {/* Title: On desktop (xl and up), this is on the left. On mobile/tablet, it is on its own top row. */}
+            <h1 className="text-lg font-bold text-slate-800 tracking-tight text-left self-start shrink-0">ព័ត៌មានសិស្ស</h1>
             
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
-              {/* Search box */}
-              <div className="relative w-full sm:w-44">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <Search className="w-4 h-4" />
+            {/* Controls Container:
+                - On mobile portrait (< sm): a vertical column of 2 rows (Row 1: search+filter, Row 2: buttons).
+                - On mobile landscape/tablet (sm to xl): all 4 controls are in a single row below the title.
+                - On desktop (xl and up): all 4 controls are in a single row on the same line as the title (aligned right). */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between xl:justify-end gap-3 w-full xl:w-auto">
+              
+              {/* Left Group: Search box and Classroom dropdown filter
+                  - On mobile portrait (< sm): they are side-by-side (flex-row) and fit the screen width (w-full).
+                  - On larger screens: sm:w-auto, items aligned side-by-side. */}
+              <div className="flex flex-row items-center gap-2 w-full sm:w-auto min-w-0">
+                {/* Search box - grows on mobile portrait */}
+                <div className="relative flex-1 sm:w-44 xl:w-48 sm:shrink-0 min-w-0">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <Search className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    placeholder="ស្វែងរកសិស្ស"
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    className="block w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:ring-1 focus:ring-teal-500 outline-none font-medium"
+                  />
                 </div>
-                <input
-                  type="text"
-                  required
-                  placeholder="ស្វែងរកសិស្ស"
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className="block w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:ring-1 focus:ring-teal-500 outline-none font-medium"
-                />
+
+                {/* Classroom dropdown filter */}
+                <div className="flex items-center gap-2 shrink-0 flex-1 sm:flex-initial">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">ថ្នាក់៖</span>
+                  <select
+                    value={classFilter}
+                    onChange={e => setClassFilter(e.target.value)}
+                    className="block w-full sm:w-auto px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white outline-none cursor-pointer appearance-none text-center font-bold text-slate-700"
+                  >
+                    <option value="">គ្រប់ថ្នាក់</option>
+                    {classrooms.map(c => (
+                      <option key={c.id} value={c.id}>{(c.name || '').replace(/^ថ្នាក់ទី\s*/, '')}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              {/* Classroom dropdown filter */}
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">ថ្នាក់៖</span>
-                <select
-                  value={classFilter}
-                  onChange={e => setClassFilter(e.target.value)}
-                  className="block w-auto px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white outline-none cursor-pointer appearance-none text-center font-bold text-slate-700"
-                >
-                  <option value="">គ្រប់ថ្នាក់</option>
-                  {classrooms.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex gap-2 w-full sm:w-auto shrink-0">
+              {/* Right Group: Action buttons
+                  - On mobile portrait (< sm): they are side-by-side (flex-row) below Left Group, and each fits 50% of the screen.
+                  - On larger screens: they sit side-by-side next to the Left Group. */}
+              <div className="flex flex-row gap-2 w-full sm:w-auto shrink-0">
                 <button
                   type="button"
                   onClick={handleOpenAddStudent}
-                  className="flex-1 sm:flex-none px-4 py-2 bg-white border border-purple-600 text-purple-600 hover:bg-purple-50 hover:text-purple-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer whitespace-nowrap animate-pulse-once"
+                  className="flex-1 sm:flex-initial px-4 py-2 bg-white border border-purple-600 text-purple-600 hover:bg-purple-50 hover:text-purple-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer whitespace-nowrap animate-pulse-once"
                   id="btn-add-student"
                 >
                   <UserPlus className="w-4 h-4 text-purple-600 shrink-0" />
@@ -1905,20 +2158,21 @@ export default function StudentManagement({
                 <button
                   type="button"
                   onClick={() => setIsDeleteAllStudentsConfirmOpen(true)}
-                  className="flex-1 sm:flex-none px-4 py-2 bg-white border border-red-500 text-red-600 hover:bg-rose-50 hover:text-red-750 disabled:opacity-50 disabled:cursor-not-allowed text-red-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer whitespace-nowrap"
+                  className="flex-1 sm:flex-initial px-4 py-2 bg-white border border-red-500 text-red-600 hover:bg-rose-50 hover:text-red-755 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer whitespace-nowrap"
                   id="btn-clear-all-students"
                 >
                   <Trash2 className="w-4 h-4 text-red-600 shrink-0" />
                   លុបទិន្នន័យ
                 </button>
               </div>
+              
             </div>
           </div>
 
           {/* Students Table */}
-          <div className="border border-slate-100 rounded-none overflow-hidden shadow-xs">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+          <div className="border border-slate-200 rounded-none overflow-hidden shadow-xs w-full max-w-full">
+            <div className="overflow-x-auto scrollbar-thin">
+              <table className="w-full text-left border-collapse min-w-[700px]">
                 <thead>
                   <tr className="bg-emerald-700 text-white font-bold text-xs uppercase" id="students-list-th-row">
                     <th className="px-4 py-3 text-center">ល.រ</th>
@@ -2268,7 +2522,7 @@ export default function StudentManagement({
                   >
                     <option value="" disabled>-- សូមជ្រើសរើសថ្នាក់ --</option>
                     {classrooms.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
+                      <option key={c.id} value={c.id}>{(c.name || '').replace(/^ថ្នាក់ទី\s*/, '')}</option>
                     ))}
                   </select>
                 </div>
@@ -2686,6 +2940,178 @@ export default function StudentManagement({
           >
             <X className="w-3.5 h-3.5" />
           </button>
+        </div>
+      )}
+
+      {/* SUBJECT DELETE CONFIRMATION DIALOG */}
+      {subjectToDelete && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[250] p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-slate-100 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 bg-rose-50 text-rose-600 rounded-full shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-sm font-extrabold text-slate-800">លុបមុខវិជ្ជា?</h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed font-sans">
+                  តើអ្នកពិតជាចង់លុបមុខវិជ្ជា <span className="font-extrabold text-slate-800">«{subjectToDelete.subName}»</span> នេះពីបញ្ជីមែនទេ?
+                  <br />
+                  <span className="text-emerald-600 text-[10px] font-bold block mt-1.5">
+                    *ចំណាំ៖ ការលុបនេះនឹងរក្សាទុកដោយស្វ័យប្រវត្តិ។
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setSubjectToDelete(null)}
+                className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50 border border-slate-200 rounded-lg transition-colors cursor-pointer"
+              >
+                បោះបង់
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteSubject(subjectToDelete.catId, subjectToDelete.subId)}
+                className="px-4 py-2 text-xs font-bold text-white bg-rose-500 hover:bg-rose-600 rounded-lg shadow-xs transition-colors cursor-pointer"
+              >
+                យល់ព្រមលុប
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SUBJECT RESTORE CONFIRMATION DIALOG */}
+      {categoryToRestore && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[250] p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-slate-100 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 bg-rose-50 text-rose-600 rounded-full shrink-0">
+                <RotateCcw className="w-6 h-6 animate-spin-reverse" />
+              </div>
+              <div>
+                <h3 className="text-sm font-extrabold text-slate-800">ស្ដារមុខវិជ្ជាដើម?</h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed font-sans">
+                  តើអ្នកពិតជាចង់ស្ដារបញ្ជីមុខវិជ្ជាដើមសម្រាប់ <span className="font-extrabold text-slate-800">«{categoryToRestore.catName}»</span> ឡើងវិញមែនទេ? មុខវិជ្ជាដែលបានកែសម្រួល ឬបន្ថែមថ្មីទាំងអស់នៅក្នុងកម្រិតថ្នាក់នេះនឹងត្រូវជំនួសដោយមុខវិជ្ជាស្ដង់ដាររបស់ក្រសួងវិញ។
+                  <br />
+                  <span className="text-emerald-600 text-[10px] font-bold block mt-1.5">
+                    *ចំណាំ៖ ការស្ដារនេះនឹងរក្សាទុកដោយស្វ័យប្រវត្តិ។
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setCategoryToRestore(null)}
+                className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50 border border-slate-200 rounded-lg transition-colors cursor-pointer"
+              >
+                បោះបង់
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRestoreDefaultSubjects(categoryToRestore.catId)}
+                className="px-4 py-2 text-xs font-bold text-white bg-rose-500 hover:bg-rose-600 rounded-lg shadow-xs transition-colors cursor-pointer"
+              >
+                យល់ព្រមស្ដារ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADD SUBJECT DIALOG MODAL */}
+      {addingSubjectCatId && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[250] p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-violet-50 text-violet-600 rounded-lg shrink-0">
+                  <Plus className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-extrabold text-slate-800">បន្ថែមមុខវិជ្ជាថ្មី</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAddingSubjectCatId(null)}
+                className="text-slate-400 hover:text-slate-600 hover:bg-slate-50 p-1.5 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5">
+              {/* Subject Name Input */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1">
+                  ឈ្មោះមុខវិជ្ជា <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="ឧ. ភូមិវិទ្យា, សរសេរតាមអាន,..."
+                  value={newSubjectName}
+                  onChange={(e) => setNewSubjectName(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-violet-500 text-slate-800 bg-white"
+                />
+              </div>
+
+              {/* Max Score & Coefficient calculation */}
+              <div className="grid grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1">
+                    ពិន្ទុអតិបរមា <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="500"
+                    required
+                    value={newSubjectMaxScore}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNewSubjectMaxScore(val);
+                    }}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-violet-500 bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                    មេគុណស្វ័យប្រវត្ត
+                  </label>
+                  <div className="w-full px-3 py-2 bg-slate-50 border border-slate-100 rounded-lg text-xs font-extrabold text-violet-700 select-none">
+                    × {((parseFloat(newSubjectMaxScore as string) || 0) / 50).toFixed(1).replace(/\.0$/, '')}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-[10px] text-slate-500 leading-relaxed font-semibold">
+                ✨ <span className="font-bold text-violet-600">ការគណនាមេគុណ៖</span> ប្រព័ន្ធនឹងគណនាមេគុណដោយស្វ័យប្រវត្តិតាមរូបមន្ត <span className="font-bold">ពិន្ទុអតិបរមា ចែកនឹង ៥០</span>។ (ឧទាហរណ៍៖ ពិន្ទុអតិបរមា ១០០ = មេគុណ ២)
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setAddingSubjectCatId(null)}
+                className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50 border border-slate-200 rounded-lg transition-colors cursor-pointer"
+              >
+                បោះបង់
+              </button>
+              <button
+                type="button"
+                disabled={!newSubjectName.trim() || (parseFloat(newSubjectMaxScore as string) || 0) <= 0}
+                onClick={() => handleAddSubject(addingSubjectCatId)}
+                className="px-4 py-2 text-xs font-bold text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-xs transition-colors cursor-pointer"
+              >
+                បន្ថែម
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

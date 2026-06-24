@@ -427,15 +427,15 @@ export default function App() {
       </aside>
 
       {/* 2. MAIN APP CONTAINER WRAPPER */}
-      <div className={`flex-1 flex flex-col pt-[88px] sm:pt-16 transition-all duration-300 focus:outline-none ${
+      <div className={`flex-1 flex flex-col pt-[88px] sm:pt-16 transition-all duration-300 focus:outline-none min-w-0 max-w-full overflow-hidden ${
         isSidebarOpen ? 'md:pl-40' : 'md:pl-0'
       }`}>
         
         {/* MAIN BODY CORE CONTENT SECTION */}
-        <main className="flex-1 p-4 md:p-8 outline-none print:p-0 print:m-0">
+        <main className="flex-1 p-4 md:p-8 outline-none print:p-0 print:m-0 min-w-0 max-w-full">
           
           {/* Conditional rendering depending on target views */}
-          <div className="print:hidden">
+          <div className="print:hidden w-full min-w-0 max-w-full">
             {/* If selected classroom is active, render ClassroomDetails sheets directly */}
             {selectedClassroomId && activeClassroomFull ? (
               <ClassroomDetails

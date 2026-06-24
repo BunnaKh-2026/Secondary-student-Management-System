@@ -58,8 +58,16 @@ export default function TeacherManagement({
     dob: '',
     phone: '',
     subject: '',
-    role: 'គ្រូបង្រៀន',
+    role: '',
     responsibilities: [],
+    salaryRank: '',
+    framework: '',
+    teachingSubjects: '',
+    classCharge: '',
+    ethnicity: '',
+    educationLevel: '',
+    joinDate: '',
+    yearsOfService: 0,
   });
 
   // Role details input helper
@@ -148,17 +156,50 @@ export default function TeacherManagement({
     }
   }, [selectedPrintTeacher, isBadgeModalOpen]);
 
+  const calculateYearsOfService = (dateStr: string): number => {
+    if (!dateStr) return 0;
+    const joinDateObj = new Date(dateStr);
+    const today = new Date();
+    if (isNaN(joinDateObj.getTime())) return 0;
+    
+    let diffYears = today.getFullYear() - joinDateObj.getFullYear();
+    const monthDiff = today.getMonth() - joinDateObj.getMonth();
+    const dayDiff = today.getDate() - joinDateObj.getDate();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+      diffYears--;
+    }
+    return Math.max(0, diffYears);
+  };
+
+  const handleJoinDateChange = (dateVal: string) => {
+    const yrs = calculateYearsOfService(dateVal);
+    setFormData(prev => ({
+      ...prev,
+      joinDate: dateVal,
+      yearsOfService: yrs,
+    }));
+  };
+
   const handleOpenAdd = () => {
     setEditingTeacher(null);
     setFormData({
-      idNumber: `TCH-${String(teachers.length + 1).padStart(3, '0')}`,
+      idNumber: '',
       name: '',
       gender: 'ប្រុស',
       dob: '',
       phone: '',
       subject: '',
-      role: 'គ្រូបង្រៀន',
+      role: '',
       responsibilities: [],
+      salaryRank: '',
+      framework: '',
+      teachingSubjects: '',
+      classCharge: '',
+      ethnicity: '',
+      educationLevel: '',
+      joinDate: '',
+      yearsOfService: 0,
     });
     setNewResp('');
     setIsFormOpen(true);
@@ -167,14 +208,22 @@ export default function TeacherManagement({
   const handleOpenEdit = (t: Teacher) => {
     setEditingTeacher(t);
     setFormData({
-      idNumber: t.idNumber,
-      name: t.name,
-      gender: t.gender,
-      dob: t.dob,
-      phone: t.phone,
-      subject: t.subject,
-      role: t.role,
-      responsibilities: t.responsibilities,
+      idNumber: t.idNumber || '',
+      name: t.name || '',
+      gender: t.gender || 'ប្រុស',
+      dob: t.dob || '',
+      phone: t.phone || '',
+      subject: t.subject || '',
+      role: t.role || '',
+      responsibilities: t.responsibilities || [],
+      salaryRank: t.salaryRank || '',
+      framework: t.framework || '',
+      teachingSubjects: t.teachingSubjects || '',
+      classCharge: t.classCharge || '',
+      ethnicity: t.ethnicity || '',
+      educationLevel: t.educationLevel || '',
+      joinDate: t.joinDate || '',
+      yearsOfService: t.yearsOfService !== undefined ? t.yearsOfService : (t.joinDate ? calculateYearsOfService(t.joinDate) : 0),
     });
     setNewResp('');
     setIsFormOpen(true);
@@ -309,10 +358,10 @@ export default function TeacherManagement({
       {activeSubTab === 'list' && (
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-5">
           {/* Integrated Header Container */}
-          <div className="border-b border-slate-100 pb-4 flex flex-col md:flex-row gap-4 items-center justify-between">
-            <h1 className="text-lg font-bold text-slate-800 tracking-tight">ព័ត៌មានគ្រូបង្រៀន</h1>
+          <div className="border-b border-slate-100 pb-4 flex flex-col xl:flex-row gap-4 items-start xl:items-center justify-between w-full">
+            <h1 className="text-lg font-bold text-slate-800 tracking-tight text-left self-start shrink-0">ព័ត៌មានគ្រូបង្រៀន</h1>
             
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
               {/* Search input placed directly on the left of action buttons */}
               <div className="relative w-full sm:w-48">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -341,9 +390,9 @@ export default function TeacherManagement({
                   type="button"
                   onClick={() => setIsDeleteAllOpen(true)}
                   disabled={teachers.length === 0}
-                  className="flex-1 sm:flex-none px-4 py-2 bg-white border border-rose-600 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed text-rose-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                  className="flex-1 sm:flex-none px-4 py-2 bg-white border border-red-500 hover:bg-red-50/50 disabled:opacity-50 disabled:cursor-not-allowed text-red-600 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                 >
-                  <Trash2 className="w-4 h-4 text-rose-600 shrink-0" />
+                  <Trash2 className="w-4 h-4 text-red-500 shrink-0" />
                   លុបទិន្នន័យ
                 </button>
               </div>
@@ -404,7 +453,7 @@ export default function TeacherManagement({
                             <button
                               onClick={() => handleDeleteTeacher(t.id, t.name)}
                               title="លុបទិន្នន័យគ្រូ"
-                              className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                              className="p-1.5 text-red-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -597,27 +646,27 @@ export default function TeacherManagement({
             <form onSubmit={handleSaveTeacher} className="flex-1 overflow-y-auto p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label htmlFor="teacher-code-input" className="text-xs font-bold text-slate-600">លេខកូដសម្គាល់គ្រូ</label>
+                  <label htmlFor="teacher-code-input" className="text-xs font-bold text-slate-600">អត្តលេខមន្ត្រី</label>
                   <input
                     id="teacher-code-input"
                     type="text"
                     required
                     value={formData.idNumber}
                     onChange={e => setFormData({ ...formData, idNumber: e.target.value })}
-                    placeholder="ឧ. TCH-005"
+                    placeholder="1900100036"
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label htmlFor="teacher-name-input" className="text-xs font-bold text-slate-600">គោត្តនាម & នាមខ្លួន</label>
+                  <label htmlFor="teacher-name-input" className="text-xs font-bold text-slate-600">គោត្តនាម និងនាមខ្លួន</label>
                   <input
                     id="teacher-name-input"
                     type="text"
                     required
                     value={formData.name}
                     onChange={e => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="លី សុខជា"
+                    placeholder="ផៃ ប៊ុនណា"
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
                   />
                 </div>
@@ -625,20 +674,16 @@ export default function TeacherManagement({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-600">ភេទ</label>
-                  <div className="flex gap-4 pt-1.5">
-                    {(['ប្រុស', 'ស្រី'] as const).map(g => (
-                      <label key={g} className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-700">
-                        <input
-                          type="radio"
-                          name="teacherGender"
-                          checked={formData.gender === g}
-                          onChange={() => setFormData({ ...formData, gender: g })}
-                        />
-                        <span>{g}</span>
-                      </label>
-                    ))}
-                  </div>
+                  <label htmlFor="teacher-gender-select" className="text-xs font-bold text-slate-600">ភេទ</label>
+                  <select
+                    id="teacher-gender-select"
+                    value={formData.gender}
+                    onChange={e => setFormData({ ...formData, gender: e.target.value as 'ប្រុស' | 'ស្រី' })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white appearance-none cursor-pointer"
+                  >
+                    <option value="ប្រុស">ប្រុស</option>
+                    <option value="ស្រី">ស្រី</option>
+                  </select>
                 </div>
 
                 <div className="space-y-1.5">
@@ -649,6 +694,45 @@ export default function TeacherManagement({
                     required
                     value={formData.dob}
                     onChange={e => setFormData({ ...formData, dob: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* Added: កាំប្រាក់, តួនាទី, ក្របខ័ណ្ឌ */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="teacher-salaryRank-input" className="text-xs font-bold text-slate-600">កាំប្រាក់</label>
+                  <input
+                    id="teacher-salaryRank-input"
+                    type="text"
+                    value={formData.salaryRank || ''}
+                    onChange={e => setFormData({ ...formData, salaryRank: e.target.value })}
+                    placeholder="ឧ. គ.២"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="teacher-role-input" className="text-xs font-bold text-slate-600">តួនាទី</label>
+                  <input
+                    id="teacher-role-input"
+                    type="text"
+                    value={formData.role || ''}
+                    onChange={e => setFormData({ ...formData, role: e.target.value })}
+                    placeholder="ឧ. គ្រូបង្រៀន"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="teacher-framework-input" className="text-xs font-bold text-slate-600">ក្របខ័ណ្ឌ</label>
+                  <input
+                    id="teacher-framework-input"
+                    type="text"
+                    value={formData.framework || ''}
+                    onChange={e => setFormData({ ...formData, framework: e.target.value })}
+                    placeholder="ឧ. មន្ត្រីក្រមការ"
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
                   />
                 </div>
@@ -669,7 +753,7 @@ export default function TeacherManagement({
                 </div>
 
                 <div className="space-y-1.5">
-                  <label htmlFor="teacher-subject-input" className="text-xs font-bold text-slate-600">មុខវិជ្ជាបង្រៀនឯក</label>
+                  <label htmlFor="teacher-subject-input" className="text-xs font-bold text-slate-600">ឯកទេស</label>
                   <input
                     id="teacher-subject-input"
                     type="text"
@@ -682,55 +766,80 @@ export default function TeacherManagement({
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label htmlFor="teacher-role-input" className="text-xs font-bold text-slate-600">តួនាទី / មុខតំណែង</label>
-                <input
-                  id="teacher-role-input"
-                  type="text"
-                  required
-                  value={formData.role}
-                  onChange={e => setFormData({ ...formData, role: e.target.value })}
-                  placeholder="គ្រូបង្រៀន / ជំនួយការការិយាល័យ"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
-                />
-              </div>
-
-              {/* Configure Responsibilities */}
-              <div className="space-y-2 pt-2 border-t border-slate-100">
-                <label className="text-xs font-bold text-slate-600 block">ចាត់តាំងភារកិច្ចបន្ថែម</label>
-                <div className="flex gap-2">
+              {/* Added: មុខវិជ្ជាបង្រៀន, បន្ទុកថ្នាក់, ជនជាតិភាគតិច, កម្រិតវប្បធម៌ */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="teacher-teachingSubjects-input" className="text-xs font-bold text-slate-600">មុខវិជ្ជាបង្រៀន</label>
                   <input
+                    id="teacher-teachingSubjects-input"
                     type="text"
-                    value={newResp}
-                    onChange={e => setNewResp(e.target.value)}
-                    placeholder="ឧ. ទទួលបន្ទុកសម្ភារពិសោធន៍គីមី"
-                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
+                    value={formData.teachingSubjects || ''}
+                    onChange={e => setFormData({ ...formData, teachingSubjects: e.target.value })}
+                    placeholder="ឧ. គណិត, រូប"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
                   />
-                  <button
-                    type="button"
-                    onClick={addResponsibility}
-                    className="px-3 py-2 bg-teal-600 text-white rounded-xl text-xs font-bold flex items-center justify-center cursor-pointer hover:bg-teal-700"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
                 </div>
 
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {formData.responsibilities.map((r, i) => (
-                    <span 
-                      key={i} 
-                      className="px-2 py-1 bg-teal-50 text-teal-800 rounded-lg text-[10px] font-bold flex items-center gap-1 border border-teal-100"
-                    >
-                      {r}
-                      <button 
-                        type="button" 
-                        onClick={() => removeResponsibility(i)}
-                        className="text-teal-600 hover:text-teal-900 cursor-pointer"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
+                <div className="space-y-1.5">
+                  <label htmlFor="teacher-classCharge-input" className="text-xs font-bold text-slate-600">បន្ទុកថ្នាក់</label>
+                  <input
+                    id="teacher-classCharge-input"
+                    type="text"
+                    value={formData.classCharge || ''}
+                    onChange={e => setFormData({ ...formData, classCharge: e.target.value })}
+                    placeholder="ឧ. ថ្នាក់ទី ១០A, ១១B"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="teacher-ethnicity-input" className="text-xs font-bold text-slate-600">ជនជាតិភាគតិច</label>
+                  <input
+                    id="teacher-ethnicity-input"
+                    type="text"
+                    value={formData.ethnicity || ''}
+                    onChange={e => setFormData({ ...formData, ethnicity: e.target.value })}
+                    placeholder="ឧ. ខ្មែរ (ឬជនជាតិភាគតិច)"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="teacher-educationLevel-input" className="text-xs font-bold text-slate-600">កម្រិតវប្បធម៌</label>
+                  <input
+                    id="teacher-educationLevel-input"
+                    type="text"
+                    value={formData.educationLevel || ''}
+                    onChange={e => setFormData({ ...formData, educationLevel: e.target.value })}
+                    placeholder="ឧ. បរិញ្ញាបត្រ"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="teacher-joinDate-input" className="text-xs font-bold text-slate-600">ថ្ងៃចូលបម្រើការងារ</label>
+                  <input
+                    id="teacher-joinDate-input"
+                    type="date"
+                    value={formData.joinDate || ''}
+                    onChange={e => handleJoinDateChange(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="teacher-yearsOfService-input" className="text-xs font-bold text-slate-600">ចំនួនឆ្នាំបម្រើការងារ</label>
+                  <input
+                    id="teacher-yearsOfService-input"
+                    type="text"
+                    readOnly
+                    value={formData.yearsOfService !== undefined ? `${formData.yearsOfService} ឆ្នាំ` : '0 ឆ្នាំ'}
+                    className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs outline-none cursor-not-allowed font-semibold text-slate-600"
+                  />
                 </div>
               </div>
 
