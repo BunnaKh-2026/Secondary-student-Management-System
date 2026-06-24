@@ -483,6 +483,7 @@ export default function App() {
                     onUpdateTeachers={handleUpdateTeachers}
                     onUpdateAttendance={handleUpdateTeacherAttendance}
                     activeSubTab={activeTeacherSubTab}
+                    classrooms={state.classrooms}
                   />
                 )}
 

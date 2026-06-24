@@ -16,13 +16,17 @@ interface SchoolSettingsProps {
 export default function SchoolSettings({ schoolInfo, onSave }: SchoolSettingsProps) {
   const [formData, setFormData] = useState<SchoolInfo>({ ...schoolInfo });
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+  const [schoolAddressManual, setSchoolAddressManual] = useState(false);
 
-  useEffect(() => {
-    setFormData({ ...schoolInfo });
-  }, [schoolInfo]);
   const provincesList = useMemo(() => {
     return getProvincesList();
   }, []);
+
+  useEffect(() => {
+    setFormData({ ...schoolInfo });
+    const isCustom = schoolInfo.province ? !provincesList.includes(schoolInfo.province) : false;
+    setSchoolAddressManual(isCustom);
+  }, [schoolInfo, provincesList]);
 
   const districtsList = useMemo(() => {
     return getDistrictsForProvince(formData.province);
@@ -185,106 +189,155 @@ export default function SchoolSettings({ schoolInfo, onSave }: SchoolSettingsPro
 
           {/* Location details */}
           <div className="space-y-4">
-            <div 
-              className="text-sm font-bold text-slate-700" 
-              style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}
-            >
-              អាសយដ្ឋានសាលារៀន
+            <div className="flex justify-between items-center">
+              <div 
+                className="text-sm font-bold text-slate-700" 
+                style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}
+              >
+                អាសយដ្ឋានសាលារៀន
+              </div>
+              <button
+                type="button"
+                onClick={() => setSchoolAddressManual(!schoolAddressManual)}
+                className="text-[10px] font-bold text-teal-600 hover:text-teal-700 underline cursor-pointer"
+              >
+                {schoolAddressManual ? 'ជ្រើសរើសពីបញ្ជី' : 'សរសេរដោយផ្ទាល់'}
+              </button>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {/* Province Dropdown menu */}
+              {/* Province Dropdown/Input menu */}
               <div className="space-y-1.5">
                 <label htmlFor="province-select" className="text-xs font-bold text-slate-500">រាជធានី / ខេត្ត</label>
-                <select
-                  id="province-select"
-                  value={formData.province || ''}
-                  onChange={e => handleProvinceSelect(e.target.value)}
-                  className={`block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white outline-none appearance-none cursor-pointer ${
-                    !formData.province ? 'text-slate-400 font-medium' : 'text-slate-800'
-                  }`}
-                  style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
-                >
-                  <option value="" className="text-slate-400 font-medium">ជ្រើសរើស</option>
-                  {provincesList.map(p => (
-                    <option key={p} value={p} className="text-slate-800 font-medium">{p}</option>
-                  ))}
-                </select>
+                {schoolAddressManual ? (
+                  <input
+                    type="text"
+                    value={formData.province || ''}
+                    onChange={e => handleChange('province', e.target.value)}
+                    placeholder="បញ្ចូលខេត្ត/ក្រុង"
+                    className="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none"
+                  />
+                ) : (
+                  <select
+                    id="province-select"
+                    value={formData.province || ''}
+                    onChange={e => handleProvinceSelect(e.target.value)}
+                    className={`block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white outline-none appearance-none cursor-pointer ${
+                      !formData.province ? 'text-slate-400 font-medium' : 'text-slate-800'
+                    }`}
+                    style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
+                  >
+                    <option value="" className="text-slate-400 font-medium">ជ្រើសរើស</option>
+                    {provincesList.map(p => (
+                      <option key={p} value={p} className="text-slate-800 font-medium">{p}</option>
+                    ))}
+                  </select>
+                )}
               </div>
 
-              {/* District Dropdown menu */}
+              {/* District Dropdown/Input menu */}
               <div className="space-y-1.5">
                 <label htmlFor="district-select" className="text-xs font-bold text-slate-500">ស្រុក / ក្រុង / ខណ្ឌ</label>
-                <select
-                  id="district-select"
-                  value={formData.district || ''}
-                  onChange={e => handleDistrictSelect(e.target.value)}
-                  className={`block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white outline-none appearance-none cursor-pointer ${
-                    !formData.district ? 'text-slate-400 font-medium' : 'text-slate-800'
-                  }`}
-                  style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
-                >
-                  <option value="" className="text-slate-400 font-medium">ជ្រើសរើស</option>
-                  {(() => {
-                    const list = [...districtsList];
-                    if (formData.district && !list.includes(formData.district)) {
-                      list.unshift(formData.district);
-                    }
-                    return list.map(d => (
-                      <option key={d} value={d} className="text-slate-800 font-medium">{d}</option>
-                    ));
-                  })()}
-                </select>
+                {schoolAddressManual ? (
+                  <input
+                    type="text"
+                    value={formData.district || ''}
+                    onChange={e => handleChange('district', e.target.value)}
+                    placeholder="បញ្ចូលស្រុក/ក្រុង/ខណ្ឌ"
+                    className="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none"
+                  />
+                ) : (
+                  <select
+                    id="district-select"
+                    value={formData.district || ''}
+                    onChange={e => handleDistrictSelect(e.target.value)}
+                    className={`block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white outline-none appearance-none cursor-pointer ${
+                      !formData.district ? 'text-slate-400 font-medium' : 'text-slate-800'
+                    }`}
+                    style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
+                  >
+                    <option value="" className="text-slate-400 font-medium">ជ្រើសរើស</option>
+                    {(() => {
+                      const list = [...districtsList];
+                      if (formData.district && !list.includes(formData.district)) {
+                        list.unshift(formData.district);
+                      }
+                      return list.map(d => (
+                        <option key={d} value={d} className="text-slate-800 font-medium">{d}</option>
+                      ));
+                    })()}
+                  </select>
+                )}
               </div>
 
-              {/* Commune Dropdown menu */}
+              {/* Commune Dropdown/Input menu */}
               <div className="space-y-1.5">
                 <label htmlFor="commune-select" className="text-xs font-bold text-slate-500">ឃុំ / សង្កាត់</label>
-                <select
-                  id="commune-select"
-                  value={formData.commune || ''}
-                  onChange={e => handleCommuneSelect(e.target.value)}
-                  className={`block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white outline-none appearance-none cursor-pointer ${
-                    !formData.commune ? 'text-slate-400 font-medium' : 'text-slate-800'
-                  }`}
-                  style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
-                >
-                  <option value="" className="text-slate-400 font-medium">ជ្រើសរើស</option>
-                  {(() => {
-                    const list = [...communesList];
-                    if (formData.commune && !list.includes(formData.commune)) {
-                      list.unshift(formData.commune);
-                    }
-                    return list.map(c => (
-                      <option key={c} value={c} className="text-slate-800 font-medium">{c}</option>
-                    ));
-                  })()}
-                </select>
+                {schoolAddressManual ? (
+                  <input
+                    type="text"
+                    value={formData.commune || ''}
+                    onChange={e => handleChange('commune', e.target.value)}
+                    placeholder="បញ្ចូលឃុំ/សង្កាត់"
+                    className="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none"
+                  />
+                ) : (
+                  <select
+                    id="commune-select"
+                    value={formData.commune || ''}
+                    onChange={e => handleCommuneSelect(e.target.value)}
+                    className={`block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white outline-none appearance-none cursor-pointer ${
+                      !formData.commune ? 'text-slate-400 font-medium' : 'text-slate-800'
+                    }`}
+                    style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
+                  >
+                    <option value="" className="text-slate-400 font-medium">ជ្រើសរើស</option>
+                    {(() => {
+                      const list = [...communesList];
+                      if (formData.commune && !list.includes(formData.commune)) {
+                        list.unshift(formData.commune);
+                      }
+                      return list.map(c => (
+                        <option key={c} value={c} className="text-slate-800 font-medium">{c}</option>
+                      ));
+                    })()}
+                  </select>
+                )}
               </div>
 
-              {/* Village Dropdown menu */}
+              {/* Village Dropdown/Input menu */}
               <div className="space-y-1.5">
                 <label htmlFor="village-select" className="text-xs font-bold text-slate-500">ភូមិ</label>
-                <select
-                  id="village-select"
-                  value={formData.village || ''}
-                  onChange={e => handleChange('village', e.target.value)}
-                  className={`block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white outline-none appearance-none cursor-pointer ${
-                    !formData.village ? 'text-slate-400 font-medium' : 'text-slate-800'
-                  }`}
-                  style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
-                >
-                  <option value="" className="text-slate-400 font-medium">ជ្រើសរើស</option>
-                  {(() => {
-                    const list = [...villagesList];
-                    if (formData.village && !list.includes(formData.village)) {
-                      list.unshift(formData.village);
-                    }
-                    return list.map(v => (
-                      <option key={v} value={v} className="text-slate-800 font-medium">{v}</option>
-                    ));
-                  })()}
-                </select>
+                {schoolAddressManual ? (
+                  <input
+                    type="text"
+                    value={formData.village || ''}
+                    onChange={e => handleChange('village', e.target.value)}
+                    placeholder="បញ្ចូលភូមិ"
+                    className="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none"
+                  />
+                ) : (
+                  <select
+                    id="village-select"
+                    value={formData.village || ''}
+                    onChange={e => handleChange('village', e.target.value)}
+                    className={`block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white outline-none appearance-none cursor-pointer ${
+                      !formData.village ? 'text-slate-400 font-medium' : 'text-slate-800'
+                    }`}
+                    style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
+                  >
+                    <option value="" className="text-slate-400 font-medium">ជ្រើសរើស</option>
+                    {(() => {
+                      const list = [...villagesList];
+                      if (formData.village && !list.includes(formData.village)) {
+                        list.unshift(formData.village);
+                      }
+                      return list.map(v => (
+                        <option key={v} value={v} className="text-slate-800 font-medium">{v}</option>
+                      ));
+                    })()}
+                  </select>
+                )}
               </div>
             </div>
           </div>

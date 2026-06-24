@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { 
   GraduationCap, UserPlus, School, Search, Trash2, Edit2, 
   Printer, Plus, X, ArrowRight, Table, Phone, MapPin, Calendar, CheckCircle,
-  AlertTriangle, IdCard, Save, GripVertical, RotateCcw
+  AlertTriangle, IdCard, Save, GripVertical, RotateCcw, XCircle
 } from 'lucide-react';
 import { Student, Classroom, SchoolInfo } from '../types';
 import { 
@@ -315,11 +315,11 @@ export default function StudentManagement({
   const [newSubjectMaxScore, setNewSubjectMaxScore] = useState<number | string>(50);
 
   // Toast state for student registration
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const successToastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const showToast = (message: string, type: 'success' | 'info' = 'success') => {
+  const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
     if (toastTimeoutRef.current) {
       clearTimeout(toastTimeoutRef.current);
     }
@@ -687,6 +687,8 @@ export default function StudentManagement({
   // Student creation States
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [pobManual, setPobManual] = useState(false);
+  const [currentAddressManual, setCurrentAddressManual] = useState(false);
   const [studentForm, setStudentForm] = useState<Omit<Student, 'id'>>({
     classroomId: '',
     studentIdCard: '',
@@ -975,6 +977,8 @@ export default function StudentManagement({
     setEditingStudent(null);
     setStudentFormError(null);
     setHasManuallyEditedLatin(false);
+    setPobManual(false);
+    setCurrentAddressManual(false);
     setStudentForm({
       classroomId: classrooms[0]?.id || '',
       studentIdCard: `STD-${String(students.length + 1).padStart(3, '0')}`,
@@ -1002,6 +1006,12 @@ export default function StudentManagement({
     setEditingStudent(s);
     setStudentFormError(null);
     setHasManuallyEditedLatin(true);
+    
+    const isPobCustom = s.pobProvince ? !provincesList.includes(s.pobProvince) : false;
+    const isAddressCustom = s.currentAddressProvince ? !provincesList.includes(s.currentAddressProvince) : false;
+    setPobManual(isPobCustom);
+    setCurrentAddressManual(isAddressCustom);
+
     setStudentForm({
       classroomId: s.classroomId,
       studentIdCard: s.studentIdCard,
@@ -1166,7 +1176,13 @@ export default function StudentManagement({
                 បង្កើតថ្នាក់រៀនថ្មី
               </button>
               <button
-                onClick={() => setIsDeleteAllConfirmOpen(true)}
+                onClick={() => {
+                  if (classrooms.length === 0) {
+                    showToast('មិនមានទិន្នន័យថ្នាក់នៅក្នុងប្រព័ន្ធសម្រាប់លុបទេ!', 'error');
+                  } else {
+                    setIsDeleteAllConfirmOpen(true);
+                  }
+                }}
                 className="px-4 py-2 bg-white border border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
                 id="btn-clear-classrooms"
               >
@@ -2157,7 +2173,13 @@ export default function StudentManagement({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setIsDeleteAllStudentsConfirmOpen(true)}
+                  onClick={() => {
+                    if (students.length === 0) {
+                      showToast('មិនមានទិន្នន័យសិស្សនៅក្នុងប្រព័ន្ធសម្រាប់លុបទេ!', 'error');
+                    } else {
+                      setIsDeleteAllStudentsConfirmOpen(true);
+                    }
+                  }}
                   className="flex-1 sm:flex-initial px-4 py-2 bg-white border border-red-500 text-red-600 hover:bg-rose-50 hover:text-red-755 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer whitespace-nowrap"
                   id="btn-clear-all-students"
                 >
@@ -2541,171 +2563,269 @@ export default function StudentManagement({
               </div>
 
               <div className="space-y-2.5">
-                <span className="text-xs font-bold text-slate-700 block">ទីកន្លែងកំណើត</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-slate-700 block">ទីកន្លែងកំណើត</span>
+                  <button
+                    type="button"
+                    onClick={() => setPobManual(!pobManual)}
+                    className="text-[10px] font-bold text-teal-600 hover:text-teal-700 underline cursor-pointer"
+                  >
+                    {pobManual ? 'ជ្រើសរើសពីបញ្ជី' : 'សរសេរដោយផ្ទាល់'}
+                  </button>
+                </div>
                 <div className="grid grid-cols-2 gap-2 bg-slate-50/75 p-3.5 rounded-2xl border border-slate-100">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-500 block">រាជធានី/ខេត្ត</label>
-                    <select
-                      value={studentForm.pobProvince || ''}
-                      onChange={e => handlePobProvinceChange(e.target.value)}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer"
-                    >
-                      <option value="">ជ្រើសរើស</option>
-                      {(() => {
-                        const list = [...provincesList];
-                        if (studentForm.pobProvince && !list.includes(studentForm.pobProvince)) {
-                          list.unshift(studentForm.pobProvince);
-                        }
-                        return list.map(p => (
-                          <option key={p} value={p}>{p}</option>
-                        ));
-                      })()}
-                    </select>
+                    {pobManual ? (
+                      <input
+                        type="text"
+                        value={studentForm.pobProvince || ''}
+                        onChange={e => setStudentForm({ ...studentForm, pobProvince: e.target.value })}
+                        placeholder="បញ្ចូលខេត្ត/ក្រុង"
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
+                      />
+                    ) : (
+                      <select
+                        value={studentForm.pobProvince || ''}
+                        onChange={e => handlePobProvinceChange(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer"
+                      >
+                        <option value="">ជ្រើសរើស</option>
+                        {(() => {
+                          const list = [...provincesList];
+                          if (studentForm.pobProvince && !list.includes(studentForm.pobProvince)) {
+                            list.unshift(studentForm.pobProvince);
+                          }
+                          return list.map(p => (
+                            <option key={p} value={p}>{p}</option>
+                          ));
+                        })()}
+                      </select>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-500 block">ស្រុក/ក្រុង/ខណ្ឌ</label>
-                    <select
-                      value={studentForm.pobDistrict || ''}
-                      onChange={e => handlePobDistrictChange(e.target.value)}
-                      disabled={!studentForm.pobProvince}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
-                    >
-                      <option value="">ជ្រើសរើស</option>
-                      {(() => {
-                        const list = [...pobDistrictsList];
-                        if (studentForm.pobDistrict && !list.includes(studentForm.pobDistrict)) {
-                          list.unshift(studentForm.pobDistrict);
-                        }
-                        return list.map(d => (
-                          <option key={d} value={d}>{d}</option>
-                        ));
-                      })()}
-                    </select>
+                    {pobManual ? (
+                      <input
+                        type="text"
+                        value={studentForm.pobDistrict || ''}
+                        onChange={e => setStudentForm({ ...studentForm, pobDistrict: e.target.value })}
+                        placeholder="បញ្ចូលស្រុក/ក្រុង/ខណ្ឌ"
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
+                      />
+                    ) : (
+                      <select
+                        value={studentForm.pobDistrict || ''}
+                        onChange={e => handlePobDistrictChange(e.target.value)}
+                        disabled={!studentForm.pobProvince}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                      >
+                        <option value="">ជ្រើសរើស</option>
+                        {(() => {
+                          const list = [...pobDistrictsList];
+                          if (studentForm.pobDistrict && !list.includes(studentForm.pobDistrict)) {
+                            list.unshift(studentForm.pobDistrict);
+                          }
+                          return list.map(d => (
+                            <option key={d} value={d}>{d}</option>
+                          ));
+                        })()}
+                      </select>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-500 block">ឃុំ/សង្កាត់</label>
-                    <select
-                      value={studentForm.pobCommune || ''}
-                      onChange={e => handlePobCommuneChange(e.target.value)}
-                      disabled={!studentForm.pobDistrict}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
-                    >
-                      <option value="">ជ្រើសរើស</option>
-                      {(() => {
-                        const list = [...pobCommunesList];
-                        if (studentForm.pobCommune && !list.includes(studentForm.pobCommune)) {
-                          list.unshift(studentForm.pobCommune);
-                        }
-                        return list.map(c => (
-                          <option key={c} value={c}>{c}</option>
-                        ));
-                      })()}
-                    </select>
+                    {pobManual ? (
+                      <input
+                        type="text"
+                        value={studentForm.pobCommune || ''}
+                        onChange={e => setStudentForm({ ...studentForm, pobCommune: e.target.value })}
+                        placeholder="បញ្ចូលឃុំ/សង្កាត់"
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
+                      />
+                    ) : (
+                      <select
+                        value={studentForm.pobCommune || ''}
+                        onChange={e => handlePobCommuneChange(e.target.value)}
+                        disabled={!studentForm.pobDistrict}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                      >
+                        <option value="">ជ្រើសរើស</option>
+                        {(() => {
+                          const list = [...pobCommunesList];
+                          if (studentForm.pobCommune && !list.includes(studentForm.pobCommune)) {
+                            list.unshift(studentForm.pobCommune);
+                          }
+                          return list.map(c => (
+                            <option key={c} value={c}>{c}</option>
+                          ));
+                        })()}
+                      </select>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-500 block">ភូមិ</label>
-                    <select
-                      value={studentForm.pobVillage || ''}
-                      onChange={e => setStudentForm({ ...studentForm, pobVillage: e.target.value })}
-                      disabled={!studentForm.pobCommune}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
-                    >
-                      <option value="">ជ្រើសរើស</option>
-                      {(() => {
-                        const list = [...pobVillagesList];
-                        if (studentForm.pobVillage && !list.includes(studentForm.pobVillage)) {
-                          list.unshift(studentForm.pobVillage);
-                        }
-                        return list.map(v => (
-                          <option key={v} value={v}>{v}</option>
-                        ));
-                      })()}
-                    </select>
+                    {pobManual ? (
+                      <input
+                        type="text"
+                        value={studentForm.pobVillage || ''}
+                        onChange={e => setStudentForm({ ...studentForm, pobVillage: e.target.value })}
+                        placeholder="បញ្ចូលភូមិ"
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
+                      />
+                    ) : (
+                      <select
+                        value={studentForm.pobVillage || ''}
+                        onChange={e => setStudentForm({ ...studentForm, pobVillage: e.target.value })}
+                        disabled={!studentForm.pobCommune}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                      >
+                        <option value="">ជ្រើសរើស</option>
+                        {(() => {
+                          const list = [...pobVillagesList];
+                          if (studentForm.pobVillage && !list.includes(studentForm.pobVillage)) {
+                            list.unshift(studentForm.pobVillage);
+                          }
+                          return list.map(v => (
+                            <option key={v} value={v}>{v}</option>
+                          ));
+                        })()}
+                      </select>
+                    )}
                   </div>
                 </div>
               </div>
 
               <div className="space-y-2.5">
-                <span className="text-xs font-bold text-slate-700 block">ទីលំនៅបច្ចុប្បន្ន</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-slate-700 block">ទីលំនៅបច្ចុប្បន្ន</span>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentAddressManual(!currentAddressManual)}
+                    className="text-[10px] font-bold text-teal-600 hover:text-teal-700 underline cursor-pointer"
+                  >
+                    {currentAddressManual ? 'ជ្រើសរើសពីបញ្ជី' : 'សរសេរដោយផ្ទាល់'}
+                  </button>
+                </div>
                 <div className="grid grid-cols-2 gap-2 bg-slate-50/75 p-3.5 rounded-2xl border border-slate-100">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-500 block">រាជធានី/ខេត្ត</label>
-                    <select
-                      value={studentForm.currentAddressProvince || ''}
-                      onChange={e => handleCurrentAddressProvinceChange(e.target.value)}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer"
-                    >
-                      <option value="">ជ្រើសរើស</option>
-                      {(() => {
-                        const list = [...provincesList];
-                        if (studentForm.currentAddressProvince && !list.includes(studentForm.currentAddressProvince)) {
-                          list.unshift(studentForm.currentAddressProvince);
-                        }
-                        return list.map(p => (
-                          <option key={p} value={p}>{p}</option>
-                        ));
-                      })()}
-                    </select>
+                    {currentAddressManual ? (
+                      <input
+                        type="text"
+                        value={studentForm.currentAddressProvince || ''}
+                        onChange={e => setStudentForm({ ...studentForm, currentAddressProvince: e.target.value })}
+                        placeholder="បញ្ចូលខេត្ត/ក្រុង"
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
+                      />
+                    ) : (
+                      <select
+                        value={studentForm.currentAddressProvince || ''}
+                        onChange={e => handleCurrentAddressProvinceChange(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer"
+                      >
+                        <option value="">ជ្រើសរើស</option>
+                        {(() => {
+                          const list = [...provincesList];
+                          if (studentForm.currentAddressProvince && !list.includes(studentForm.currentAddressProvince)) {
+                            list.unshift(studentForm.currentAddressProvince);
+                          }
+                          return list.map(p => (
+                            <option key={p} value={p}>{p}</option>
+                          ));
+                        })()}
+                      </select>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-500 block">ស្រុក/ក្រុង/ខណ្ឌ</label>
-                    <select
-                      value={studentForm.currentAddressDistrict || ''}
-                      onChange={e => handleCurrentAddressDistrictChange(e.target.value)}
-                      disabled={!studentForm.currentAddressProvince}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
-                    >
-                      <option value="">ជ្រើសរើស</option>
-                      {(() => {
-                        const list = [...currentAddressDistrictsList];
-                        if (studentForm.currentAddressDistrict && !list.includes(studentForm.currentAddressDistrict)) {
-                          list.unshift(studentForm.currentAddressDistrict);
-                        }
-                        return list.map(d => (
-                          <option key={d} value={d}>{d}</option>
-                        ));
-                      })()}
-                    </select>
+                    {currentAddressManual ? (
+                      <input
+                        type="text"
+                        value={studentForm.currentAddressDistrict || ''}
+                        onChange={e => setStudentForm({ ...studentForm, currentAddressDistrict: e.target.value })}
+                        placeholder="បញ្ចូលស្រុក/ក្រុង/ខណ្ឌ"
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
+                      />
+                    ) : (
+                      <select
+                        value={studentForm.currentAddressDistrict || ''}
+                        onChange={e => handleCurrentAddressDistrictChange(e.target.value)}
+                        disabled={!studentForm.currentAddressProvince}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                      >
+                        <option value="">ជ្រើសរើស</option>
+                        {(() => {
+                          const list = [...currentAddressDistrictsList];
+                          if (studentForm.currentAddressDistrict && !list.includes(studentForm.currentAddressDistrict)) {
+                            list.unshift(studentForm.currentAddressDistrict);
+                          }
+                          return list.map(d => (
+                            <option key={d} value={d}>{d}</option>
+                          ));
+                        })()}
+                      </select>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-500 block">ឃុំ/សង្កាត់</label>
-                    <select
-                      value={studentForm.currentAddressCommune || ''}
-                      onChange={e => handleCurrentAddressCommuneChange(e.target.value)}
-                      disabled={!studentForm.currentAddressDistrict}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
-                    >
-                      <option value="">ជ្រើសរើស</option>
-                      {(() => {
-                        const list = [...currentAddressCommunesList];
-                        if (studentForm.currentAddressCommune && !list.includes(studentForm.currentAddressCommune)) {
-                          list.unshift(studentForm.currentAddressCommune);
-                        }
-                        return list.map(c => (
-                          <option key={c} value={c}>{c}</option>
-                        ));
-                      })()}
-                    </select>
+                    {currentAddressManual ? (
+                      <input
+                        type="text"
+                        value={studentForm.currentAddressCommune || ''}
+                        onChange={e => setStudentForm({ ...studentForm, currentAddressCommune: e.target.value })}
+                        placeholder="បញ្ចូលឃុំ/សង្កាត់"
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
+                      />
+                    ) : (
+                      <select
+                        value={studentForm.currentAddressCommune || ''}
+                        onChange={e => handleCurrentAddressCommuneChange(e.target.value)}
+                        disabled={!studentForm.currentAddressDistrict}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                      >
+                        <option value="">ជ្រើសរើស</option>
+                        {(() => {
+                          const list = [...currentAddressCommunesList];
+                          if (studentForm.currentAddressCommune && !list.includes(studentForm.currentAddressCommune)) {
+                            list.unshift(studentForm.currentAddressCommune);
+                          }
+                          return list.map(c => (
+                            <option key={c} value={c}>{c}</option>
+                          ));
+                        })()}
+                      </select>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-500 block">ភូមិ</label>
-                    <select
-                      value={studentForm.currentAddressVillage || ''}
-                      onChange={e => setStudentForm({ ...studentForm, currentAddressVillage: e.target.value })}
-                      disabled={!studentForm.currentAddressCommune}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
-                    >
-                      <option value="">ជ្រើសរើស</option>
-                      {(() => {
-                        const list = [...currentAddressVillagesList];
-                        if (studentForm.currentAddressVillage && !list.includes(studentForm.currentAddressVillage)) {
-                          list.unshift(studentForm.currentAddressVillage);
-                        }
-                        return list.map(v => (
-                          <option key={v} value={v}>{v}</option>
-                        ));
-                      })()}
-                    </select>
+                    {currentAddressManual ? (
+                      <input
+                        type="text"
+                        value={studentForm.currentAddressVillage || ''}
+                        onChange={e => setStudentForm({ ...studentForm, currentAddressVillage: e.target.value })}
+                        placeholder="បញ្ចូលភូមិ"
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
+                      />
+                    ) : (
+                      <select
+                        value={studentForm.currentAddressVillage || ''}
+                        onChange={e => setStudentForm({ ...studentForm, currentAddressVillage: e.target.value })}
+                        disabled={!studentForm.currentAddressCommune}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                      >
+                        <option value="">ជ្រើសរើស</option>
+                        {(() => {
+                          const list = [...currentAddressVillagesList];
+                          if (studentForm.currentAddressVillage && !list.includes(studentForm.currentAddressVillage)) {
+                            list.unshift(studentForm.currentAddressVillage);
+                          }
+                          return list.map(v => (
+                            <option key={v} value={v}>{v}</option>
+                          ));
+                        })()}
+                      </select>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2926,12 +3046,14 @@ export default function StudentManagement({
       )}
       {/* TOAST NOTIFICATION FEEDBACK */}
       {toast && (
-        <div className="fixed bottom-5 right-5 z-[200] flex bg-white border-l-4 border-emerald-500 shadow-xl rounded-xl p-4 items-center gap-3 max-w-sm border border-slate-100 transition-all duration-300 transform scale-100 animate-in fade-in slide-in-from-bottom-4">
-          <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-full shrink-0">
-            <CheckCircle className="w-5 h-5" />
+        <div className={`fixed bottom-5 right-5 z-[200] flex bg-white border-l-4 ${toast.type === 'error' ? 'border-red-500' : 'border-emerald-500'} shadow-xl rounded-xl p-4 items-center gap-3 max-w-sm border border-slate-100 transition-all duration-300 transform scale-100 animate-in fade-in slide-in-from-bottom-4`}>
+          <div className={`p-1.5 ${toast.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'} rounded-full shrink-0`}>
+            {toast.type === 'error' ? <XCircle className="w-5 h-5" /> : <CheckCircle className="w-5 h-5" />}
           </div>
           <div>
-            <p className="text-slate-800 text-xs font-bold font-sans">ជោគជ័យ</p>
+            <p className="text-slate-800 text-xs font-bold font-sans">
+              {toast.type === 'error' ? 'ការជូនដំណឹង' : 'ជោគជ័យ'}
+            </p>
             <p className="text-slate-600 text-[11px] font-semibold">{toast.message}</p>
           </div>
           <button 

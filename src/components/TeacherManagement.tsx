@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Users, UserPlus, Trash2, Edit2, Calendar, FileText, CheckCircle, 
-  XSquare, Clock, MapPin, Phone, Printer, Plus, X, Search 
+  XSquare, Clock, MapPin, Phone, Printer, Plus, X, Search, XCircle
 } from 'lucide-react';
-import { Teacher, TeacherAttendance, SchoolInfo } from '../types';
+import { Teacher, TeacherAttendance, SchoolInfo, Classroom } from '../types';
 
 interface TeacherManagementProps {
   teachers: Teacher[];
@@ -12,6 +12,7 @@ interface TeacherManagementProps {
   onUpdateTeachers: (list: Teacher[]) => void;
   onUpdateAttendance: (list: TeacherAttendance[]) => void;
   activeSubTab?: 'list' | 'roles' | 'attendance';
+  classrooms?: Classroom[];
 }
 
 export default function TeacherManagement({
@@ -21,15 +22,16 @@ export default function TeacherManagement({
   onUpdateTeachers,
   onUpdateAttendance,
   activeSubTab = 'list',
+  classrooms = [],
 }: TeacherManagementProps) {
    // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
 
   // Toast state
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const showToast = (message: string, type: 'success' | 'info' = 'success') => {
+  const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
     if (toastTimeoutRef.current) {
       clearTimeout(toastTimeoutRef.current);
     }
@@ -64,7 +66,7 @@ export default function TeacherManagement({
     framework: '',
     teachingSubjects: '',
     classCharge: '',
-    ethnicity: '',
+    ethnicity: 'ទេ',
     educationLevel: '',
     joinDate: '',
     yearsOfService: 0,
@@ -196,7 +198,7 @@ export default function TeacherManagement({
       framework: '',
       teachingSubjects: '',
       classCharge: '',
-      ethnicity: '',
+      ethnicity: 'ទេ',
       educationLevel: '',
       joinDate: '',
       yearsOfService: 0,
@@ -220,7 +222,7 @@ export default function TeacherManagement({
       framework: t.framework || '',
       teachingSubjects: t.teachingSubjects || '',
       classCharge: t.classCharge || '',
-      ethnicity: t.ethnicity || '',
+      ethnicity: t.ethnicity || 'ទេ',
       educationLevel: t.educationLevel || '',
       joinDate: t.joinDate || '',
       yearsOfService: t.yearsOfService !== undefined ? t.yearsOfService : (t.joinDate ? calculateYearsOfService(t.joinDate) : 0),
@@ -388,11 +390,16 @@ export default function TeacherManagement({
 
                 <button
                   type="button"
-                  onClick={() => setIsDeleteAllOpen(true)}
-                  disabled={teachers.length === 0}
-                  className="flex-1 sm:flex-none px-4 py-2 bg-white border border-red-500 hover:bg-red-50/50 disabled:opacity-50 disabled:cursor-not-allowed text-red-600 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                  onClick={() => {
+                    if (teachers.length === 0) {
+                      showToast('មិនមានទិន្នន័យគ្រូបង្រៀននៅក្នុងប្រព័ន្ធសម្រាប់លុបទេ!', 'error');
+                    } else {
+                      setIsDeleteAllOpen(true);
+                    }
+                  }}
+                  className="flex-1 sm:flex-none px-4 py-2 bg-white border border-red-600 hover:bg-red-50 text-red-600 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
                 >
-                  <Trash2 className="w-4 h-4 text-red-500 shrink-0" />
+                  <Trash2 className="w-4 h-4 text-red-600 shrink-0" />
                   លុបទិន្នន័យ
                 </button>
               </div>
@@ -643,14 +650,14 @@ export default function TeacherManagement({
             </div>
 
             {/* Scrollable Body */}
-            <form onSubmit={handleSaveTeacher} className="flex-1 overflow-y-auto p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSaveTeacher} className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label htmlFor="teacher-code-input" className="text-xs font-bold text-slate-600">អត្តលេខមន្ត្រី</label>
                   <input
                     id="teacher-code-input"
                     type="text"
-                    required
                     value={formData.idNumber}
                     onChange={e => setFormData({ ...formData, idNumber: e.target.value })}
                     placeholder="1900100036"
@@ -659,7 +666,7 @@ export default function TeacherManagement({
                 </div>
 
                 <div className="space-y-1.5">
-                  <label htmlFor="teacher-name-input" className="text-xs font-bold text-slate-600">គោត្តនាម និងនាមខ្លួន</label>
+                  <label htmlFor="teacher-name-input" className="text-xs font-bold text-slate-600">គោត្តនាម និងនាមខ្លួន <span className="text-rose-500 ml-1">*</span></label>
                   <input
                     id="teacher-name-input"
                     type="text"
@@ -674,20 +681,20 @@ export default function TeacherManagement({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label htmlFor="teacher-gender-select" className="text-xs font-bold text-slate-600">ភេទ</label>
+                  <label htmlFor="teacher-gender-select" className="text-xs font-bold text-slate-600">ភេទ <span className="text-rose-500 ml-1">*</span></label>
                   <select
                     id="teacher-gender-select"
                     value={formData.gender}
                     onChange={e => setFormData({ ...formData, gender: e.target.value as 'ប្រុស' | 'ស្រី' })}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white appearance-none cursor-pointer"
                   >
-                    <option value="ប្រុស">ប្រុស</option>
-                    <option value="ស្រី">ស្រី</option>
+                     <option value="ប្រុស">ប្រុស</option>
+                     <option value="ស្រី">ស្រី</option>
                   </select>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label htmlFor="teacher-dob-input" className="text-xs font-bold text-slate-600">ថ្ងៃខែឆ្នាំកំណើត</label>
+                  <label htmlFor="teacher-dob-input" className="text-xs font-bold text-slate-600">ថ្ងៃខែឆ្នាំកំណើត <span className="text-rose-500 ml-1">*</span></label>
                   <input
                     id="teacher-dob-input"
                     type="date"
@@ -726,15 +733,19 @@ export default function TeacherManagement({
                 </div>
 
                 <div className="space-y-1.5">
-                  <label htmlFor="teacher-framework-input" className="text-xs font-bold text-slate-600">ក្របខ័ណ្ឌ</label>
-                  <input
-                    id="teacher-framework-input"
-                    type="text"
+                  <label htmlFor="teacher-framework-select" className="text-xs font-bold text-slate-600">ក្របខ័ណ្ឌ</label>
+                  <select
+                    id="teacher-framework-select"
                     value={formData.framework || ''}
                     onChange={e => setFormData({ ...formData, framework: e.target.value })}
-                    placeholder="ឧ. មន្ត្រីក្រមការ"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
-                  />
+                    className={`w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white appearance-none cursor-pointer ${formData.framework ? 'text-slate-800 font-semibold' : 'text-slate-400/90 font-normal'}`}
+                  >
+                    <option value="" className="text-slate-400">ជ្រើសរើស</option>
+                    <option value="ម.បឋមភូមិ" className="text-slate-800 font-semibold">ម.បឋមភូមិ</option>
+                    <option value="ម.ទុតិយភូមិ" className="text-slate-800 font-semibold">ម.ទុតិយភូមិ</option>
+                    <option value="បឋមសិក្សា" className="text-slate-800 font-semibold">បឋមសិក្សា</option>
+                    <option value="ផ្សេងៗ" className="text-slate-800 font-semibold">ផ្សេងៗ</option>
+                  </select>
                 </div>
               </div>
 
@@ -744,7 +755,6 @@ export default function TeacherManagement({
                   <input
                     id="teacher-phone-input"
                     type="text"
-                    required
                     value={formData.phone}
                     onChange={e => setFormData({ ...formData, phone: e.target.value })}
                     placeholder="012 345 678"
@@ -757,7 +767,6 @@ export default function TeacherManagement({
                   <input
                     id="teacher-subject-input"
                     type="text"
-                    required
                     value={formData.subject}
                     onChange={e => setFormData({ ...formData, subject: e.target.value })}
                     placeholder="គណិតវិទ្យា"
@@ -781,41 +790,56 @@ export default function TeacherManagement({
                 </div>
 
                 <div className="space-y-1.5">
-                  <label htmlFor="teacher-classCharge-input" className="text-xs font-bold text-slate-600">បន្ទុកថ្នាក់</label>
-                  <input
-                    id="teacher-classCharge-input"
-                    type="text"
+                  <label htmlFor="teacher-classCharge-select" className="text-xs font-bold text-slate-600">បន្ទុកថ្នាក់</label>
+                  <select
+                    id="teacher-classCharge-select"
                     value={formData.classCharge || ''}
                     onChange={e => setFormData({ ...formData, classCharge: e.target.value })}
-                    placeholder="ឧ. ថ្នាក់ទី ១០A, ១១B"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
-                  />
+                    className={`w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white appearance-none cursor-pointer ${formData.classCharge ? 'text-slate-800 font-semibold' : 'text-slate-400/90 font-normal'}`}
+                  >
+                    <option value="" className="text-slate-400">ជ្រើសរើស</option>
+                    {classrooms.length > 0 ? (
+                      classrooms.map(c => (
+                        <option key={c.id} value={c.name} className="text-slate-800 font-semibold">
+                          {c.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled className="text-slate-400">មិនទាន់មានថ្នាក់រៀនក្នុងប្រព័ន្ធទេ</option>
+                    )}
+                  </select>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label htmlFor="teacher-ethnicity-input" className="text-xs font-bold text-slate-600">ជនជាតិភាគតិច</label>
-                  <input
-                    id="teacher-ethnicity-input"
-                    type="text"
+                  <label htmlFor="teacher-ethnicity-select" className="text-xs font-bold text-slate-600">ជនជាតិភាគតិច</label>
+                  <select
+                    id="teacher-ethnicity-select"
                     value={formData.ethnicity || ''}
                     onChange={e => setFormData({ ...formData, ethnicity: e.target.value })}
-                    placeholder="ឧ. ខ្មែរ (ឬជនជាតិភាគតិច)"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
-                  />
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white appearance-none cursor-pointer text-slate-800"
+                  >
+                    <option value="ទេ">ទេ</option>
+                    <option value="បាទ/ចាស">បាទ/ចាស</option>
+                  </select>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label htmlFor="teacher-educationLevel-input" className="text-xs font-bold text-slate-600">កម្រិតវប្បធម៌</label>
-                  <input
-                    id="teacher-educationLevel-input"
-                    type="text"
+                  <label htmlFor="teacher-educationLevel-select" className="text-xs font-bold text-slate-600">កម្រិតវប្បធម៌</label>
+                  <select
+                    id="teacher-educationLevel-select"
                     value={formData.educationLevel || ''}
                     onChange={e => setFormData({ ...formData, educationLevel: e.target.value })}
-                    placeholder="ឧ. បរិញ្ញាបត្រ"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
-                  />
+                    className={`w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white appearance-none cursor-pointer ${formData.educationLevel ? 'text-slate-800 font-semibold' : 'text-slate-400/90 font-normal'}`}
+                  >
+                    <option value="" className="text-slate-400">ជ្រើសរើស</option>
+                    <option value="បណ្ឌិត" className="text-slate-800 font-semibold">បណ្ឌិត</option>
+                    <option value="បរិញ្ញាបត្រជាន់ខ្ពស់" className="text-slate-800 font-semibold">បរិញ្ញាបត្រជាន់ខ្ពស់</option>
+                    <option value="បរិញ្ញាបត្រ" className="text-slate-800 font-semibold">បរិញ្ញាបត្រ</option>
+                    <option value="ទុតិយភូមិ" className="text-slate-800 font-semibold">ទុតិយភូមិ</option>
+                    <option value="ផ្សេងៗ" className="text-slate-800 font-semibold">ផ្សេងៗ</option>
+                  </select>
                 </div>
               </div>
 
@@ -843,21 +867,23 @@ export default function TeacherManagement({
                 </div>
               </div>
 
-              {/* Action buttons */}
-              <div className="pt-4 border-t border-slate-100 flex justify-end gap-2">
+              </div>
+
+              {/* Action buttons (Fixed at bottom) */}
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsFormOpen(false)}
-                  className="px-4 py-2 bg-slate-150 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold cursor-pointer"
+                  className="px-4 py-2 bg-white border border-red-500 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold cursor-pointer transition-colors"
                 >
                   បោះបង់
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer"
+                  className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer transition-colors"
                 >
                   <CheckCircle className="w-4 h-4" />
-                  រក្សាទុកបុគ្គលិក
+                  រក្សាទុក
                 </button>
               </div>
             </form>
@@ -1118,12 +1144,14 @@ export default function TeacherManagement({
       )}
       {/* TOAST NOTIFICATION FEEDBACK */}
       {toast && (
-        <div className="fixed bottom-5 right-5 z-[200] flex bg-white border-l-4 border-emerald-500 shadow-xl rounded-xl p-4 items-center gap-3 max-w-sm border border-slate-100 transition-all duration-300 transform scale-100 animate-in fade-in slide-in-from-bottom-4">
-          <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-full shrink-0">
-            <CheckCircle className="w-5 h-5" />
+        <div className={`fixed bottom-5 right-5 z-[200] flex bg-white border-l-4 ${toast.type === 'error' ? 'border-red-500' : 'border-emerald-500'} shadow-xl rounded-xl p-4 items-center gap-3 max-w-sm border border-slate-100 transition-all duration-300 transform scale-100 animate-in fade-in slide-in-from-bottom-4`}>
+          <div className={`p-1.5 ${toast.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'} rounded-full shrink-0`}>
+            {toast.type === 'error' ? <XCircle className="w-5 h-5" /> : <CheckCircle className="w-5 h-5" />}
           </div>
           <div>
-            <p className="text-slate-800 text-xs font-bold font-sans">ជោគជ័យ</p>
+            <p className="text-slate-800 text-xs font-bold font-sans">
+              {toast.type === 'error' ? 'ការជូនដំណឹង' : 'ជោគជ័យ'}
+            </p>
             <p className="text-slate-600 text-[11px] font-semibold">{toast.message}</p>
           </div>
           <button 
