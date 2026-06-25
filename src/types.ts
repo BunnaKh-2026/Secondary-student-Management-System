@@ -44,6 +44,8 @@ export interface SubjectConfig {
   name: string;
   coefficient: number;
   isActive: boolean;
+  code?: string;
+  maxScore?: number;
 }
 
 export interface PreStartConfig {

@@ -275,6 +275,36 @@ export default function App() {
                   បញ្ជីថ្នាក់រៀន
                 </button>
 
+                {/* ប៊ូតុង មេគុណ (Coefficients) */}
+                <button
+                  onClick={() => {
+                    handleNavigate('students', 'coefficients');
+                  }}
+                  className={`w-full flex items-center gap-2 px-2 py-1.75 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    activeTab === 'students' && activeStudentSubTab === 'coefficients' && !selectedClassroomId
+                      ? 'bg-teal-600 text-white shadow-xs font-extrabold'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <Percent className="w-4 h-4 shrink-0" />
+                  មុខវិជ្ជានិងមេគុណ
+                </button>
+
+                {/* ប៊ូតុង ខែយកពិន្ទុ (Months) */}
+                <button
+                  onClick={() => {
+                    handleNavigate('students', 'months');
+                  }}
+                  className={`w-full flex items-center gap-2 px-2 py-1.75 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    activeTab === 'students' && activeStudentSubTab === 'months' && !selectedClassroomId
+                      ? 'bg-teal-600 text-white shadow-xs font-extrabold'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <Calendar className="w-4 h-4 shrink-0" />
+                  ខែក្នុងឆមាស
+                </button>
+
                 {/* ៤. បញ្ជីឈ្មោះគ្រូ (Teacher list) */}
                 <button
                   onClick={() => {
@@ -306,36 +336,6 @@ export default function App() {
                 >
                   <GraduationCap className="w-4 h-4 shrink-0" />
                   បញ្ជីឈ្មោះសិស្ស
-                </button>
-
-                {/* ប៊ូតុង មេគុណ (Coefficients) */}
-                <button
-                  onClick={() => {
-                    handleNavigate('students', 'coefficients');
-                  }}
-                  className={`w-full flex items-center gap-2 px-2 py-1.75 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                    activeTab === 'students' && activeStudentSubTab === 'coefficients' && !selectedClassroomId
-                      ? 'bg-teal-600 text-white shadow-xs font-extrabold'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
-                >
-                  <Percent className="w-4 h-4 shrink-0" />
-                  មុខវិជ្ជានិងពិន្ទុ
-                </button>
-
-                {/* ប៊ូតុង ខែយកពិន្ទុ (Months) */}
-                <button
-                  onClick={() => {
-                    handleNavigate('students', 'months');
-                  }}
-                  className={`w-full flex items-center gap-2 px-2 py-1.75 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                    activeTab === 'students' && activeStudentSubTab === 'months' && !selectedClassroomId
-                      ? 'bg-teal-600 text-white shadow-xs font-extrabold'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                  }`}
-                >
-                  <Calendar className="w-4 h-4 shrink-0" />
-                  ខែក្នុងឆមាស
                 </button>
 
                 {/* ប៊ូតុង គ្រប់គ្រងថ្នាក់ (Classroom management) */}

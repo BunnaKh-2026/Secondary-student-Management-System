@@ -402,6 +402,33 @@ export function getClassroomsForCategory(catId: string, classrooms: any[]): any[
   });
 }
 
+const SUBJECT_CODES_MAP: { [id: string]: string } = {
+  s1: 'Di',  // សរសេរតាមអាន
+  s2: 'Wr',  // តែងសេចក្តី
+  s3: 'Rs',  // ល្បឿនអំណាន
+  s4: 'K',   // ភាសាខ្មែរ
+  s5: 'K',   // អក្សរសាស្ត្រខ្មែរ
+  s6: 'M',   // គណិតវិទ្យា
+  s7: 'P',   // រូបវិទ្យា
+  s8: 'C',   // គីមីវិទ្យា
+  s9: 'B',   // ជីវវិទ្យា
+  s10: 'Es', // ផែនដីវិទ្យា
+  s11: 'H',  // ប្រវត្តិវិទ្យា
+  s12: 'G',  // ភូមិវិទ្យា
+  s13: 'Mc', // ពលរដ្ឋវិជ្ជា
+  s14: 'He', // គេហវិទ្យា
+  s15: 'Ec', // សេដ្ឋកិច្ចវិទ្យា
+  s16: 'E',  // អង់គ្លេស
+  s17: 'F',  // បារាំង
+  s18: 'Hc', // អប់រំសុខភាព
+  s19: 'Ed', // អប់រំកាយ-កីឡា
+  s20: 'Ag', // កសិកម្ម
+  s21: 'Ar', // អប់រំសិល្បៈ
+  s22: 'IT', // បច្ចេកវិទ្យាព័ត៌មាន
+  s23: 'Be', // អប់រំពុទ្ធសាសនា
+  s24: 'S',  // អប់រំបំណិនជីវិត
+};
+
 export function getStandardSubjectsForCategory(catId: string): any[] {
   return STANDARD_SUBJECTS_LAYOUT.map(subLayout => {
     const std = subLayout.standards[catId] || { isActive: false, maxScore: 50 };
@@ -411,6 +438,7 @@ export function getStandardSubjectsForCategory(catId: string): any[] {
       isActive: std.isActive,
       maxScore: std.maxScore > 0 ? std.maxScore : 50,
       coefficient: std.maxScore > 0 ? std.maxScore / 50 : 1,
+      code: SUBJECT_CODES_MAP[subLayout.id] || subLayout.id.toUpperCase(),
     };
   });
 }

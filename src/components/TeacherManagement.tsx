@@ -1,9 +1,132 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Users, UserPlus, Trash2, Edit2, Calendar, FileText, CheckCircle, 
-  XSquare, Clock, MapPin, Phone, Printer, Plus, X, Search, XCircle
+  XSquare, Clock, MapPin, Phone, Printer, Plus, X, Search, XCircle, BookOpen
 } from 'lucide-react';
 import { Teacher, TeacherAttendance, SchoolInfo, Classroom } from '../types';
+import { STANDARD_SUBJECTS_LAYOUT } from '../data/subjectLayouts';
+
+// Helper to map Khmer digits and letters in class names to standard Arabic equivalents (e.g., ៧អា -> 7A, ថ្នាក់ទី ៧A -> 7A)
+const toArabicClassname = (name: string): string => {
+  if (!name) return '';
+  let clean = name.replace(/^(ថ្នាក់ទី|ថ្នាក់)\s*/g, '').trim();
+  const khmerToArabic: { [key: string]: string } = {
+    '០': '0', '១': '1', '២': '2', '៣': '3', '៤': '4',
+    '៥': '5', '៦': '6', '៧': '7', '៨': '8', '៩': '9'
+  };
+  let replaced = '';
+  for (let i = 0; i < clean.length; i++) {
+    const char = clean[i];
+    if (khmerToArabic[char] !== undefined) {
+      replaced += khmerToArabic[char];
+    } else {
+      replaced += char;
+    }
+  }
+  return replaced
+    .replace(/អា/gi, 'A')
+    .replace(/ប៊ី/gi, 'B')
+    .replace(/ស៊ី/gi, 'C')
+    .replace(/ឌី/gi, 'D')
+    .replace(/អេ/gi, 'A')
+    .replace(/បេ/gi, 'B')
+    .replace(/សេ/gi, 'C')
+    .replace(/ដេ/gi, 'D')
+    .replace(/\s+/g, '');
+};
+
+const SUBJECT_TO_CODE: { [name: string]: string } = {
+  'សរសេរតាមអាន': 'Di',
+  'តែងសេចក្តី': 'Wr',
+  'ល្បឿនអំណាន': 'Rs',
+  'ភាសាខ្មែរ': 'K',
+  'អក្សរសាស្ត្រខ្មែរ': 'K',
+  'គណិតវិទ្យា': 'M',
+  'រូបវិទ្យា': 'P',
+  'គីមីវិទ្យា': 'C',
+  'ជីវវិទ្យា': 'B',
+  'ផែនដីវិទ្យា': 'Es',
+  'ប្រវត្តិវិទ្យា': 'H',
+  'ភូមិវិទ្យា': 'G',
+  'ពលរដ្ឋវិជ្ជា': 'Mc',
+  'គេហវិទ្យា': 'He',
+  'សេដ្ឋកិច្ចវិទ្យា': 'Ec',
+  'អង់គ្លេស': 'E',
+  'បារាំង': 'F',
+  'អប់រំសុខភាព': 'Hc',
+  'អប់រំកាយ និងកីឡា': 'Ed',
+  'អប់រំកាយ-កីឡា': 'Ed',
+  'កសិកម្ម': 'Ag',
+  'គំនូរ-ចម្រៀង': 'Ar',
+  'អប់រំសិល្បៈ': 'Ar',
+  'ព័ត៌មានវិទ្យា': 'IT',
+  'បច្ចេកវិទ្យាព័ត៌មាន': 'IT',
+  'អប់រំពុទ្ធសាសនា': 'Be',
+  'អប់រំបំណិនជីវិត': 'S'
+};
+
+const CODE_TO_SUBJECT: { [code: string]: string } = {
+  'Di': 'សរសេរតាមអាន',
+  'Wr': 'តែងសេចក្តី',
+  'Rs': 'ល្បឿនអំណាន',
+  'K': 'ភាសាខ្មែរ',
+  'M': 'គណិតវិទ្យា',
+  'P': 'រូបវិទ្យា',
+  'C': 'គីមីវិទ្យា',
+  'B': 'ជីវវិទ្យា',
+  'Es': 'ផែនដីវិទ្យា',
+  'H': 'ប្រវត្តិវិទ្យា',
+  'G': 'ភូមិវិទ្យា',
+  'Mc': 'ពលរដ្ឋវិជ្ជា',
+  'He': 'គេហវិទ្យា',
+  'Ec': 'សេដ្ឋកិច្ចវិទ្យា',
+  'E': 'អង់គ្លេស',
+  'F': 'បារាំង',
+  'Hc': 'អប់រំសុខភាព',
+  'Ed': 'អប់រំកាយ-កីឡា',
+  'Ag': 'កសិកម្ម',
+  'Ar': 'អប់រំសិល្បៈ',
+  'IT': 'បច្ចេកវិទ្យាព័ត៌មាន',
+  'Be': 'អប់រំពុទ្ធសាសនា',
+  'S': 'អប់រំបំណិនជីវិត'
+};
+
+// Helper to parse "M(7A, 7B); Di(7A)" into [{ subject: "គណិតវិទ្យា", classes: ["7A", "7B"] }]
+const parseTeachingSubjects = (str: string): { subject: string; classes: string[] }[] => {
+  if (!str) return [];
+  const results: { subject: string; classes: string[] }[] = [];
+  const parts = str.split(';');
+  parts.forEach(part => {
+    const trimmed = part.trim();
+    if (!trimmed) return;
+    const match = trimmed.match(/^([^(]+)(?:\(([^)]+)\))?$/);
+    if (match) {
+      const subjectCodeOrName = match[1].trim();
+      const subject = CODE_TO_SUBJECT[subjectCodeOrName] || subjectCodeOrName;
+      const classesStr = match[2] || '';
+      const classes = classesStr.split(',').map(c => toArabicClassname(c.trim())).filter(Boolean);
+      results.push({ subject, classes });
+    } else {
+      const subject = CODE_TO_SUBJECT[trimmed] || trimmed;
+      results.push({ subject, classes: [] });
+    }
+  });
+  return results;
+};
+
+// Helper to format [{ subject: "គណិតវិទ្យា", classes: ["7A", "7B"] }] into "M(7A, 7B); Di(7A)"
+const formatTeachingSubjects = (selections: { subject: string; classes: string[] }[]): string => {
+  return selections
+    .map(sel => {
+      const code = SUBJECT_TO_CODE[sel.subject] || sel.subject;
+      const cleanClasses = sel.classes.map(toArabicClassname);
+      if (cleanClasses.length > 0) {
+        return `${code}(${cleanClasses.join(', ')})`;
+      }
+      return code;
+    })
+    .join('; ');
+};
 
 interface TeacherManagementProps {
   teachers: Teacher[];
@@ -74,6 +197,89 @@ export default function TeacherManagement({
 
   // Role details input helper
   const [newResp, setNewResp] = useState('');
+
+  // Subject and Class popup states
+  const [isSubjectClassModalOpen, setIsSubjectClassModalOpen] = useState(false);
+  const [selectedSubject, setSelectedSubject] = useState('');
+  const [customSubjectName, setCustomSubjectName] = useState('');
+  const [selectedClassesForSubject, setSelectedClassesForSubject] = useState<string[]>([]);
+  const [addedSubjectsList, setAddedSubjectsList] = useState<{ subject: string; classes: string[] }[]>([]);
+  const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
+  const classDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close custom dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (classDropdownRef.current && !classDropdownRef.current.contains(event.target as Node)) {
+        setIsClassDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [classDropdownRef]);
+
+  // Get all unique subject names
+  const availableSubjects = React.useMemo(() => {
+    const subjectsSet = new Set<string>();
+    STANDARD_SUBJECTS_LAYOUT.forEach(sub => {
+      if (sub.name) subjectsSet.add(sub.name);
+    });
+    classrooms.forEach(cls => {
+      if (cls.preStartConfig?.subjects) {
+        cls.preStartConfig.subjects.forEach(sub => {
+          if (sub.name) subjectsSet.add(sub.name);
+        });
+      }
+    });
+    return Array.from(subjectsSet).sort();
+  }, [classrooms]);
+
+  const handleOpenSubjectClassModal = () => {
+    const parsed = parseTeachingSubjects(formData.teachingSubjects || '');
+    setAddedSubjectsList(parsed);
+    setSelectedSubject('');
+    setCustomSubjectName('');
+    setSelectedClassesForSubject([]);
+    setIsSubjectClassModalOpen(true);
+  };
+
+  const handleAddSubjectClassPair = () => {
+    const subj = selectedSubject === 'other' ? customSubjectName.trim() : selectedSubject;
+    if (!subj) return;
+
+    // Check if we already have this subject
+    const existingIndex = addedSubjectsList.findIndex(s => s.subject.toLowerCase() === subj.toLowerCase());
+    
+    if (existingIndex > -1) {
+      // Merge selected classes, avoiding duplicates
+      const updatedList = [...addedSubjectsList];
+      const mergedClasses = Array.from(new Set([...updatedList[existingIndex].classes, ...selectedClassesForSubject]));
+      updatedList[existingIndex] = {
+        subject: subj,
+        classes: mergedClasses
+      };
+      setAddedSubjectsList(updatedList);
+    } else {
+      setAddedSubjectsList([...addedSubjectsList, { subject: subj, classes: [...selectedClassesForSubject] }]);
+    }
+
+    // Reset inputs
+    setSelectedSubject('');
+    setCustomSubjectName('');
+    setSelectedClassesForSubject([]);
+  };
+
+  const handleRemoveSubjectClassPair = (index: number) => {
+    setAddedSubjectsList(addedSubjectsList.filter((_, idx) => idx !== index));
+  };
+
+  const handleSaveSubjectClassSelections = () => {
+    const formattedStr = formatTeachingSubjects(addedSubjectsList);
+    setFormData(prev => ({ ...prev, teachingSubjects: formattedStr }));
+    setIsSubjectClassModalOpen(false);
+  };
 
   // Attendance date picker
   const todayStr = new Date().toISOString().split('T')[0];
@@ -779,14 +985,25 @@ export default function TeacherManagement({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label htmlFor="teacher-teachingSubjects-input" className="text-xs font-bold text-slate-600">មុខវិជ្ជាបង្រៀន</label>
-                  <input
-                    id="teacher-teachingSubjects-input"
-                    type="text"
-                    value={formData.teachingSubjects || ''}
-                    onChange={e => setFormData({ ...formData, teachingSubjects: e.target.value })}
-                    placeholder="ឧ. គណិត, រូប"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
-                  />
+                  <div className="relative">
+                    <input
+                      id="teacher-teachingSubjects-input"
+                      type="text"
+                      readOnly
+                      onClick={handleOpenSubjectClassModal}
+                      value={formData.teachingSubjects || ''}
+                      placeholder="មុខវិជ្ជានិងថ្នាក់"
+                      className="w-full pr-10 pl-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white cursor-pointer hover:border-slate-300 transition-colors font-semibold text-slate-800"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleOpenSubjectClassModal}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-teal-600 transition-colors cursor-pointer"
+                      title="កំណត់មុខវិជ្ជា និងថ្នាក់បង្រៀន"
+                    >
+                      <BookOpen className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">
@@ -995,6 +1212,7 @@ export default function TeacherManagement({
                   {/* Print actions */}
                   <div className="w-full space-y-2 pt-2">
                     <button
+                      type="button"
                       onClick={handlePrintTrigger}
                       className="w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-transform cursor-pointer"
                     >
@@ -1073,6 +1291,194 @@ export default function TeacherManagement({
             <div className="w-full border-t border-dashed border-slate-300 pt-3 text-[10px] text-slate-400 italic">
               ហត្ថលេខានាយកសាលា និងត្រា
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* TEACHING SUBJECTS AND CLASSES CONFIGURATION MODAL */}
+      {isSubjectClassModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-[100] p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full border border-slate-100 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+            
+            {/* Modal Header */}
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-teal-600" />
+                <h3 className="font-bold text-slate-800 text-sm font-sans">កំណត់មុខវិជ្ជា និងថ្នាក់បង្រៀន</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSubjectClassModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 overflow-y-auto space-y-4">
+              
+              {/* Form to Select Subject & Classes */}
+              <div className="p-3.5 bg-slate-50/50 border border-slate-100 rounded-xl space-y-3">
+                <h4 className="font-extrabold text-slate-700 text-xs">កំណត់មុខវិជ្ជាថ្មី</h4>
+                
+                {/* 1. Subject Dropdown */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-500">ជ្រើសរើសមុខវិជ្ជា</label>
+                  <select
+                    value={selectedSubject}
+                    onChange={e => {
+                      setSelectedSubject(e.target.value);
+                      if (e.target.value !== 'other') {
+                        setCustomSubjectName('');
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-slate-350 text-slate-800 font-semibold"
+                  >
+                    <option value="" className="text-slate-400">-- ជ្រើសរើសមុខវិជ្ជា --</option>
+                    {availableSubjects.map((sub, idx) => (
+                      <option key={idx} value={sub} className="text-slate-800 font-semibold">{sub}</option>
+                    ))}
+                    <option value="other" className="text-slate-800 font-semibold">ផ្សេងទៀត...</option>
+                  </select>
+                </div>
+
+                {/* Custom Subject Name Input (if Other is selected) */}
+                {selectedSubject === 'other' && (
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-500">បញ្ចូលឈ្មោះមុខវិជ្ជាផ្ទាល់ខ្លួន</label>
+                    <input
+                      type="text"
+                      value={customSubjectName}
+                      onChange={e => setCustomSubjectName(e.target.value)}
+                      placeholder="ឧ. គូរគំនូរ"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-slate-350 text-slate-800 font-semibold"
+                    />
+                  </div>
+                )}
+
+                {/* 2. Classes Dropdown Selector (Without any arrow icon) */}
+                <div className="space-y-1.5 relative" ref={classDropdownRef}>
+                  <label className="text-[11px] font-bold text-slate-500">ជ្រើសរើសថ្នាក់បង្រៀន (ជ្រើសរើសបានច្រើន)</label>
+                  {classrooms.length > 0 ? (
+                    <div>
+                      {/* Trigger button without arrow */}
+                      <button
+                        type="button"
+                        onClick={() => setIsClassDropdownOpen(!isClassDropdownOpen)}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-left font-bold text-slate-700 cursor-pointer hover:border-slate-350 focus:border-slate-350 transition-colors flex items-center justify-between"
+                      >
+                        <span className="truncate">
+                          {selectedClassesForSubject.length > 0
+                            ? selectedClassesForSubject.map(toArabicClassname).join(', ')
+                            : 'ចុចដើម្បីជ្រើសរើសថ្នាក់បង្រៀន...'}
+                        </span>
+                      </button>
+
+                      {/* Dropdown panel */}
+                      {isClassDropdownOpen && (
+                        <div className="absolute left-0 right-0 mt-1.5 p-2 bg-white border border-slate-150 rounded-xl shadow-xl z-[150] max-h-48 overflow-y-auto grid grid-cols-3 gap-1.5">
+                          {classrooms.map(cls => {
+                            const isSelected = selectedClassesForSubject.includes(cls.name);
+                            const arabicName = toArabicClassname(cls.name);
+                            return (
+                              <button
+                                key={cls.id}
+                                type="button"
+                                onClick={() => {
+                                  if (isSelected) {
+                                    setSelectedClassesForSubject(selectedClassesForSubject.filter(name => name !== cls.name));
+                                  } else {
+                                    setSelectedClassesForSubject([...selectedClassesForSubject, cls.name]);
+                                  }
+                                }}
+                                className={`px-2 py-1.5 rounded-lg text-[11px] font-bold border transition-all text-center cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-teal-50 border-teal-250 text-teal-700 font-extrabold shadow-3xs'
+                                    : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-100'
+                                }`}
+                              >
+                                {arabicName}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] font-semibold text-rose-500 italic">មិនទាន់មានថ្នាក់រៀនក្នុងប្រព័ន្ធទេ</p>
+                  )}
+                </div>
+
+                {/* Add Button - CRISP & SOLID */}
+                <button
+                  type="button"
+                  onClick={handleAddSubjectClassPair}
+                  disabled={!selectedSubject || (selectedSubject === 'other' && !customSubjectName.trim())}
+                  className="w-full py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  បន្ថែមមុខវិជ្ជានេះ
+                </button>
+              </div>
+
+              {/* Display list of added subjects */}
+              <div className="space-y-2">
+                <h4 className="font-extrabold text-slate-700 text-xs">បញ្ជីមុខវិជ្ជា និងថ្នាក់បង្រៀនដែលបានកំណត់</h4>
+                {addedSubjectsList.length > 0 ? (
+                  <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                    {addedSubjectsList.map((item, idx) => {
+                      const code = SUBJECT_TO_CODE[item.subject] || item.subject;
+                      const arabicClasses = item.classes.map(toArabicClassname);
+                      return (
+                        <div key={idx} className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-extrabold text-teal-700 font-mono text-xs">
+                              {code}{arabicClasses.length > 0 ? `(${arabicClasses.join(', ')})` : ''}
+                            </span>
+                            <span className="font-semibold text-slate-500 text-[10px]">
+                              {item.subject}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSubjectClassPair(idx)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                            title="លុបមុខវិជ្ជានេះ"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 border border-dashed border-slate-200 rounded-xl text-slate-400 italic font-semibold text-xs bg-slate-50/50">
+                    មិនទាន់មានមុខវិជ្ជាត្រូវបានកំណត់នៅឡើយទេ
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-5 py-4 border-t border-slate-100 flex justify-end gap-2 bg-slate-50/50 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsSubjectClassModalOpen(false)}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold cursor-pointer transition-colors"
+              >
+                បោះបង់
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveSubjectClassSelections}
+                className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors shadow-sm"
+              >
+                យល់ព្រមរួចរាល់
+              </button>
+            </div>
+
           </div>
         </div>
       )}

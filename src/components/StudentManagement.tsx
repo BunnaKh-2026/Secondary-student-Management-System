@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { 
-  GraduationCap, UserPlus, School, Search, Trash2, Edit2, 
+  GraduationCap, UserPlus, School, Search, Trash2, Edit2, Pencil,
   Printer, Plus, X, ArrowRight, Table, Phone, MapPin, Calendar, CheckCircle,
   AlertTriangle, IdCard, Save, GripVertical, RotateCcw, XCircle
 } from 'lucide-react';
@@ -33,6 +33,34 @@ export const DEFAULT_SUBJECTS = [
   { id: '9', name: 'ភាសាបរទេស (អង់គ្លេស)', coefficient: 1, isActive: true },
   { id: '10', name: 'ព័ត៌មានវិទ្យា', coefficient: 1, isActive: true },
 ];
+
+const toArabicClassname = (name: string): string => {
+  if (!name) return '';
+  let clean = name.replace(/^(ថ្នាក់ទី|ថ្នាក់)\s*/g, '').trim();
+  const khmerToArabic: { [key: string]: string } = {
+    '០': '0', '១': '1', '២': '2', '៣': '3', '៤': '4',
+    '៥': '5', '៦': '6', '៧': '7', '៨': '8', '៩': '9'
+  };
+  let replaced = '';
+  for (let i = 0; i < clean.length; i++) {
+    const char = clean[i];
+    if (khmerToArabic[char] !== undefined) {
+      replaced += khmerToArabic[char];
+    } else {
+      replaced += char;
+    }
+  }
+  return replaced
+    .replace(/អា/gi, 'A')
+    .replace(/ប៊ី/gi, 'B')
+    .replace(/ស៊ី/gi, 'C')
+    .replace(/ឌី/gi, 'D')
+    .replace(/អេ/gi, 'A')
+    .replace(/បេ/gi, 'B')
+    .replace(/សេ/gi, 'C')
+    .replace(/ដេ/gi, 'D')
+    .replace(/\s+/g, '');
+};
 
 interface StudentManagementProps {
   students: Student[];
@@ -312,7 +340,14 @@ export default function StudentManagement({
   const [categoryToRestore, setCategoryToRestore] = useState<{ catId: string; catName: string } | null>(null);
   const [addingSubjectCatId, setAddingSubjectCatId] = useState<string | null>(null);
   const [newSubjectName, setNewSubjectName] = useState('');
+  const [newSubjectCode, setNewSubjectCode] = useState('');
   const [newSubjectMaxScore, setNewSubjectMaxScore] = useState<number | string>(50);
+
+  // Subject editing states
+  const [editingSubjectConfig, setEditingSubjectConfig] = useState<{ catId: string; sub: any } | null>(null);
+  const [editSubjectName, setEditSubjectName] = useState('');
+  const [editSubjectCode, setEditSubjectCode] = useState('');
+  const [editSubjectMaxScore, setEditSubjectMaxScore] = useState<number | string>(50);
 
   // Toast state for student registration
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
@@ -385,9 +420,29 @@ export default function StudentManagement({
             isActive: match.isActive !== undefined ? match.isActive : def.isActive,
             maxScore,
             coefficient: maxScore / 50,
+            code: match.code || def.code || def.id.toUpperCase(),
           };
         }
-        return def;
+        return {
+          ...def,
+          code: def.code || def.id.toUpperCase(),
+        };
+      });
+
+      // Add any custom subjects from existingSubjects that are not in defaultLayout
+      existingSubjects.forEach(ex => {
+        const isStandard = defaultLayout.some(def => def.name === ex.name || def.id === ex.id);
+        if (!isStandard) {
+          const maxScore = ex.maxScore !== undefined ? ex.maxScore : (ex.coefficient !== undefined ? ex.coefficient * 50 : 50);
+          merged.push({
+            id: ex.id,
+            name: ex.name,
+            isActive: ex.isActive !== undefined ? ex.isActive : true,
+            maxScore,
+            coefficient: maxScore / 50,
+            code: ex.code || ex.id.toUpperCase(),
+          });
+        }
       });
 
       updatedCategorySubjects[cat.id] = merged;
@@ -564,12 +619,14 @@ export default function StudentManagement({
     const maxScore = parseFloat(newSubjectMaxScore as string) || 0;
     if (maxScore <= 0) return;
 
+    const code = newSubjectCode.trim() || ('SUB_' + Date.now().toString().slice(-4));
     const newSub = {
       id: 'sub_custom_' + Date.now(),
       name: newSubjectName.trim(),
       isActive: true,
       maxScore,
-      coefficient: maxScore / 50
+      coefficient: maxScore / 50,
+      code: code.toUpperCase()
     };
 
     setCategorySubjects(prev => {
@@ -588,9 +645,42 @@ export default function StudentManagement({
     });
 
     setNewSubjectName('');
+    setNewSubjectCode('');
     setNewSubjectMaxScore(50);
     setAddingSubjectCatId(null);
     showToast('បានបន្ថែមមុខវិជ្ជាថ្មី!');
+  };
+
+  const handleEditSubject = () => {
+    if (!editingSubjectConfig) return;
+    const { catId, sub } = editingSubjectConfig;
+    if (!editSubjectName.trim()) return;
+    const maxScore = parseFloat(editSubjectMaxScore as string) || 0;
+    if (maxScore <= 0) return;
+
+    setCategorySubjects(prev => {
+      const current = prev[catId] || [];
+      const updated = current.map(s => {
+        if (s.id === sub.id) {
+          return {
+            ...s,
+            name: editSubjectName.trim(),
+            code: (editSubjectCode.trim() || s.code || s.id).toUpperCase(),
+            maxScore,
+            coefficient: maxScore / 50,
+          };
+        }
+        return s;
+      });
+      autoSaveCategorySubjects(catId, updated);
+      return {
+        ...prev,
+        [catId]: updated
+      };
+    });
+
+    setEditingSubjectConfig(null);
+    showToast('បានកែសម្រួលមុខវិជ្ជាជោគជ័យ!');
   };
 
   const handleDeleteSubject = (catId: string, subId: string) => {
@@ -1824,7 +1914,7 @@ export default function StudentManagement({
                             ថ្នាក់អនុវត្ត ({catClassrooms.length})៖
                           </span>
                           <span className="font-extrabold text-violet-700 bg-violet-100/80 border border-violet-200 px-2 py-0.5 rounded-md shadow-2xs">
-                            {catClassrooms.map(c => (c.name || '').replace(/^ថ្នាក់ទី\s*/, '')).join(', ')}
+                            {catClassrooms.map(c => toArabicClassname(c.name || '')).join(', ')}
                           </span>
                         </div>
                       </div>
@@ -1833,17 +1923,19 @@ export default function StudentManagement({
                       <div className="max-h-[460px] overflow-x-auto overflow-y-auto pr-1 border border-slate-100 rounded-lg shadow-2xs">
                         <table className="w-full min-w-[400px] text-left text-xs border-collapse">
                           <thead>
-                            <tr className="bg-emerald-700 text-white font-extrabold select-none sticky top-0 z-10 whitespace-nowrap" id="coefficients-list-th-row">
-                              <th className="p-2 text-center w-14 border-r border-emerald-800 whitespace-nowrap">ល.រ</th>
-                              <th className="p-2 text-left w-36 max-w-[150px] border-r border-emerald-800 whitespace-nowrap">មុខវិជ្ជា</th>
+                            <tr className="bg-emerald-700 text-white font-extrabold select-none sticky top-0 z-10 whitespace-nowrap text-center" id="coefficients-list-th-row">
+                              <th className="p-2 text-center w-12 border-r border-emerald-800 whitespace-nowrap">ល.រ</th>
+                              <th className="p-2 text-center w-24 border-r border-emerald-800 whitespace-nowrap">កូដមុខវិជ្ជា</th>
+                              <th className="p-2 text-center w-28 border-r border-emerald-800 whitespace-nowrap">មុខវិជ្ជា</th>
                               <th className="p-2 text-center w-24 border-r border-emerald-800 whitespace-nowrap">ពិន្ទុអតិបរមា</th>
                               <th className="p-2 text-center w-16 border-r border-emerald-800 whitespace-nowrap">មេគុណ</th>
-                              <th className="p-2 text-center w-14 text-white whitespace-nowrap">លុប</th>
+                              <th className="p-2 text-center w-20 text-white whitespace-nowrap">សកម្មភាព</th>
                             </tr>
                           </thead>
                           <tbody>
                             {currentSubs.map((s, idx) => {
                               const mx = s.maxScore !== undefined ? s.maxScore : 50;
+                              const currentCode = s.code || s.id.toUpperCase();
                               return (
                                 <tr 
                                   key={s.id} 
@@ -1870,7 +1962,7 @@ export default function StudentManagement({
                                     }
                                   }}
                                   onDragEnd={handleDragEnd}
-                                  className={`border-b border-slate-50 transition-all duration-150 group/row whitespace-nowrap
+                                  className={`border-b border-emerald-600 transition-all duration-150 group/row whitespace-nowrap
                                     text-slate-800
                                     ${draggingInfo?.catId === cat.id && draggingInfo?.index === idx ? 'opacity-40 bg-violet-50/20' : ''}
                                     ${dragOverInfo?.catId === cat.id && dragOverInfo?.index === idx ? 'bg-violet-50/40 border-y-2 border-violet-200' : 'hover:bg-slate-50/50'}
@@ -1884,8 +1976,15 @@ export default function StudentManagement({
                                     </div>
                                   </td>
 
+                                  {/* Subject Code column */}
+                                  <td className="p-2 text-center font-bold font-mono text-[11px] text-slate-600 whitespace-nowrap" title={currentCode}>
+                                    <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded-md font-semibold border border-slate-200/50">
+                                      {currentCode}
+                                    </span>
+                                  </td>
+
                                   {/* Subject name column */}
-                                  <td className="p-2 font-bold font-sans whitespace-nowrap w-36 max-w-[150px] overflow-hidden text-ellipsis" title={s.name}>
+                                  <td className="p-2 text-left pl-4 font-bold font-sans whitespace-nowrap" title={s.name}>
                                     <span className="text-slate-800 font-extrabold">
                                       {s.name}
                                     </span>
@@ -1912,16 +2011,31 @@ export default function StudentManagement({
                                     </span>
                                   </td>
 
-                                  {/* Delete action column */}
+                                  {/* Action column with Edit & Delete */}
                                   <td className="p-2 text-center whitespace-nowrap">
-                                    <button
-                                      type="button"
-                                      onClick={() => setSubjectToDelete({ catId: cat.id, subId: s.id, subName: s.name })}
-                                      className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                                      title="លុបមុខវិជ្ជា"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
+                                    <div className="flex items-center justify-center gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingSubjectConfig({ catId: cat.id, sub: s });
+                                          setEditSubjectName(s.name);
+                                          setEditSubjectCode(currentCode);
+                                          setEditSubjectMaxScore(mx);
+                                        }}
+                                        className="p-1 text-teal-600 hover:text-teal-800 hover:bg-teal-50 rounded-lg transition-colors cursor-pointer"
+                                        title="កែសម្រួលមុខវិជ្ជា"
+                                      >
+                                        <Pencil className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setSubjectToDelete({ catId: cat.id, subId: s.id, subName: s.name })}
+                                        className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                        title="លុបមុខវិជ្ជា"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
                                   </td>
                                 </tr>
                               );
@@ -2858,7 +2972,7 @@ export default function StudentManagement({
             {/* Modal Header */}
             <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
               <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-                <Printer className="w-4 h-4 text-teal-650" />
+                <Printer className="w-4 h-4 text-teal-600" />
                 បោះពុម្ពប័ណ្ណសម្គាល់សិស្ស (ID Card)
               </h3>
               <button 
@@ -3166,6 +3280,20 @@ export default function StudentManagement({
             </div>
 
             <div className="space-y-3.5">
+              {/* Subject Code Input */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1">
+                  កូដមុខវិជ្ជា <span className="text-slate-450 font-medium">(ទុកទទេសម្រាប់កំណត់ស្វ័យប្រវត្តិ)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="ឧ. KH-LANG, MATH,..."
+                  value={newSubjectCode}
+                  onChange={(e) => setNewSubjectCode(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-violet-500 text-slate-800 bg-white uppercase"
+                />
+              </div>
+
               {/* Subject Name Input */}
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 mb-1">
@@ -3231,6 +3359,113 @@ export default function StudentManagement({
                 className="px-4 py-2 text-xs font-bold text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-xs transition-colors cursor-pointer"
               >
                 បន្ថែម
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT SUBJECT DIALOG MODAL */}
+      {editingSubjectConfig && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[250] p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-teal-50 text-teal-600 rounded-lg shrink-0">
+                  <Pencil className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-extrabold text-slate-800">កែសម្រួលមុខវិជ្ជា</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingSubjectConfig(null)}
+                className="text-slate-400 hover:text-slate-600 hover:bg-slate-50 p-1.5 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5">
+              {/* Subject Code Input */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1">
+                  កូដមុខវិជ្ជា <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="ឧ. KH-LANG, MATH,..."
+                  value={editSubjectCode}
+                  onChange={(e) => setEditSubjectCode(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-teal-500 text-slate-800 bg-white uppercase"
+                />
+              </div>
+
+              {/* Subject Name Input */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1">
+                  ឈ្មោះមុខវិជ្ជា <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="ឧ. ភូមិវិទ្យា, សរសេរតាមអាន,..."
+                  value={editSubjectName}
+                  onChange={(e) => setEditSubjectName(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-teal-500 text-slate-800 bg-white"
+                />
+              </div>
+
+              {/* Max Score & Coefficient calculation */}
+              <div className="grid grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1">
+                    ពិន្ទុអតិបរមា <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="500"
+                    required
+                    value={editSubjectMaxScore}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setEditSubjectMaxScore(val);
+                    }}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-teal-500 bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                    មេគុណស្វ័យប្រវត្ត
+                  </label>
+                  <div className="w-full px-3 py-2 bg-slate-50 border border-slate-100 rounded-lg text-xs font-extrabold text-teal-700 select-none">
+                    × {((parseFloat(editSubjectMaxScore as string) || 0) / 50).toFixed(1).replace(/\.0$/, '')}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-[10px] text-slate-500 leading-relaxed font-semibold">
+                ✨ <span className="font-bold text-teal-600">ការគណនាមេគុណ៖</span> ប្រព័ន្ធនឹងគណនាមេគុណដោយស្វ័យប្រវត្តិតាមរូបមន្ត <span className="font-bold">ពិន្ទុអតិបរមា ចែកនឹង ៥០</span>។
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setEditingSubjectConfig(null)}
+                className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50 border border-slate-200 rounded-lg transition-colors cursor-pointer"
+              >
+                បោះបង់
+              </button>
+              <button
+                type="button"
+                disabled={!editSubjectName.trim() || !editSubjectCode.trim() || (parseFloat(editSubjectMaxScore as string) || 0) <= 0}
+                onClick={handleEditSubject}
+                className="px-4 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-xs transition-colors cursor-pointer"
+              >
+                រក្សាទុក
               </button>
             </div>
           </div>
