@@ -348,6 +348,20 @@ export const STANDARD_SUBJECTS_LAYOUT: SubjectLayoutItem[] = [
       G12_SC: { isActive: false, maxScore: 50 },
       G12_SS: { isActive: false, maxScore: 50 },
     }
+  },
+  {
+    id: 's25',
+    name: 'បណ្ណាល័យ',
+    standards: {
+      G7: { isActive: true, maxScore: 50 },
+      G8: { isActive: true, maxScore: 50 },
+      G9: { isActive: true, maxScore: 50 },
+      G10: { isActive: true, maxScore: 50 },
+      G11_SC: { isActive: true, maxScore: 50 },
+      G11_SS: { isActive: true, maxScore: 50 },
+      G12_SC: { isActive: true, maxScore: 50 },
+      G12_SS: { isActive: true, maxScore: 50 },
+    }
   }
 ];
 
@@ -427,6 +441,7 @@ const SUBJECT_CODES_MAP: { [id: string]: string } = {
   s22: 'IT', // បច្ចេកវិទ្យាព័ត៌មាន
   s23: 'Be', // អប់រំពុទ្ធសាសនា
   s24: 'S',  // អប់រំបំណិនជីវិត
+  s25: 'Li', // បណ្ណាល័យ
 };
 
 export function getStandardSubjectsForCategory(catId: string): any[] {

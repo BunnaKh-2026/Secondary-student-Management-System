@@ -8,6 +8,10 @@ export interface SchoolInfo {
   village?: string;
   directorName: string;
   directorGender: 'ប្រុស' | 'ស្រី' | '';
+  madeAt?: string;
+  studentAgeLimitDate?: string;
+  teacherAgeLimitDate?: string;
+  teacherServiceLimitDate?: string;
 }
 
 export interface Teacher {

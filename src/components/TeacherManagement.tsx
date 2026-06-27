@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Users, UserPlus, Trash2, Edit2, Calendar, FileText, CheckCircle, 
-  XSquare, Clock, MapPin, Phone, Printer, Plus, X, Search, XCircle, BookOpen, GripVertical
+  XSquare, Clock, MapPin, Phone, Printer, Plus, X, Search, XCircle, BookOpen, GripVertical,
+  Eye, ArrowUpDown, Camera
 } from 'lucide-react';
 import { Teacher, TeacherAttendance, SchoolInfo, Classroom } from '../types';
 import { STANDARD_SUBJECTS_LAYOUT } from '../data/subjectLayouts';
@@ -119,7 +120,8 @@ const SUBJECT_TO_CODE: { [name: string]: string } = {
   'ព័ត៌មានវិទ្យា': 'IT',
   'បច្ចេកវិទ្យាព័ត៌មាន': 'IT',
   'អប់រំពុទ្ធសាសនា': 'Be',
-  'អប់រំបំណិនជីវិត': 'S'
+  'អប់រំបំណិនជីវិត': 'S',
+  'បណ្ណាល័យ': 'Li'
 };
 
 const CODE_TO_SUBJECT: { [code: string]: string } = {
@@ -145,7 +147,8 @@ const CODE_TO_SUBJECT: { [code: string]: string } = {
   'Ar': 'អប់រំសិល្បៈ',
   'IT': 'បច្ចេកវិទ្យាព័ត៌មាន',
   'Be': 'អប់រំពុទ្ធសាសនា',
-  'S': 'អប់រំបំណិនជីវិត'
+  'S': 'អប់រំបំណិនជីវិត',
+  'Li': 'បណ្ណាល័យ'
 };
 
 // Helper to parse "M(7A, 7B); Di(7A)" into [{ subject: "គណិតវិទ្យា", classes: ["7A", "7B"] }]
@@ -206,6 +209,36 @@ export default function TeacherManagement({
 }: TeacherManagementProps) {
    // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Sorting state
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | null>(null);
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
+  // View detail state
+  const [viewingTeacher, setViewingTeacher] = useState<Teacher | null>(null);
+
+  const handleSortName = () => {
+    if (sortOrder === null) {
+      setSortOrder('asc');
+    } else if (sortOrder === 'asc') {
+      setSortOrder('desc');
+    } else {
+      setSortOrder(null);
+    }
+  };
+
+  // Click outside listener for sort dropdown
+  useEffect(() => {
+    function handleClickOutsideSort(event: MouseEvent) {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
+        setShowSortDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutsideSort);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutsideSort);
+    };
+  }, []);
 
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
@@ -254,6 +287,7 @@ export default function TeacherManagement({
     educationLevel: '',
     joinDate: '',
     yearsOfService: 0,
+    photoUrl: '',
   });
 
   // Role details input helper
@@ -307,7 +341,8 @@ export default function TeacherManagement({
       "អប់រំសិល្បៈ",
       "បច្ចេកវិទ្យាព័ត៌មាន",
       "អប់រំពុទ្ធសាសនា",
-      "អប់រំបំណិនជីវិត"
+      "អប់រំបំណិនជីវិត",
+      "បណ្ណាល័យ"
     ];
 
     const getSubjectIndex = (name: string): number => {
@@ -474,7 +509,7 @@ export default function TeacherManagement({
   const calculateYearsOfService = (dateStr: string): number => {
     if (!dateStr) return 0;
     const joinDateObj = new Date(dateStr);
-    const today = new Date();
+    const today = schoolInfo.teacherServiceLimitDate ? new Date(schoolInfo.teacherServiceLimitDate) : new Date();
     if (isNaN(joinDateObj.getTime())) return 0;
     
     let diffYears = today.getFullYear() - joinDateObj.getFullYear();
@@ -485,6 +520,19 @@ export default function TeacherManagement({
       diffYears--;
     }
     return Math.max(0, diffYears);
+  };
+
+  const calculateTeacherAge = (dobStr: string): string => {
+    if (!dobStr) return '';
+    const birthDate = new Date(dobStr);
+    if (isNaN(birthDate.getTime())) return '';
+    const today = schoolInfo.teacherAgeLimitDate ? new Date(schoolInfo.teacherAgeLimitDate) : new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age >= 0 ? String(age) : '';
   };
 
   const handleJoinDateChange = (dateVal: string) => {
@@ -515,6 +563,7 @@ export default function TeacherManagement({
       educationLevel: '',
       joinDate: '',
       yearsOfService: 0,
+      photoUrl: '',
     });
     setNewResp('');
     setIsFormOpen(true);
@@ -539,6 +588,7 @@ export default function TeacherManagement({
       educationLevel: t.educationLevel || '',
       joinDate: t.joinDate || '',
       yearsOfService: t.yearsOfService !== undefined ? t.yearsOfService : (t.joinDate ? calculateYearsOfService(t.joinDate) : 0),
+      photoUrl: t.photoUrl || '',
     });
     setNewResp('');
     setIsFormOpen(true);
@@ -599,12 +649,21 @@ export default function TeacherManagement({
   };
 
   // List filter
-  const filteredTeachers = teachers.filter(t => 
+  const baseFilteredTeachers = teachers.filter(t => 
     t.name.includes(searchTerm) || 
     t.idNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
     t.subject.includes(searchTerm) ||
     t.role.includes(searchTerm)
   );
+
+  const filteredTeachers = (() => {
+    if (sortOrder === 'asc') {
+      return [...baseFilteredTeachers].sort((a, b) => a.name.localeCompare(b.name, 'km'));
+    } else if (sortOrder === 'desc') {
+      return [...baseFilteredTeachers].sort((a, b) => b.name.localeCompare(a.name, 'km'));
+    }
+    return baseFilteredTeachers;
+  })();
 
   // Drag and drop event handlers for teachers list
   const handleTeacherDragStart = (e: React.DragEvent, id: string) => {
@@ -769,9 +828,60 @@ export default function TeacherManagement({
                   <tr className="bg-emerald-700 text-white font-bold text-xs uppercase whitespace-nowrap" id="teachers-list-th-row">
                     <th className="px-3 py-3 text-center w-12 whitespace-nowrap">ល.រ</th>
                     <th className="px-4 py-3 text-center whitespace-nowrap">អត្តលេខមន្ត្រី</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap">គោត្តនាម-នាម</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap select-none">
+                      <div className="flex items-center justify-center gap-2">
+                        <span>គោត្តនាម-នាម</span>
+                        <div className="relative inline-block" ref={sortDropdownRef}>
+                          <button
+                            onClick={() => setShowSortDropdown(!showSortDropdown)}
+                            className="p-1 rounded-md hover:bg-emerald-800 hover:text-white transition-colors cursor-pointer focus:outline-none flex items-center justify-center bg-emerald-700/50"
+                            title="ជម្រើសតម្រៀបទិន្នន័យ"
+                          >
+                            <ArrowUpDown className={`w-3.5 h-3.5 ${sortOrder ? 'text-white' : 'text-emerald-300'}`} />
+                          </button>
+                          
+                          {showSortDropdown && (
+                            <div className="absolute left-1/2 -translate-x-1/2 mt-2 w-40 bg-white border border-slate-200 rounded-lg shadow-lg py-1.5 z-50 text-slate-700 text-left normal-case font-normal">
+                              <button
+                                onClick={() => {
+                                  setSortOrder('asc');
+                                  setShowSortDropdown(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2 text-[11px] font-semibold cursor-pointer ${sortOrder === 'asc' ? 'text-emerald-600 bg-emerald-50/50 font-bold' : ''}`}
+                              >
+                                <span className={`w-1.5 h-1.5 rounded-full ${sortOrder === 'asc' ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
+                                តម្រៀបតាម ក-ខ
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSortOrder('desc');
+                                  setShowSortDropdown(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2 text-[11px] font-semibold cursor-pointer ${sortOrder === 'desc' ? 'text-emerald-600 bg-emerald-50/50 font-bold' : ''}`}
+                              >
+                                <span className={`w-1.5 h-1.5 rounded-full ${sortOrder === 'desc' ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
+                                តម្រៀបតាម ខ-ក
+                              </button>
+                              {sortOrder && (
+                                <button
+                                  onClick={() => {
+                                    setSortOrder(null);
+                                    setShowSortDropdown(false);
+                                  }}
+                                  className="w-full text-left px-3 py-2 hover:bg-rose-50 flex items-center gap-2 text-[11px] font-semibold cursor-pointer text-rose-600 border-t border-slate-100"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                  លុបការតម្រៀប
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </th>
                     <th className="px-3 py-3 text-center whitespace-nowrap">ភេទ</th>
                     <th className="px-4 py-3 text-center whitespace-nowrap">ថ្ងៃខែឆ្នាំកំណើត</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap">អាយុ</th>
                     <th className="px-4 py-3 text-center whitespace-nowrap">ក្របខ័ណ្ឌ</th>
                     <th className="px-4 py-3 text-center whitespace-nowrap">កាំប្រាក់</th>
                     <th className="px-4 py-3 text-center whitespace-nowrap">ឯកទេស</th>
@@ -787,7 +897,7 @@ export default function TeacherManagement({
                 <tbody>
                   {filteredTeachers.length === 0 ? (
                     <tr>
-                      <td colSpan={15} className="px-4 py-12 text-center text-slate-400 text-xs font-medium whitespace-nowrap">
+                      <td colSpan={16} className="px-4 py-12 text-center text-slate-400 text-xs font-medium whitespace-nowrap">
                         គ្មានសំណុំទិន្នន័យគ្រូបង្រៀនត្រូវបានរកឃើញទេ។
                       </td>
                     </tr>
@@ -815,7 +925,23 @@ export default function TeacherManagement({
                           {t.idNumber}
                         </td>
                         <td className="px-4 py-3 font-bold text-slate-800 whitespace-nowrap">
-                          {t.name}
+                          <div className="flex items-center gap-2">
+                            {t.photoUrl ? (
+                              <img 
+                                src={t.photoUrl} 
+                                alt="រូបថតគ្រូ" 
+                                className="w-6 h-6 rounded-full object-cover border border-slate-200 shrink-0"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : (
+                              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] text-white font-bold shrink-0 shadow-xs ${
+                                t.gender === 'ប្រុស' ? 'bg-sky-500' : 'bg-pink-500'
+                              }`}>
+                                {t.gender === 'ប្រុស' ? 'ប្រ' : 'ស្រ'}
+                              </div>
+                            )}
+                            <span>{t.name}</span>
+                          </div>
                         </td>
                         <td className="px-3 py-3 text-center whitespace-nowrap">
                           <span className={`px-2 py-0.5 rounded-sm text-[10px] font-bold ${
@@ -826,6 +952,9 @@ export default function TeacherManagement({
                         </td>
                         <td className="px-4 py-3 text-center font-mono whitespace-nowrap">
                           {formatToDDMMYYYY(t.dob)}
+                        </td>
+                        <td className="px-4 py-3 text-center text-slate-750 font-bold whitespace-nowrap">
+                          {calculateTeacherAge(t.dob) ? `${calculateTeacherAge(t.dob)} ឆ្នាំ` : '-'}
                         </td>
                         <td className="px-4 py-3 text-center whitespace-nowrap">
                           {t.framework ? (
@@ -868,6 +997,13 @@ export default function TeacherManagement({
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => setViewingTeacher(t)}
+                              title="មើលព័ត៌មានលម្អិត"
+                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
                             <button
                               onClick={() => handleOpenEdit(t)}
                               title="កែសម្រួលទិន្នន័យ"
@@ -994,7 +1130,25 @@ export default function TeacherManagement({
                           className="border-b border-emerald-600 hover:bg-slate-50/50 transition-colors text-xs text-slate-700 font-medium"
                         >
                           <td className="px-4 py-3 font-mono text-center font-semibold text-teal-600 bg-slate-50/30">{t.idNumber}</td>
-                        <td className="px-4 py-3 font-bold text-slate-800">{t.name}</td>
+                        <td className="px-4 py-3 font-bold text-slate-800">
+                          <div className="flex items-center gap-2">
+                            {t.photoUrl ? (
+                              <img 
+                                src={t.photoUrl} 
+                                alt="រូបថតគ្រូ" 
+                                className="w-6 h-6 rounded-full object-cover border border-slate-200 shrink-0"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : (
+                              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] text-white font-bold shrink-0 shadow-xs ${
+                                t.gender === 'ប្រុស' ? 'bg-sky-500' : 'bg-pink-500'
+                              }`}>
+                                {t.gender === 'ប្រុស' ? 'ប្រ' : 'ស្រ'}
+                              </div>
+                            )}
+                            <span>{t.name}</span>
+                          </div>
+                        </td>
                         <td className="px-4 py-3 text-slate-600 font-semibold">{t.role} ({t.subject})</td>
                         <td className="px-4 py-3">
                           <div className="flex justify-center items-center gap-1.5">
@@ -1070,34 +1224,100 @@ export default function TeacherManagement({
             {/* Scrollable Body */}
             <form onSubmit={handleSaveTeacher} className="flex-1 flex flex-col overflow-hidden">
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="teacher-code-input" className="text-xs font-bold text-slate-600">អត្តលេខមន្ត្រី</label>
-                  <input
-                    id="teacher-code-input"
-                    type="text"
-                    value={formData.idNumber}
-                    onChange={e => setFormData({ ...formData, idNumber: e.target.value })}
-                    placeholder="1900100036"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
-                  />
+                {/* Layout for Teacher Photo and Basic Identifiers */}
+                <div className="grid grid-cols-[1fr_130px] gap-4 items-start bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+                  {/* Left side: Stacked Inputs */}
+                  <div className="space-y-3.5">
+                    <div className="space-y-1.5">
+                      <label htmlFor="teacher-code-input" className="text-xs font-bold text-slate-700 block">អត្តលេខមន្ត្រី</label>
+                      <input
+                        id="teacher-code-input"
+                        type="text"
+                        value={formData.idNumber}
+                        onChange={e => setFormData({ ...formData, idNumber: e.target.value })}
+                        placeholder="1900100036"
+                        className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label htmlFor="teacher-name-input" className="text-xs font-bold text-slate-700 block">គោត្តនាម និងនាមខ្លួន <span className="text-rose-500 ml-1">*</span></label>
+                      <input
+                        id="teacher-name-input"
+                        type="text"
+                        required
+                        value={formData.name}
+                        onChange={e => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="ផៃ ប៊ុនណា"
+                        className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Right side: Portrait Card Photo */}
+                  <div className="flex flex-col items-center">
+                    <span className="text-[11px] font-bold text-slate-500 mb-1.5 block">រូបថតកាត</span>
+                    <div className="relative w-28 h-32 rounded-xl overflow-hidden bg-slate-100 border-2 border-dashed border-slate-300 shadow-xs flex items-center justify-center group shrink-0">
+                      {formData.photoUrl ? (
+                        <>
+                          <img 
+                            src={formData.photoUrl} 
+                            alt="រូបថតគ្រូ" 
+                            className="w-full h-full object-cover object-top"
+                            referrerPolicy="no-referrer"
+                          />
+                          <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white text-[10px] font-bold cursor-pointer transition-all gap-1">
+                            <label 
+                              htmlFor="teacher-photo-upload" 
+                              className="w-full h-full flex flex-col items-center justify-center cursor-pointer gap-1"
+                            >
+                              <Camera className="w-4 h-4" />
+                              <span>ប្តូររូបភាព</span>
+                            </label>
+                          </div>
+                        </>
+                      ) : (
+                        <label 
+                          htmlFor="teacher-photo-upload" 
+                          className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 hover:text-teal-600 hover:bg-slate-50/50 cursor-pointer transition-all gap-1.5"
+                        >
+                          <Camera className="w-5 h-5 text-slate-400" />
+                          <span className="text-[9px] font-bold text-slate-500 text-center px-1">បញ្ចូលរូបថត</span>
+                        </label>
+                      )}
+                    </div>
+                    <input 
+                      id="teacher-photo-upload" 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setFormData(prev => ({
+                              ...prev,
+                              photoUrl: reader.result as string
+                            }));
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                    {formData.photoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, photoUrl: '' }))}
+                        className="mt-1 text-[9px] text-rose-600 hover:text-rose-750 font-bold hover:underline"
+                      >
+                        លុបរូបថតចេញ
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label htmlFor="teacher-name-input" className="text-xs font-bold text-slate-600">គោត្តនាម និងនាមខ្លួន <span className="text-rose-500 ml-1">*</span></label>
-                  <input
-                    id="teacher-name-input"
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="ផៃ ប៊ុនណា"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-1.5">
                   <label htmlFor="teacher-gender-select" className="text-xs font-bold text-slate-600">ភេទ <span className="text-rose-500 ml-1">*</span></label>
                   <select
@@ -1120,6 +1340,17 @@ export default function TeacherManagement({
                     value={formData.dob}
                     onChange={e => setFormData({ ...formData, dob: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-600 block">អាយុ (គណនាស្វ័យប្រវត្តិ)</label>
+                  <input
+                    type="text"
+                    readOnly
+                    disabled
+                    value={calculateTeacherAge(formData.dob) ? `${calculateTeacherAge(formData.dob)} ឆ្នាំ` : '---'}
+                    className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs outline-none text-slate-500 font-bold"
                   />
                 </div>
               </div>
@@ -1360,10 +1591,19 @@ export default function TeacherManagement({
                     <div className="w-full border-b-2 border-slate-100"></div>
 
                     <div className="flex flex-col items-center space-y-1">
-                      {/* Simulated profile avatar */}
-                      <div className="w-20 h-20 rounded-full border-2 border-purple-600 bg-gradient-to-tr from-purple-500 to-indigo-600 flex items-center justify-center text-white text-3xl font-extrabold uppercase">
-                        {selectedPrintTeacher.name[0]}
-                      </div>
+                      {/* Simulated profile avatar or real photo */}
+                      {selectedPrintTeacher.photoUrl ? (
+                        <img 
+                          src={selectedPrintTeacher.photoUrl} 
+                          alt={selectedPrintTeacher.name} 
+                          className="w-20 h-20 rounded-full border-2 border-purple-600 object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="w-20 h-20 rounded-full border-2 border-purple-600 bg-gradient-to-tr from-purple-500 to-indigo-600 flex items-center justify-center text-white text-3xl font-extrabold uppercase">
+                          {selectedPrintTeacher.name[0]}
+                        </div>
+                      )}
                       <h4 className="text-sm font-extrabold text-slate-800 mt-2">
                         {selectedPrintTeacher.name}
                       </h4>
@@ -1444,9 +1684,18 @@ export default function TeacherManagement({
             <div className="w-full border-b-2 border-slate-100"></div>
 
             <div className="flex flex-col items-center space-y-1">
-              <div className="w-24 h-24 rounded-full border-2 border-teal-600 bg-teal-100 flex items-center justify-center text-teal-800 text-4xl font-extrabold uppercase">
-                {selectedPrintTeacher.name[0]}
-              </div>
+              {selectedPrintTeacher.photoUrl ? (
+                <img 
+                  src={selectedPrintTeacher.photoUrl} 
+                  alt={selectedPrintTeacher.name} 
+                  className="w-24 h-24 rounded-full border-2 border-teal-600 object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-full border-2 border-teal-600 bg-teal-100 flex items-center justify-center text-teal-800 text-4xl font-extrabold uppercase">
+                  {selectedPrintTeacher.name[0]}
+                </div>
+              )}
               <h4 className="text-base font-extrabold text-slate-800 mt-2">
                 {selectedPrintTeacher.name}
               </h4>
@@ -1766,6 +2015,148 @@ export default function TeacherManagement({
           >
             <X className="w-3.5 h-3.5" />
           </button>
+        </div>
+      )}
+
+      {/* VIEW TEACHER DETAILS MODAL */}
+      {viewingTeacher && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full overflow-hidden border border-slate-100 shadow-xl flex flex-col">
+            {/* Header */}
+            <div className="px-5 py-3.5 bg-emerald-700 text-white flex items-center justify-between">
+              <h3 className="font-bold text-xs flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                <span>ព័ត៌មានលម្អិតរបស់គ្រូបង្រៀន</span>
+              </h3>
+              <button 
+                onClick={() => setViewingTeacher(null)}
+                className="p-1 hover:bg-emerald-800 rounded-full text-white/80 hover:text-white transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Profile Content - meticulously designed to fit completely on desktop and scrollable on mobile */}
+            <div className="p-4 space-y-3 overflow-y-auto max-h-[75vh] md:max-h-none md:overflow-visible">
+              {/* Top Summary Banner */}
+              <div className="flex items-center gap-4 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100/60">
+                {viewingTeacher.photoUrl ? (
+                  <img 
+                    src={viewingTeacher.photoUrl} 
+                    alt={viewingTeacher.name} 
+                    className="w-24 h-30 rounded-lg object-cover object-top border-2 border-emerald-200 shrink-0 shadow-sm"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className={`w-24 h-30 rounded-lg flex flex-col items-center justify-center text-sm text-white font-bold shrink-0 shadow-sm ${
+                    viewingTeacher.gender === 'ប្រុស' ? 'bg-sky-500' : 'bg-pink-500'
+                  }`}>
+                    <span className="text-xl mb-1">
+                      {viewingTeacher.gender === 'ប្រុស' ? 'ប' : 'ស'}
+                    </span>
+                    <span className="text-[10px] opacity-80">
+                      {viewingTeacher.gender || 'គ្រូ'}
+                    </span>
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-bold text-slate-800">
+                    {viewingTeacher.name}
+                  </h4>
+                  <div className="flex flex-col gap-1.5 mt-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-slate-500 font-bold min-w-[75px]">ភេទ៖</span>
+                      <span className={`px-1.5 py-0.5 rounded-sm text-[9px] font-bold ${
+                        viewingTeacher.gender === 'ប្រុស' ? 'bg-sky-100 text-sky-800' : 'bg-pink-100 text-pink-800'
+                      }`}>
+                        {viewingTeacher.gender}
+                      </span>
+                    </div>
+                    {viewingTeacher.idNumber && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-500 font-bold min-w-[75px]">អត្តលេខមន្ត្រី៖</span>
+                        <span className="text-[10px] font-mono font-bold text-teal-600 bg-slate-100 px-1.5 py-0.5 rounded-sm">
+                          {viewingTeacher.idNumber}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Info Grid - 1 column on mobile, 2 columns on medium screens and up */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
+                {/* Left Column: Personal info */}
+                <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100 space-y-1.5">
+                  <h5 className="font-bold text-emerald-800 border-b border-slate-100 pb-1 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    ព័ត៌មានផ្ទាល់ខ្លួន
+                  </h5>
+                  <div className="grid grid-cols-3 gap-y-1.5 text-slate-650">
+                    <span className="col-span-1 font-bold">ថ្ងៃខែឆ្នាំកំណើត:</span>
+                    <span className="col-span-2 text-slate-800 font-semibold">{formatToDDMMYYYY(viewingTeacher.dob)}</span>
+                    
+                    <span className="col-span-1 font-bold">អាយុ:</span>
+                    <span className="col-span-2 text-slate-800 font-semibold">{calculateTeacherAge(viewingTeacher.dob) ? `${calculateTeacherAge(viewingTeacher.dob)} ឆ្នាំ` : '-'}</span>
+                    
+                    <span className="col-span-1 font-bold">លេខទូរស័ព្ទ:</span>
+                    <span className="col-span-2 text-slate-800 font-mono font-semibold">{viewingTeacher.phone || '-'}</span>
+
+                    <span className="col-span-1 font-bold">ជនជាតិភាគតិច:</span>
+                    <span className="col-span-2 text-slate-800 font-semibold">{viewingTeacher.ethnicity || 'ទេ'}</span>
+
+                    <span className="col-span-1 font-bold">កម្រិតវប្បធម៌:</span>
+                    <span className="col-span-2 text-slate-800 font-semibold">{viewingTeacher.educationLevel || '-'}</span>
+                  </div>
+                </div>
+
+                {/* Right Column: Work info */}
+                <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100 space-y-1.5">
+                  <h5 className="font-bold text-emerald-800 border-b border-slate-100 pb-1 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    ព័ត៌មានបម្រើការងារ
+                  </h5>
+                  <div className="grid grid-cols-3 gap-y-1.5 text-slate-650">
+                    <span className="col-span-1 font-bold">ឯកទេស:</span>
+                    <span className="col-span-2 text-slate-800 font-semibold">{viewingTeacher.subject}</span>
+                    
+                    <span className="col-span-1 font-bold">មុខវិជ្ជាបង្រៀន:</span>
+                    <span className="col-span-2 text-slate-800 font-semibold">{viewingTeacher.teachingSubjects || '-'}</span>
+                    
+                    <span className="col-span-1 font-bold">បន្ទុកថ្នាក់:</span>
+                    <span className="col-span-2 text-slate-800 font-semibold">
+                      {viewingTeacher.classCharge ? toArabicClassnameWithPrefix(viewingTeacher.classCharge) : '-'}
+                    </span>
+
+                    <span className="col-span-1 font-bold">ក្របខ័ណ្ឌ:</span>
+                    <span className="col-span-2 text-slate-800 font-semibold">{viewingTeacher.framework || '-'}</span>
+
+                    <span className="col-span-1 font-bold">កាំប្រាក់:</span>
+                    <span className="col-span-2 text-slate-800 font-mono font-semibold">{viewingTeacher.salaryRank || '-'}</span>
+
+                    <span className="col-span-1 font-bold">ថ្ងៃចូលធ្វើការ:</span>
+                    <span className="col-span-2 text-slate-800 font-semibold">{formatToDDMMYYYY(viewingTeacher.joinDate)}</span>
+
+                    <span className="col-span-1 font-bold">ឆ្នាំបម្រើការ:</span>
+                    <span className="col-span-2 text-slate-800 font-semibold">{calculateYearsOfService(viewingTeacher.joinDate) ? `${calculateYearsOfService(viewingTeacher.joinDate)} ឆ្នាំ` : '-'}</span>
+                  </div>
+                </div>
+              </div>
+
+
+
+              {/* Action Buttons inside footer */}
+              <div className="flex justify-end pt-1.5 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setViewingTeacher(null)}
+                  className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold cursor-pointer transition-colors"
+                >
+                  បិទផ្ទាំង
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

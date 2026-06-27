@@ -4,7 +4,7 @@ import {
   GraduationCap, UserPlus, School, Search, Trash2, Edit2, Pencil,
   Printer, Plus, X, ArrowRight, Table, Phone, MapPin, Calendar, CheckCircle,
   AlertTriangle, IdCard, Save, GripVertical, RotateCcw, XCircle, User, Camera,
-  ArrowUpDown
+  ArrowUpDown, Eye
 } from 'lucide-react';
 import { Student, Classroom, SchoolInfo } from '../types';
 import { 
@@ -33,6 +33,7 @@ export const DEFAULT_SUBJECTS = [
   { id: '8', name: 'សីលធម៌-ពលរដ្ឋ', coefficient: 1, isActive: true },
   { id: '9', name: 'ភាសាបរទេស (អង់គ្លេស)', coefficient: 1, isActive: true },
   { id: '10', name: 'ព័ត៌មានវិទ្យា', coefficient: 1, isActive: true },
+  { id: '11', name: 'បណ្ណាល័យ', coefficient: 1, isActive: true, code: 'Li', maxScore: 50 },
 ];
 
 const toArabicClassname = (name: string): string => {
@@ -205,11 +206,11 @@ const COMMON_KHMER_NAME_REPLACEMENTS: { [key: string]: string } = {
   'ពិសី': 'PISEY'
 };
 
-const calculateAge = (dobString: string): string => {
+const calculateAge = (dobString: string, referenceDateString?: string): string => {
   if (!dobString) return '';
   const birthDate = new Date(dobString);
   if (isNaN(birthDate.getTime())) return '';
-  const today = new Date();
+  const today = referenceDateString ? new Date(referenceDateString) : new Date();
   let age = today.getFullYear() - birthDate.getFullYear();
   const m = today.getMonth() - birthDate.getMonth();
   if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
@@ -820,6 +821,7 @@ export default function StudentManagement({
   // Student creation States
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
   const [pobManual, setPobManual] = useState(false);
   const [currentAddressManual, setCurrentAddressManual] = useState(false);
   const [studentForm, setStudentForm] = useState<Omit<Student, 'id'> & { gender: 'ប្រុស' | 'ស្រី' | '' }>({
@@ -859,6 +861,52 @@ export default function StudentManagement({
   // Student Sort states
   const [studentSortField, setStudentSortField] = useState<'name' | 'classroom' | null>(null);
   const [studentSortDirection, setStudentSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [activeSortMenu, setActiveSortMenu] = useState<'name' | 'classroom' | null>(null);
+
+  // Helper to convert Khmer grade to number for sorting
+  const gradeToNum = (grade?: string): number => {
+    switch (grade) {
+      case '៧': return 7;
+      case '៨': return 8;
+      case '៩': return 9;
+      case '១០': return 10;
+      case '១១': return 11;
+      case '១២': return 12;
+      default: return 99;
+    }
+  };
+
+  const sortAndAssignRollNumbers = (allStudents: Student[]): Student[] => {
+    const sorted = [...allStudents].sort((a, b) => {
+      const clsA = classrooms.find(c => c.id === a.classroomId);
+      const clsB = classrooms.find(c => c.id === b.classroomId);
+      
+      if (clsA && clsB) {
+        if (clsA.id !== clsB.id) {
+          const gA = gradeToNum(clsA.grade);
+          const gB = gradeToNum(clsB.grade);
+          if (gA !== gB) return gA - gB;
+          return clsA.name.localeCompare(clsB.name, 'km');
+        }
+      } else if (clsA) {
+        return -1;
+      } else if (clsB) {
+        return 1;
+      }
+      
+      return a.nameKhmer.localeCompare(b.nameKhmer, 'km');
+    });
+
+    const classroomCounts: Record<string, number> = {};
+    return sorted.map(student => {
+      const cid = student.classroomId;
+      classroomCounts[cid] = (classroomCounts[cid] || 0) + 1;
+      return {
+        ...student,
+        rollNumber: String(classroomCounts[cid])
+      };
+    });
+  };
 
   const provincesList = useMemo(() => {
     return getProvincesList();
@@ -1129,7 +1177,7 @@ export default function StudentManagement({
     setPobManual(false);
     setCurrentAddressManual(false);
     setStudentForm({
-      classroomId: classrooms[0]?.id || '',
+      classroomId: '',
       studentIdCard: '',
       rollNumber: String(students.length + 1),
       nameKhmer: '',
@@ -1246,14 +1294,16 @@ export default function StudentManagement({
 
     if (editingStudent) {
       const updated = students.map(s => s.id === editingStudent.id ? { ...s, ...finalFormData } : s);
-      onUpdateStudents(updated);
+      const sortedAndNumbered = sortAndAssignRollNumbers(updated);
+      onUpdateStudents(sortedAndNumbered);
       showToast(`បានកែសម្រួលព័ត៌មានសិស្សឈ្មោះ "${finalFormData.nameKhmer}" ដោយជោគជ័យ។`);
     } else {
       const newStd: Student = {
         id: `STD-${Date.now()}`,
         ...finalFormData,
       };
-      onUpdateStudents([...students, newStd]);
+      const sortedAndNumbered = sortAndAssignRollNumbers([...students, newStd]);
+      onUpdateStudents(sortedAndNumbered);
       showToast(`បានចុះឈ្មោះសិស្សថ្មីឈ្មោះ "${finalFormData.nameKhmer}" ទទួលបានជោគជ័យ!`);
     }
     setIsStudentModalOpen(false);
@@ -2477,31 +2527,143 @@ export default function StudentManagement({
                     <th className="px-4 py-3 text-center bg-emerald-700">ល.រ</th>
                     <th className="px-4 py-3 text-center bg-emerald-700">អត្តលេខ</th>
                     <th 
-                      onClick={() => handleStudentSort('name')}
-                      className="px-4 py-3 bg-emerald-700 cursor-pointer select-none hover:bg-emerald-850 transition-colors"
-                      title="ចុចដើម្បីតម្រៀបតាមឈ្មោះ"
+                      className={`px-4 py-3 bg-emerald-700 relative select-none ${
+                        activeSortMenu === 'name' ? 'z-30' : 'z-10'
+                      }`}
                     >
-                      <div className="flex items-center gap-1.5 justify-start">
+                      <div 
+                        onClick={() => setActiveSortMenu(activeSortMenu === 'name' ? null : 'name')}
+                        className="flex items-center gap-1.5 justify-start cursor-pointer hover:text-emerald-100 transition-colors"
+                        title="ជម្រើសតម្រៀបតាមឈ្មោះ"
+                      >
                         <span>គោត្តនាម-នាម</span>
                         <ArrowUpDown className={`w-3.5 h-3.5 transition-opacity shrink-0 ${
                           studentSortField === 'name' ? 'text-white opacity-100' : 'text-emerald-200/60 opacity-60'
                         }`} />
                       </div>
+
+                      {activeSortMenu === 'name' && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setActiveSortMenu(null)} />
+                          <div className="absolute left-2 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1.5 min-w-[170px] text-slate-700 font-sans font-medium text-xs normal-case">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setStudentSortField('name');
+                                setStudentSortDirection('asc');
+                                setActiveSortMenu(null);
+                              }}
+                              className={`w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-colors ${
+                                studentSortField === 'name' && studentSortDirection === 'asc' ? 'text-emerald-600 bg-emerald-50/40 font-bold' : ''
+                              }`}
+                            >
+                              <span>តម្រៀប កើនឡើង (ក-អ)</span>
+                              {studentSortField === 'name' && studentSortDirection === 'asc' && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setStudentSortField('name');
+                                setStudentSortDirection('desc');
+                                setActiveSortMenu(null);
+                              }}
+                              className={`w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-colors ${
+                                studentSortField === 'name' && studentSortDirection === 'desc' ? 'text-emerald-600 bg-emerald-50/40 font-bold' : ''
+                              }`}
+                            >
+                              <span>តម្រៀប ថយចុះ (អ-ក)</span>
+                              {studentSortField === 'name' && studentSortDirection === 'desc' && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              )}
+                            </button>
+                            {studentSortField === 'name' && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setStudentSortField(null);
+                                  setActiveSortMenu(null);
+                                }}
+                                className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 border-t border-slate-100 flex items-center gap-2 cursor-pointer transition-colors"
+                              >
+                                លុបការតម្រៀប
+                              </button>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </th>
                     <th className="px-3 py-3 text-center bg-emerald-700">ភេទ</th>
                     <th className="px-4 py-3 text-center bg-emerald-700">ថ្ងៃខែឆ្នាំកំណើត</th>
                     <th className="px-4 py-3 text-center bg-emerald-700">អាយុ</th>
                     <th 
-                      onClick={() => handleStudentSort('classroom')}
-                      className="px-4 py-3 bg-emerald-700 cursor-pointer select-none hover:bg-emerald-850 transition-colors"
-                      title="ចុចដើម្បីតម្រៀបតាមថ្នាក់"
+                      className={`px-4 py-3 bg-emerald-700 relative select-none ${
+                        activeSortMenu === 'classroom' ? 'z-30' : 'z-10'
+                      }`}
                     >
-                      <div className="flex items-center gap-1.5 justify-start">
+                      <div 
+                        onClick={() => setActiveSortMenu(activeSortMenu === 'classroom' ? null : 'classroom')}
+                        className="flex items-center gap-1.5 justify-start cursor-pointer hover:text-emerald-100 transition-colors"
+                        title="ជម្រើសតម្រៀបតាមថ្នាក់"
+                      >
                         <span>ថ្នាក់</span>
                         <ArrowUpDown className={`w-3.5 h-3.5 transition-opacity shrink-0 ${
                           studentSortField === 'classroom' ? 'text-white opacity-100' : 'text-emerald-200/60 opacity-60'
                         }`} />
                       </div>
+
+                      {activeSortMenu === 'classroom' && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setActiveSortMenu(null)} />
+                          <div className="absolute left-2 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1.5 min-w-[210px] text-slate-700 font-sans font-medium text-xs normal-case">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setStudentSortField('classroom');
+                                setStudentSortDirection('asc');
+                                setActiveSortMenu(null);
+                              }}
+                              className={`w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-colors ${
+                                studentSortField === 'classroom' && studentSortDirection === 'asc' ? 'text-emerald-600 bg-emerald-50/40 font-bold' : ''
+                              }`}
+                            >
+                              <span>តម្រៀប កើនឡើង (ថ្នាក់ ៧-១២)</span>
+                              {studentSortField === 'classroom' && studentSortDirection === 'asc' && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setStudentSortField('classroom');
+                                setStudentSortDirection('desc');
+                                setActiveSortMenu(null);
+                              }}
+                              className={`w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-colors ${
+                                studentSortField === 'classroom' && studentSortDirection === 'desc' ? 'text-emerald-600 bg-emerald-50/40 font-bold' : ''
+                              }`}
+                            >
+                              <span>តម្រៀប ថយចុះ (ថ្នាក់ ១២-៧)</span>
+                              {studentSortField === 'classroom' && studentSortDirection === 'desc' && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              )}
+                            </button>
+                            {studentSortField === 'classroom' && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setStudentSortField(null);
+                                  setActiveSortMenu(null);
+                                }}
+                                className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 border-t border-slate-100 flex items-center gap-2 cursor-pointer transition-colors"
+                              >
+                                លុបការតម្រៀប
+                              </button>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </th>
                     <th className="px-4 py-3 bg-emerald-700">ទីកន្លែងកំណើត</th>
                     <th className="px-4 py-3 bg-emerald-700">ឈ្មោះឪពុក</th>
@@ -2575,7 +2737,7 @@ export default function StudentManagement({
                             {s.dob ? s.dob.split('-').reverse().join('-') : '-'}
                           </td>
                           <td className="px-4 py-3 text-center text-slate-750 font-bold">
-                            {calculateAge(s.dob) ? `${calculateAge(s.dob)} ឆ្នាំ` : '-'}
+                            {calculateAge(s.dob, schoolInfo.studentAgeLimitDate) ? `${calculateAge(s.dob, schoolInfo.studentAgeLimitDate)} ឆ្នាំ` : '-'}
                           </td>
                           <td className="px-4 py-3">
                             <span className="font-bold text-slate-600">
@@ -2611,6 +2773,13 @@ export default function StudentManagement({
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => setViewingStudent(s)}
+                                title="មើលព័ត៌មានលម្អិត"
+                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg cursor-pointer"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
                               <button
                                 onClick={() => handleOpenEditStudent(s)}
                                 title="កែសម្រួលទិន្នន័យផ្ទាល់ខ្លួន"
@@ -2703,7 +2872,7 @@ export default function StudentManagement({
                   <button
                     type="button"
                     onClick={() => {
-                      onUpdateStudents(students.filter(s => s.id !== deletingStudent.id));
+                      onUpdateStudents(sortAndAssignRollNumbers(students.filter(s => s.id !== deletingStudent.id)));
                       if (selectedPrintStudent?.id === deletingStudent.id) setSelectedPrintStudent(null);
                       setDeletingStudent(null);
                     }}
@@ -2953,7 +3122,7 @@ export default function StudentManagement({
                     type="text"
                     readOnly
                     disabled
-                    value={calculateAge(studentForm.dob) ? `${calculateAge(studentForm.dob)} ឆ្នាំ` : '---'}
+                    value={calculateAge(studentForm.dob, schoolInfo.studentAgeLimitDate) ? `${calculateAge(studentForm.dob, schoolInfo.studentAgeLimitDate)} ឆ្នាំ` : '---'}
                     className="w-full px-3 h-[38px] bg-slate-100 border border-slate-200 rounded-xl text-xs outline-none text-slate-500 font-bold"
                   />
                 </div>
@@ -2964,11 +3133,13 @@ export default function StudentManagement({
                     id="student-cls-select"
                     value={studentForm.classroomId}
                     onChange={e => setStudentForm({ ...studentForm, classroomId: e.target.value })}
-                    className="w-full px-3 h-[38px] bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white font-bold text-slate-700 appearance-none"
+                    className={`w-full px-3 h-[38px] bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white cursor-pointer appearance-none ${
+                      studentForm.classroomId === '' ? 'text-slate-400 font-normal' : 'text-slate-700 font-bold'
+                    }`}
                   >
-                    <option value="" disabled>-- សូមជ្រើសរើសថ្នាក់ --</option>
+                    <option value="" className="text-slate-400 font-normal">សូមជ្រើសរើសថ្នាក់</option>
                     {classrooms.map(c => (
-                      <option key={c.id} value={c.id}>{toArabicClassname(c.name)}</option>
+                      <option key={c.id} value={c.id} className="text-slate-700 font-bold">{toArabicClassname(c.name)}</option>
                     ))}
                   </select>
                 </div>
@@ -3889,6 +4060,162 @@ export default function StudentManagement({
           </div>
         </div>
       )}
+
+      {/* VIEW STUDENT DETAILS MODAL */}
+      {viewingStudent && (() => {
+        const cls = classrooms.find(c => c.id === viewingStudent.classroomId);
+        const className = cls ? toArabicClassname(cls.name) : '-';
+        return (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl max-w-2xl w-full overflow-hidden border border-slate-100 shadow-xl flex flex-col">
+              {/* Header */}
+              <div className="px-5 py-3.5 bg-emerald-700 text-white flex items-center justify-between">
+                <h3 className="font-bold text-xs flex items-center gap-2">
+                  <GraduationCap className="w-4 h-4" />
+                  <span>ព័ត៌មានលម្អិតរបស់សិស្សានុសិស្ស</span>
+                </h3>
+                <button 
+                  onClick={() => setViewingStudent(null)}
+                  className="p-1 hover:bg-emerald-800 rounded-full text-white/80 hover:text-white transition cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Profile Content - meticulously designed to fit completely without any scrollbar */}
+              <div className="p-4 space-y-3">
+                {/* Top Summary Banner */}
+                <div className="flex items-center gap-4 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100/60">
+                  {viewingStudent.photoUrl ? (
+                    <img 
+                      src={viewingStudent.photoUrl} 
+                      alt={viewingStudent.nameKhmer} 
+                      className="w-24 h-30 rounded-lg object-cover object-top border-2 border-emerald-200 shrink-0 shadow-sm"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className={`w-24 h-30 rounded-lg flex flex-col items-center justify-center text-sm text-white font-bold shrink-0 shadow-sm ${
+                      viewingStudent.gender === 'ប្រុស' ? 'bg-sky-500' : 'bg-pink-500'
+                    }`}>
+                      <span className="text-xl mb-1">
+                        {viewingStudent.gender === 'ប្រុស' ? 'ប' : 'ស'}
+                      </span>
+                      <span className="text-[10px] opacity-80">
+                        {viewingStudent.gender || 'សិស្ស'}
+                      </span>
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-bold text-slate-800">
+                      {viewingStudent.nameKhmer}
+                    </h4>
+                    <div className="flex flex-col gap-1.5 mt-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-500 font-bold min-w-[75px]">ភេទ៖</span>
+                        <span className={`px-1.5 py-0.5 rounded-sm text-[9px] font-bold ${
+                          viewingStudent.gender === 'ប្រុស' ? 'bg-sky-100 text-sky-800' : 'bg-pink-100 text-pink-800'
+                        }`}>
+                          {viewingStudent.gender}
+                        </span>
+                      </div>
+                      {viewingStudent.studentIdCard && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-slate-500 font-bold min-w-[75px]">អត្តលេខសិស្ស៖</span>
+                          <span className="text-[10px] font-mono font-bold text-teal-600 bg-slate-100 px-1.5 py-0.5 rounded-sm">
+                            {viewingStudent.studentIdCard}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-500 font-bold min-w-[75px]">ថ្នាក់៖</span>
+                        <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded-sm">
+                          {className}
+                        </span>
+                      </div>
+                      {viewingStudent.rollNumber && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-slate-500 font-bold min-w-[75px]">លេខរៀងបញ្ជី៖</span>
+                          <span className="text-[10px] font-bold text-purple-800 bg-purple-50 px-1.5 py-0.5 rounded-sm">
+                            {viewingStudent.rollNumber}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2-Column Info Grid */}
+                <div className="grid grid-cols-2 gap-3 text-[11px]">
+                  {/* Left Column: Personal info */}
+                  <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100 space-y-1.5">
+                    <h5 className="font-bold text-emerald-800 border-b border-slate-100 pb-1 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      ព័ត៌មានផ្ទាល់ខ្លួន
+                    </h5>
+                    <div className="grid grid-cols-3 gap-y-1.5 text-slate-650">
+                      <span className="col-span-1 font-bold">ថ្ងៃខែឆ្នាំកំណើត:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold">{viewingStudent.dob ? viewingStudent.dob.split('-').reverse().join('-') : '-'}</span>
+                      
+                      <span className="col-span-1 font-bold">អាយុ:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold">
+                        {calculateAge(viewingStudent.dob, schoolInfo.studentAgeLimitDate) ? `${calculateAge(viewingStudent.dob, schoolInfo.studentAgeLimitDate)} ឆ្នាំ` : '-'}
+                      </span>
+                      
+                      <span className="col-span-1 font-bold">ទីកន្លែងកំណើត:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold leading-relaxed">
+                        {viewingStudent.pob || [viewingStudent.pobVillage, viewingStudent.pobCommune, viewingStudent.pobDistrict, viewingStudent.pobProvince].filter(Boolean).join(', ') || '-'}
+                      </span>
+
+                      <span className="col-span-1 font-bold">ជនជាតិភាគតិច:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold">{viewingStudent.indigenousGroup || 'ទេ'}</span>
+
+                      <span className="col-span-1 font-bold">បញ្ហាផ្សេងៗ:</span>
+                      <span className="col-span-2 text-red-700 font-bold leading-relaxed">{viewingStudent.studentIssue || 'គ្មាន'}</span>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Family / Address info */}
+                  <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100 space-y-1.5">
+                    <h5 className="font-bold text-emerald-800 border-b border-slate-100 pb-1 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      ព័ត៌មានគ្រួសារ និងស្នាក់នៅ
+                    </h5>
+                    <div className="grid grid-cols-3 gap-y-1.5 text-slate-650">
+                      <span className="col-span-1 font-bold">ឈ្មោះឪពុក:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold">{viewingStudent.fatherName || '-'} ({viewingStudent.fatherOccupation || '-'})</span>
+                      
+                      <span className="col-span-1 font-bold">ឈ្មោះម្តាយ:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold">{viewingStudent.motherName || '-'} ({viewingStudent.motherOccupation || '-'})</span>
+                      
+                      <span className="col-span-1 font-bold">លេខទូរស័ព្ទ:</span>
+                      <span className="col-span-2 text-slate-800 font-mono font-semibold">
+                        {viewingStudent.parentPhone || '-'}
+                        {viewingStudent.parentPhone2 ? ` / ${viewingStudent.parentPhone2}` : ''}
+                      </span>
+
+                      <span className="col-span-1 font-bold">អាសយដ្ឋានបច្ចុប្បន្ន:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold leading-relaxed">
+                        {viewingStudent.currentAddress || [viewingStudent.currentAddressVillage, viewingStudent.currentAddressCommune, viewingStudent.currentAddressDistrict, viewingStudent.currentAddressProvince].filter(Boolean).join(', ') || '-'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons inside footer */}
+                <div className="flex justify-end pt-1.5 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setViewingStudent(null)}
+                    className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold cursor-pointer transition-colors"
+                  >
+                    បិទផ្ទាំង
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

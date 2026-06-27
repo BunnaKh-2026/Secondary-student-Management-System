@@ -10,6 +10,10 @@ export const DEFAULT_SCHOOL_INFO: SchoolInfo = {
   village: '',
   directorName: '',
   directorGender: '',
+  madeAt: '',
+  studentAgeLimitDate: '',
+  teacherAgeLimitDate: '',
+  teacherServiceLimitDate: '',
 };
 
 export const DEFAULT_TEACHERS: Teacher[] = [
@@ -70,6 +74,7 @@ export const DEFAULT_SUBJECTS = [
   { id: '8', name: 'សីលធម៌-ពលរដ្ឋ', coefficient: 1, isActive: true },
   { id: '9', name: 'ភាសាបរទេស (អង់គ្លេស)', coefficient: 1, isActive: true },
   { id: '10', name: 'ព័ត៌មានវិទ្យា', coefficient: 1, isActive: true },
+  { id: '11', name: 'បណ្ណាល័យ', coefficient: 1, isActive: true, code: 'Li', maxScore: 50 },
 ];
 
 export const DEFAULT_CLASSROOMS: Classroom[] = [

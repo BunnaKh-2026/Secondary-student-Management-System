@@ -89,7 +89,11 @@ export default function SchoolSettings({ schoolInfo, onSave }: SchoolSettingsPro
       commune: '',
       village: '',
       directorName: '',
-      directorGender: 'ប្រុស'
+      directorGender: 'ប្រុស',
+      madeAt: '',
+      studentAgeLimitDate: '',
+      teacherAgeLimitDate: '',
+      teacherServiceLimitDate: '',
     };
     setFormData(emptyInfo);
     onSave(emptyInfo);
@@ -182,6 +186,55 @@ export default function SchoolSettings({ schoolInfo, onSave }: SchoolSettingsPro
                   <option value="ស្រី">ស្រី</option>
                 </select>
               </div>
+            </div>
+
+            {/* ធ្វើនៅ */}
+            <div className="space-y-2 col-span-1 md:col-span-3">
+              <label htmlFor="made-at-input" className="block text-sm font-bold text-slate-700">ធ្វើនៅ</label>
+              <input
+                id="made-at-input"
+                type="text"
+                value={formData.madeAt || ''}
+                onChange={e => handleChange('madeAt', e.target.value)}
+                placeholder="អនុវិ.បាលិលេយ្យ"
+                className="block w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none"
+              />
+            </div>
+
+            {/* គិតអាយុសិស្សត្រឹម */}
+            <div className="space-y-2 col-span-1 md:col-span-3">
+              <label htmlFor="student-age-limit-date-input" className="block text-sm font-bold text-slate-700">គិតអាយុសិស្សត្រឹម</label>
+              <input
+                id="student-age-limit-date-input"
+                type="date"
+                value={formData.studentAgeLimitDate || ''}
+                onChange={e => handleChange('studentAgeLimitDate', e.target.value)}
+                className="block w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none"
+              />
+            </div>
+
+            {/* គិតអាយុគ្រូត្រឹម */}
+            <div className="space-y-2 col-span-1 md:col-span-3">
+              <label htmlFor="teacher-age-limit-date-input" className="block text-sm font-bold text-slate-700">គិតអាយុគ្រូត្រឹម</label>
+              <input
+                id="teacher-age-limit-date-input"
+                type="date"
+                value={formData.teacherAgeLimitDate || ''}
+                onChange={e => handleChange('teacherAgeLimitDate', e.target.value)}
+                className="block w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none"
+              />
+            </div>
+
+            {/* គិតឆ្នាំបម្រើការគ្រូត្រឹម */}
+            <div className="space-y-2 col-span-1 md:col-span-3">
+              <label htmlFor="teacher-service-limit-date-input" className="block text-sm font-bold text-slate-700">គិតឆ្នាំបម្រើការគ្រូត្រឹម</label>
+              <input
+                id="teacher-service-limit-date-input"
+                type="date"
+                value={formData.teacherServiceLimitDate || ''}
+                onChange={e => handleChange('teacherServiceLimitDate', e.target.value)}
+                className="block w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none"
+              />
             </div>
           </div>
 
