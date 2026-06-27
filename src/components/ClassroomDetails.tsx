@@ -9,6 +9,63 @@ import {
 } from '../types';
 import { getDefaultSubjectsForClass } from '../data/subjectLayouts';
 
+const toArabicClassname = (name: string): string => {
+  if (!name) return '';
+  let clean = name.replace(/^(ថ្នាក់ទី|ថ្នាក់)\s*/g, '').trim();
+  const khmerToArabic: { [key: string]: string } = {
+    '០': '0', '១': '1', '២': '2', '៣': '3', '៤': '4',
+    '៥': '5', '៦': '6', '៧': '7', '៨': '8', '៩': '9'
+  };
+  let replaced = '';
+  for (let i = 0; i < clean.length; i++) {
+    const char = clean[i];
+    if (khmerToArabic[char] !== undefined) {
+      replaced += khmerToArabic[char];
+    } else {
+      replaced += char;
+    }
+  }
+  return replaced
+    .replace(/អា/gi, 'A')
+    .replace(/ប៊ី/gi, 'B')
+    .replace(/ស៊ី/gi, 'C')
+    .replace(/ឌី/gi, 'D')
+    .replace(/អេ/gi, 'A')
+    .replace(/បេ/gi, 'B')
+    .replace(/សេ/gi, 'C')
+    .replace(/ដេ/gi, 'D')
+    .replace(/\s+/g, '');
+};
+
+const toArabicClassnameWithPrefix = (name: string): string => {
+  if (!name) return '';
+  const prefix = name.startsWith('ថ្នាក់ទី') ? 'ថ្នាក់ទី ' : name.startsWith('ថ្នាក់') ? 'ថ្នាក់ ' : '';
+  const clean = name.replace(/^(ថ្នាក់ទី|ថ្នាក់)\s*/g, '').trim();
+  const khmerToArabic: { [key: string]: string } = {
+    '០': '0', '១': '1', '២': '2', '៣': '3', '៤': '4',
+    '៥': '5', '៦': '6', '៧': '7', '៨': '8', '៩': '9'
+  };
+  let replaced = '';
+  for (let i = 0; i < clean.length; i++) {
+    const char = clean[i];
+    if (khmerToArabic[char] !== undefined) {
+      replaced += khmerToArabic[char];
+    } else {
+      replaced += char;
+    }
+  }
+  return prefix + replaced
+    .replace(/អា/gi, 'A')
+    .replace(/ប៊ី/gi, 'B')
+    .replace(/ស៊ី/gi, 'C')
+    .replace(/ឌី/gi, 'D')
+    .replace(/អេ/gi, 'A')
+    .replace(/បេ/gi, 'B')
+    .replace(/សេ/gi, 'C')
+    .replace(/ដេ/gi, 'D')
+    .replace(/\s+/g, '');
+};
+
 interface ClassroomDetailsProps {
   classroom: Classroom;
   students: Student[];
@@ -322,7 +379,7 @@ export default function ClassroomDetails({
           <div className="flex items-center justify-between border-b pb-3 border-slate-100">
             <h2 className="font-bold text-slate-800 text-sm flex items-center gap-2">
               <Users className="w-5 h-5 text-teal-600" />
-              បញ្ជីឈ្មោះសិស្ស {classroom.name}
+              បញ្ជីឈ្មោះសិស្ស {toArabicClassnameWithPrefix(classroom.name)}
             </h2>
           </div>
 
@@ -486,7 +543,7 @@ export default function ClassroomDetails({
       {activeTab === 'tasks' && (
         <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm space-y-6 animate-fade-in">
           <div className="space-y-1 border-b border-slate-100 pb-3">
-            <h2 className="font-bold text-slate-800 text-lg">៣-ក. កិច្ចការ ឬខ្លឹមសារការងារគ្រូបន្ទុកថ្នាក់ ({classroom.name})</h2>
+            <h2 className="font-bold text-slate-800 text-lg">៣-ក. កិច្ចការ ឬខ្លឹមសារការងារគ្រូបន្ទុកថ្នាក់ ({toArabicClassnameWithPrefix(classroom.name)})</h2>
             <p className="text-slate-500 text-xs text-right-aligned">កំណត់ និងតាមដានរដ្ឋបាលការងាររបស់ថ្នាក់ ដើម្បីការបញ្ជាក់លទ្ធផលត្រឹមត្រូវ</p>
           </div>
 
@@ -909,7 +966,7 @@ export default function ClassroomDetails({
                     <div className="w-12 border-b border-slate-300"></div>
                     <span className="text-xs font-extrabold text-yellow-700 uppercase tracking-widest pt-1">ប័ណ្ណសរសើរ</span>
                     <p className="text-[10px] text-slate-600 leading-normal px-2">
-                       លោកនាយក {schoolInfo.schoolName} សូមកោតសរសើរ និងជូនប័ណ្ណនេះចំពោះសិស្ស <span className="font-bold text-slate-800">{certificateStudent.nameKhmer}</span> សិក្សាក្នុង <span className="font-bold text-slate-800">{classroom.name}</span> ដែលបានប្រឹងប្រែងរហូតសម្រេចបាន ចំណាត់ថ្នាក់ទី <span className="font-bold text-amber-800 text-xs">{certificateRank}</span>។
+                       លោកនាយក {schoolInfo.schoolName} សូមកោតសរសើរ និងជូនប័ណ្ណនេះចំពោះសិស្ស <span className="font-bold text-slate-800">{certificateStudent.nameKhmer}</span> សិក្សាក្នុង <span className="font-bold text-slate-800">{toArabicClassnameWithPrefix(classroom.name)}</span> ដែលបានប្រឹងប្រែងរហូតសម្រេចបាន ចំណាត់ថ្នាក់ទី <span className="font-bold text-amber-800 text-xs">{certificateRank}</span>។
                     </p>
                     <span className="text-[7px] text-slate-400 font-semibold pt-1">ចុះហត្ថលេខា និងបោះត្រា</span>
                   </div>
@@ -967,7 +1024,7 @@ export default function ClassroomDetails({
                 ភេទ ៖ <span className="font-extrabold text-slate-800">{certificateStudent.gender}</span> | ថ្ងៃខែឆ្នាំកំណើត ៖ <span className="font-extrabold text-slate-800">{certificateStudent.dob}</span>
               </p>
               <p className="text-slate-700 font-sans leading-normal">
-                ដែលជានិស្សិតសិក្សាក្នុង <span className="font-extrabold text-slate-800">{classroom.name}</span> ដែលមានសមត្ថភាពខិតខំប្រឹងប្រែង រៀនសូត្រសម្រេចបានលទ្ធផល <span className="text-stone-900">ល្អប្រសើរ</span>
+                ដែលជានិស្សិតសិក្សាក្នុង <span className="font-extrabold text-slate-800">{toArabicClassnameWithPrefix(classroom.name)}</span> ដែលមានសមត្ថភាពខិតខំប្រឹងប្រែង រៀនសូត្រសម្រេចបានលទ្ធផល <span className="text-stone-900">ល្អប្រសើរ</span>
               </p>
               <p className="font-semibold text-slate-700">
                 ទទួលបាន៖ ចំណាត់ថ្នាក់ទី <span className="text-xl font-extrabold text-amber-700 bg-amber-50 px-3 py-1 rounded border border-amber-200">{certificateRank}</span> ក្នុងលទ្ធផលសិក្សាចុងឆមាស។

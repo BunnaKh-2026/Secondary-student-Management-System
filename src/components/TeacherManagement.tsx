@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Users, UserPlus, Trash2, Edit2, Calendar, FileText, CheckCircle, 
-  XSquare, Clock, MapPin, Phone, Printer, Plus, X, Search, XCircle, BookOpen
+  XSquare, Clock, MapPin, Phone, Printer, Plus, X, Search, XCircle, BookOpen, GripVertical
 } from 'lucide-react';
 import { Teacher, TeacherAttendance, SchoolInfo, Classroom } from '../types';
 import { STANDARD_SUBJECTS_LAYOUT } from '../data/subjectLayouts';
@@ -33,6 +33,63 @@ const toArabicClassname = (name: string): string => {
     .replace(/សេ/gi, 'C')
     .replace(/ដេ/gi, 'D')
     .replace(/\s+/g, '');
+};
+
+const toArabicClassnameWithPrefix = (name: string): string => {
+  if (!name) return '';
+  const prefix = name.startsWith('ថ្នាក់ទី') ? 'ថ្នាក់ទី ' : name.startsWith('ថ្នាក់') ? 'ថ្នាក់ ' : '';
+  const clean = name.replace(/^(ថ្នាក់ទី|ថ្នាក់)\s*/g, '').trim();
+  const khmerToArabic: { [key: string]: string } = {
+    '០': '0', '១': '1', '២': '2', '៣': '3', '៤': '4',
+    '៥': '5', '៦': '6', '៧': '7', '៨': '8', '៩': '9'
+  };
+  let replaced = '';
+  for (let i = 0; i < clean.length; i++) {
+    const char = clean[i];
+    if (khmerToArabic[char] !== undefined) {
+      replaced += khmerToArabic[char];
+    } else {
+      replaced += char;
+    }
+  }
+  return prefix + replaced
+    .replace(/អា/gi, 'A')
+    .replace(/ប៊ី/gi, 'B')
+    .replace(/ស៊ី/gi, 'C')
+    .replace(/ឌី/gi, 'D')
+    .replace(/អេ/gi, 'A')
+    .replace(/បេ/gi, 'B')
+    .replace(/សេ/gi, 'C')
+    .replace(/ដេ/gi, 'D')
+    .replace(/\s+/g, '');
+};
+
+const formatToDDMMYYYY = (dateStr: string): string => {
+  if (!dateStr) return '-';
+  const clean = dateStr.trim();
+  
+  // Try matching standard YYYY-MM-DD
+  const matchIso = clean.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (matchIso) {
+    return `${matchIso[3]}-${matchIso[2]}-${matchIso[1]}`;
+  }
+  
+  // If it matches DD-MM-YYYY or DD/MM/YYYY, return with hyphens
+  const matchDmy = clean.match(/^(\d{2})[-/](\d{2})[-/](\d{4})$/);
+  if (matchDmy) {
+    return `${matchDmy[1]}-${matchDmy[2]}-${matchDmy[3]}`;
+  }
+  
+  // Try fallback parsing via native Date
+  const d = new Date(clean);
+  if (!isNaN(d.getTime())) {
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
+  }
+  
+  return dateStr;
 };
 
 const SUBJECT_TO_CODE: { [name: string]: string } = {
@@ -172,6 +229,10 @@ export default function TeacherManagement({
     };
   }, []);
 
+  // Drag and drop states for teachers list
+  const [draggingTeacherId, setDraggingTeacherId] = useState<string | null>(null);
+  const [dragOverTeacherId, setDragOverTeacherId] = useState<string | null>(null);
+
   // Modal / Form States
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isBadgeModalOpen, setIsBadgeModalOpen] = useState(false);
@@ -220,8 +281,43 @@ export default function TeacherManagement({
     };
   }, [classDropdownRef]);
 
-  // Get all unique subject names
+  // Get all unique subject names, sorted in the custom sequence requested by the user
   const availableSubjects = React.useMemo(() => {
+    const SUBJECT_ORDER = [
+      "សរសេរតាមអាន",
+      "តែងសេចក្ដី",
+      "ល្បឿនអំណាន",
+      "ភាសាខ្មែរ",
+      "អក្សរសាស្ត្រខ្មែរ",
+      "គណិតវិទ្យា",
+      "រូបវិទ្យា",
+      "គីមីវិទ្យា",
+      "ជីវវិទ្យា",
+      "ផែនដីវិទ្យា",
+      "ប្រវត្តិវិទ្យា",
+      "ភូមិវិទ្យា",
+      "ពលរដ្ឋវិជ្ជា",
+      "គេហវិទ្យា",
+      "សេដ្ឋកិច្ចវិទ្យា",
+      "អង់គ្លេស",
+      "បារាំង",
+      "អប់រំសុខភាព",
+      "អប់រំកាយ-កីឡា",
+      "កសិកម្ម",
+      "អប់រំសិល្បៈ",
+      "បច្ចេកវិទ្យាព័ត៌មាន",
+      "អប់រំពុទ្ធសាសនា",
+      "អប់រំបំណិនជីវិត"
+    ];
+
+    const getSubjectIndex = (name: string): number => {
+      const clean = name.trim();
+      if (clean === 'តែងសេចក្តី' || clean === 'តែងសេចក្ដី') {
+        return 1;
+      }
+      return SUBJECT_ORDER.indexOf(clean);
+    };
+
     const subjectsSet = new Set<string>();
     STANDARD_SUBJECTS_LAYOUT.forEach(sub => {
       if (sub.name) subjectsSet.add(sub.name);
@@ -233,7 +329,18 @@ export default function TeacherManagement({
         });
       }
     });
-    return Array.from(subjectsSet).sort();
+
+    const list = Array.from(subjectsSet);
+    return list.sort((a, b) => {
+      const idxA = getSubjectIndex(a);
+      const idxB = getSubjectIndex(b);
+      if (idxA !== -1 && idxB !== -1) {
+        return idxA - idxB;
+      }
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.localeCompare(b, 'km');
+    });
   }, [classrooms]);
 
   const handleOpenSubjectClassModal = () => {
@@ -499,6 +606,48 @@ export default function TeacherManagement({
     t.role.includes(searchTerm)
   );
 
+  // Drag and drop event handlers for teachers list
+  const handleTeacherDragStart = (e: React.DragEvent, id: string) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('input') || target.closest('button') || target.closest('select')) {
+      e.preventDefault();
+      return;
+    }
+    setDraggingTeacherId(id);
+  };
+
+  const handleTeacherDragOver = (e: React.DragEvent, id: string) => {
+    if (draggingTeacherId && draggingTeacherId !== id) {
+      e.preventDefault();
+      if (dragOverTeacherId !== id) {
+        setDragOverTeacherId(id);
+      }
+    }
+  };
+
+  const handleTeacherDropRow = (targetId: string) => {
+    if (!draggingTeacherId || draggingTeacherId === targetId) return;
+
+    const sourceIndex = teachers.findIndex(t => t.id === draggingTeacherId);
+    const targetIndex = teachers.findIndex(t => t.id === targetId);
+
+    if (sourceIndex === -1 || targetIndex === -1) return;
+
+    const updated = [...teachers];
+    const [movedItem] = updated.splice(sourceIndex, 1);
+    updated.splice(targetIndex, 0, movedItem);
+
+    onUpdateTeachers(updated);
+
+    setDraggingTeacherId(null);
+    setDragOverTeacherId(null);
+  };
+
+  const handleTeacherDragEnd = () => {
+    setDraggingTeacherId(null);
+    setDragOverTeacherId(null);
+  };
+
   // Attendance management helpers
   const handleMarkAttendance = (teacherId: string, status: 'វត្តមាន' | 'ច្បាប់' | 'អវត្តមាន', reason?: string) => {
     const existingIdx = teacherAttendance.findIndex(a => a.teacherId === teacherId && a.date === selectedAttDate);
@@ -615,46 +764,109 @@ export default function TeacherManagement({
           {/* List Table - Integrated under the same white container */}
           <div className="border border-slate-100 rounded-none overflow-hidden shadow-xs">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left border-collapse table-auto whitespace-nowrap">
                 <thead>
-                  <tr className="bg-emerald-700 text-white font-bold text-xs uppercase" id="teachers-list-th-row">
-                    <th className="px-4 py-3 text-center">អត្តសញ្ញាណ</th>
-                    <th className="px-4 py-3">ឈ្មោះគ្រូ</th>
-                    <th className="px-3 py-3 text-center">ភេទ</th>
-                    <th className="px-4 py-3">មុខវិជ្ជាឯក</th>
-                    <th className="px-4 py-3">លេខទូរស័ព្ទ</th>
-                    <th className="px-4 py-3 text-right">សកម្មភាព</th>
+                  <tr className="bg-emerald-700 text-white font-bold text-xs uppercase whitespace-nowrap" id="teachers-list-th-row">
+                    <th className="px-3 py-3 text-center w-12 whitespace-nowrap">ល.រ</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap">អត្តលេខមន្ត្រី</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap">គោត្តនាម-នាម</th>
+                    <th className="px-3 py-3 text-center whitespace-nowrap">ភេទ</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap">ថ្ងៃខែឆ្នាំកំណើត</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap">ក្របខ័ណ្ឌ</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap">កាំប្រាក់</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap">ឯកទេស</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap">មុខវិជ្ជាបង្រៀន</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap">បន្ទុកថ្នាក់</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap">ជន.ភាគតិច</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap">កម្រិតវប្បធម៌</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap">ថ្ងៃចូលធ្វើការ</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap">លេខទូរស័ព្ទ</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap">សកម្មភាព</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredTeachers.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-12 text-center text-slate-400 text-xs font-medium">
+                      <td colSpan={15} className="px-4 py-12 text-center text-slate-400 text-xs font-medium whitespace-nowrap">
                         គ្មានសំណុំទិន្នន័យគ្រូបង្រៀនត្រូវបានរកឃើញទេ។
                       </td>
                     </tr>
                   ) : (
-                    filteredTeachers.map(t => (
+                    filteredTeachers.map((t, idx) => (
                       <tr 
                         key={t.id} 
-                        className="border-b border-emerald-600 hover:bg-slate-50/50 transition-colors text-xs text-slate-700 font-medium"
+                        draggable={true}
+                        onDragStart={(e) => handleTeacherDragStart(e, t.id)}
+                        onDragOver={(e) => handleTeacherDragOver(e, t.id)}
+                        onDrop={() => handleTeacherDropRow(t.id)}
+                        onDragEnd={handleTeacherDragEnd}
+                        className={`border-b border-emerald-600 transition-colors text-xs text-slate-700 font-medium group/row whitespace-nowrap
+                          ${draggingTeacherId === t.id ? 'opacity-40 bg-emerald-50/20' : ''}
+                          ${dragOverTeacherId === t.id ? 'bg-emerald-50/40 border-y-2 border-emerald-200' : 'hover:bg-slate-50/50'}
+                        `}
                       >
-                        <td className="px-4 py-3 font-mono font-semibold text-teal-600 text-center bg-slate-50/30">
+                        <td className="px-3 py-3 text-center font-bold text-slate-400 whitespace-nowrap select-none">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <GripVertical className="w-3.5 h-3.5 text-slate-400 group-hover/row:text-emerald-600 hover:text-emerald-700 transition-colors cursor-grab active:cursor-grabbing shrink-0" />
+                            <span>{idx + 1}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 font-mono font-semibold text-teal-600 text-center bg-slate-50/30 whitespace-nowrap">
                           {t.idNumber}
                         </td>
-                        <td className="px-4 py-3 font-bold text-slate-800">
+                        <td className="px-4 py-3 font-bold text-slate-800 whitespace-nowrap">
                           {t.name}
                         </td>
-                        <td className="px-3 py-3 text-center">
+                        <td className="px-3 py-3 text-center whitespace-nowrap">
                           <span className={`px-2 py-0.5 rounded-sm text-[10px] font-bold ${
                             t.gender === 'ប្រុស' ? 'bg-sky-50 text-sky-700' : 'bg-pink-50 text-pink-700'
                           }`}>
                             {t.gender}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-slate-600 font-semibold">{t.subject}</td>
-                        <td className="px-4 py-3 text-slate-500">{t.phone}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-center font-mono whitespace-nowrap">
+                          {formatToDDMMYYYY(t.dob)}
+                        </td>
+                        <td className="px-4 py-3 text-center whitespace-nowrap">
+                          {t.framework ? (
+                            <span className="px-2 py-0.5 rounded-sm text-[10px] font-semibold bg-indigo-50 text-indigo-700">
+                              {t.framework}
+                            </span>
+                          ) : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-center font-mono font-medium whitespace-nowrap">
+                          {t.salaryRank || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-slate-600 font-semibold whitespace-nowrap">
+                          {t.subject}
+                        </td>
+                        <td className="px-4 py-3 text-slate-600 font-medium whitespace-nowrap">
+                          {t.teachingSubjects || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-center whitespace-nowrap">
+                          {t.classCharge ? (
+                            <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-amber-50 text-amber-800">
+                              {toArabicClassnameWithPrefix(t.classCharge)}
+                            </span>
+                          ) : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-center whitespace-nowrap">
+                          <span className={`px-2 py-0.5 rounded-sm text-[10px] font-semibold ${
+                            t.ethnicity === 'បាទ/ចាស' ? 'bg-amber-50 text-amber-700 font-bold' : 'bg-slate-50 text-slate-500'
+                          }`}>
+                            {t.ethnicity || 'ទេ'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center font-semibold text-slate-600 whitespace-nowrap">
+                          {t.educationLevel || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-center font-mono whitespace-nowrap">
+                          {formatToDDMMYYYY(t.joinDate)}
+                        </td>
+                        <td className="px-4 py-3 text-slate-500 text-center font-mono whitespace-nowrap">
+                          {t.phone || '-'}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
                           <div className="flex items-center justify-end gap-1.5">
                             <button
                               onClick={() => handleOpenEdit(t)}
@@ -760,10 +972,10 @@ export default function TeacherManagement({
                 <thead>
                   <tr className="bg-emerald-700 text-white font-bold text-xs uppercase" id="teacher-attendance-th-row">
                     <th className="px-4 py-3 text-center">អត្តលេខ</th>
-                    <th className="px-4 py-3">ឈ្មោះបុគ្គលិក</th>
-                    <th className="px-4 py-3">មុខវិជ្ជា/តួនាទី</th>
+                    <th className="px-4 py-3 text-center">ឈ្មោះបុគ្គលិក</th>
+                    <th className="px-4 py-3 text-center">មុខវិជ្ជា/តួនាទី</th>
                     <th className="px-4 py-3 text-center">ស្ថានភាពវត្តមាន</th>
-                    <th className="px-4 py-3">ចំណាំ/មូលហេតុ</th>
+                    <th className="px-4 py-3 text-center">ចំណាំ/មូលហេតុ</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -845,7 +1057,7 @@ export default function TeacherManagement({
             {/* Header */}
             <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
               <h3 className="font-bold text-slate-800 text-base">
-                {editingTeacher ? 'កែសម្រួលព័ត៌មានគ្រូខ្មែរ' : 'ចុះឈ្មោះបុគ្គលិក-គ្រូថ្មី'}
+                {editingTeacher ? 'កែសម្រួលព័ត៌មានគ្រូ' : 'ចុះឈ្មោះបុគ្គលិក-គ្រូថ្មី'}
               </h3>
               <button 
                 onClick={() => setIsFormOpen(false)}
@@ -912,8 +1124,8 @@ export default function TeacherManagement({
                 </div>
               </div>
 
-              {/* Added: កាំប្រាក់, តួនាទី, ក្របខ័ណ្ឌ */}
-              <div className="grid grid-cols-3 gap-4">
+              {/* Added: កាំប្រាក់, ក្របខ័ណ្ឌ */}
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label htmlFor="teacher-salaryRank-input" className="text-xs font-bold text-slate-600">កាំប្រាក់</label>
                   <input
@@ -922,18 +1134,6 @@ export default function TeacherManagement({
                     value={formData.salaryRank || ''}
                     onChange={e => setFormData({ ...formData, salaryRank: e.target.value })}
                     placeholder="ឧ. គ.២"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label htmlFor="teacher-role-input" className="text-xs font-bold text-slate-600">តួនាទី</label>
-                  <input
-                    id="teacher-role-input"
-                    type="text"
-                    value={formData.role || ''}
-                    onChange={e => setFormData({ ...formData, role: e.target.value })}
-                    placeholder="ឧ. គ្រូបង្រៀន"
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
                   />
                 </div>
@@ -1183,7 +1383,7 @@ export default function TeacherManagement({
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400 text-[10px]">ថ្ងៃខែឆ្នាំកំណើត</span>
-                        <span>{selectedPrintTeacher.dob || '---'}</span>
+                        <span>{formatToDDMMYYYY(selectedPrintTeacher.dob)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400 text-[10px]">លេខទូរស័ព្ទ</span>
@@ -1266,7 +1466,7 @@ export default function TeacherManagement({
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400 font-semibold text-[10px]">ថ្ងៃខែឆ្នាំកំណើត:</span>
-                <span className="font-bold text-slate-800">{selectedPrintTeacher.dob || '---'}</span>
+                <span className="font-bold text-slate-800">{formatToDDMMYYYY(selectedPrintTeacher.dob)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400 font-semibold text-[10px]">លេខទូរស័ព្ទ:</span>

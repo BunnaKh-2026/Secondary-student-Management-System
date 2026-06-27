@@ -23,6 +23,35 @@ function toKhmerDigits(num: number | string): string {
   }).join('');
 }
 
+function toArabicClassnameWithPrefix(name: string): string {
+  if (!name) return '';
+  const prefix = name.startsWith('ថ្នាក់ទី') ? 'ថ្នាក់ទី ' : name.startsWith('ថ្នាក់') ? 'ថ្នាក់ ' : '';
+  const clean = name.replace(/^(ថ្នាក់ទី|ថ្នាក់)\s*/g, '').trim();
+  const khmerToArabic: { [key: string]: string } = {
+    '០': '0', '១': '1', '២': '2', '៣': '3', '៤': '4',
+    '៥': '5', '៦': '6', '៧': '7', '៨': '8', '៩': '9'
+  };
+  let replaced = '';
+  for (let i = 0; i < clean.length; i++) {
+    const char = clean[i];
+    if (khmerToArabic[char] !== undefined) {
+      replaced += khmerToArabic[char];
+    } else {
+      replaced += char;
+    }
+  }
+  return prefix + replaced
+    .replace(/អា/gi, 'A')
+    .replace(/ប៊ី/gi, 'B')
+    .replace(/ស៊ី/gi, 'C')
+    .replace(/ឌី/gi, 'D')
+    .replace(/អេ/gi, 'A')
+    .replace(/បេ/gi, 'B')
+    .replace(/សេ/gi, 'C')
+    .replace(/ដេ/gi, 'D')
+    .replace(/\s+/g, '');
+}
+
 const ACADEMIC_YEARS_LIST = (() => {
   const list = [];
   for (let yr = 2026; yr <= 2049; yr++) {
@@ -377,7 +406,7 @@ export default function App() {
                   >
                     {state.classrooms.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.name}
+                        {toArabicClassnameWithPrefix(c.name)}
                       </option>
                     ))}
                   </select>

@@ -69,6 +69,7 @@ export interface Student {
   dob: string;
   pob: string; // Place of birth
   parentPhone: string;
+  parentPhone2?: string;
   photoUrl?: string;
   // Sub-fields for Place of Birth (divided into 4 parts)
   pobProvince?: string;
@@ -81,6 +82,12 @@ export interface Student {
   currentAddressCommune?: string;
   currentAddressVillage?: string;
   currentAddress?: string;
+  fatherName?: string;
+  fatherOccupation?: string;
+  motherName?: string;
+  motherOccupation?: string;
+  studentIssue?: string;
+  indigenousGroup?: string;
 }
 
 export interface StudentScore {

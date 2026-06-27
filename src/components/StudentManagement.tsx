@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { 
   GraduationCap, UserPlus, School, Search, Trash2, Edit2, Pencil,
   Printer, Plus, X, ArrowRight, Table, Phone, MapPin, Calendar, CheckCircle,
-  AlertTriangle, IdCard, Save, GripVertical, RotateCcw, XCircle
+  AlertTriangle, IdCard, Save, GripVertical, RotateCcw, XCircle, User, Camera,
+  ArrowUpDown
 } from 'lucide-react';
 import { Student, Classroom, SchoolInfo } from '../types';
 import { 
@@ -51,6 +52,35 @@ const toArabicClassname = (name: string): string => {
     }
   }
   return replaced
+    .replace(/អា/gi, 'A')
+    .replace(/ប៊ី/gi, 'B')
+    .replace(/ស៊ី/gi, 'C')
+    .replace(/ឌី/gi, 'D')
+    .replace(/អេ/gi, 'A')
+    .replace(/បេ/gi, 'B')
+    .replace(/សេ/gi, 'C')
+    .replace(/ដេ/gi, 'D')
+    .replace(/\s+/g, '');
+};
+
+const toArabicClassnameWithPrefix = (name: string): string => {
+  if (!name) return '';
+  const prefix = name.startsWith('ថ្នាក់ទី') ? 'ថ្នាក់ទី ' : name.startsWith('ថ្នាក់') ? 'ថ្នាក់ ' : '';
+  const clean = name.replace(/^(ថ្នាក់ទី|ថ្នាក់)\s*/g, '').trim();
+  const khmerToArabic: { [key: string]: string } = {
+    '០': '0', '១': '1', '២': '2', '៣': '3', '៤': '4',
+    '៥': '5', '៦': '6', '៧': '7', '៨': '8', '៩': '9'
+  };
+  let replaced = '';
+  for (let i = 0; i < clean.length; i++) {
+    const char = clean[i];
+    if (khmerToArabic[char] !== undefined) {
+      replaced += khmerToArabic[char];
+    } else {
+      replaced += char;
+    }
+  }
+  return prefix + replaced
     .replace(/អា/gi, 'A')
     .replace(/ប៊ី/gi, 'B')
     .replace(/ស៊ី/gi, 'C')
@@ -173,6 +203,19 @@ const COMMON_KHMER_NAME_REPLACEMENTS: { [key: string]: string } = {
   'សោភា': 'SOPHEA',
   'រចនា': 'RACHANA',
   'ពិសី': 'PISEY'
+};
+
+const calculateAge = (dobString: string): string => {
+  if (!dobString) return '';
+  const birthDate = new Date(dobString);
+  if (isNaN(birthDate.getTime())) return '';
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age >= 0 ? String(age) : '';
 };
 
 const transliterateKhmerToLatin = (khText: string): string => {
@@ -779,13 +822,13 @@ export default function StudentManagement({
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [pobManual, setPobManual] = useState(false);
   const [currentAddressManual, setCurrentAddressManual] = useState(false);
-  const [studentForm, setStudentForm] = useState<Omit<Student, 'id'>>({
+  const [studentForm, setStudentForm] = useState<Omit<Student, 'id'> & { gender: 'ប្រុស' | 'ស្រី' | '' }>({
     classroomId: '',
     studentIdCard: '',
     rollNumber: '',
     nameKhmer: '',
     nameLatin: '',
-    gender: 'ប្រុស',
+    gender: '',
     dob: '',
     pob: '',
     pobProvince: '',
@@ -798,8 +841,24 @@ export default function StudentManagement({
     currentAddressVillage: '',
     currentAddress: '',
     parentPhone: '',
+    parentPhone2: '',
+    fatherName: '',
+    fatherOccupation: '',
+    motherName: '',
+    motherOccupation: '',
+    studentIssue: '',
+    indigenousGroup: 'ទេ',
+    photoUrl: '',
   });
   const [studentFormError, setStudentFormError] = useState<string | null>(null);
+
+  // Student Drag & Drop states
+  const [draggingStudentId, setDraggingStudentId] = useState<string | null>(null);
+  const [dragOverStudentId, setDragOverStudentId] = useState<string | null>(null);
+
+  // Student Sort states
+  const [studentSortField, setStudentSortField] = useState<'name' | 'classroom' | null>(null);
+  const [studentSortDirection, setStudentSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const provincesList = useMemo(() => {
     return getProvincesList();
@@ -1071,11 +1130,11 @@ export default function StudentManagement({
     setCurrentAddressManual(false);
     setStudentForm({
       classroomId: classrooms[0]?.id || '',
-      studentIdCard: `STD-${String(students.length + 1).padStart(3, '0')}`,
+      studentIdCard: '',
       rollNumber: String(students.length + 1),
       nameKhmer: '',
       nameLatin: '',
-      gender: 'ប្រុស',
+      gender: '',
       dob: '',
       pob: '',
       pobProvince: '',
@@ -1088,6 +1147,14 @@ export default function StudentManagement({
       currentAddressVillage: '',
       currentAddress: '',
       parentPhone: '',
+      parentPhone2: '',
+      fatherName: '',
+      fatherOccupation: '',
+      motherName: '',
+      motherOccupation: '',
+      studentIssue: '',
+      indigenousGroup: 'ទេ',
+      photoUrl: '',
     });
     setIsStudentModalOpen(true);
   };
@@ -1121,6 +1188,14 @@ export default function StudentManagement({
       currentAddressVillage: s.currentAddressVillage || '',
       currentAddress: s.currentAddress || '',
       parentPhone: s.parentPhone || '',
+      parentPhone2: s.parentPhone2 || '',
+      fatherName: s.fatherName || '',
+      fatherOccupation: s.fatherOccupation || '',
+      motherName: s.motherName || '',
+      motherOccupation: s.motherOccupation || '',
+      studentIssue: s.studentIssue || '',
+      indigenousGroup: s.indigenousGroup || '',
+      photoUrl: s.photoUrl || '',
     });
     setIsStudentModalOpen(true);
   };
@@ -1130,7 +1205,7 @@ export default function StudentManagement({
     setStudentFormError(null);
 
     // Validate Required fields manually to double check
-    if (!studentForm.studentIdCard.trim() || !studentForm.nameKhmer.trim() || !studentForm.dob || !studentForm.classroomId) {
+    if (!studentForm.studentIdCard.trim() || !studentForm.nameKhmer.trim() || !studentForm.gender || !studentForm.dob || !studentForm.classroomId) {
       setStudentFormError('សូមបំពេញព័ត៌មានដែលចាំបាច់ទាំងអស់ (អត្តលេខ ឈ្មោះខ្មែរ ភេទ ថ្ងៃខែឆ្នាំកំណើត និងថ្នាក់)');
       return;
     }
@@ -1188,14 +1263,102 @@ export default function StudentManagement({
     setDeletingStudent({ id, name });
   };
 
-  // Filter students
-  const filteredStudents = students.filter(s => {
-    const matchesSearch = s.nameKhmer.includes(searchTerm) || 
-      s.nameLatin.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.studentIdCard.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesClass = classFilter ? s.classroomId === classFilter : true;
-    return matchesSearch && matchesClass;
-  });
+  // Filter and Sort students
+  const filteredStudents = useMemo(() => {
+    const filtered = students.filter(s => {
+      const matchesSearch = s.nameKhmer.includes(searchTerm) || 
+        s.nameLatin.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.studentIdCard.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesClass = classFilter ? s.classroomId === classFilter : true;
+      return matchesSearch && matchesClass;
+    });
+
+    if (!studentSortField) {
+      return filtered;
+    }
+
+    return [...filtered].sort((a, b) => {
+      let comparison = 0;
+      if (studentSortField === 'name') {
+        comparison = a.nameKhmer.localeCompare(b.nameKhmer, 'km');
+      } else if (studentSortField === 'classroom') {
+        const clsA = classrooms.find(c => c.id === a.classroomId)?.name || '';
+        const clsB = classrooms.find(c => c.id === b.classroomId)?.name || '';
+        comparison = clsA.localeCompare(clsB, 'km');
+      }
+      return studentSortDirection === 'asc' ? comparison : -comparison;
+    });
+  }, [students, searchTerm, classFilter, studentSortField, studentSortDirection, classrooms]);
+
+  const handleStudentSort = (field: 'name' | 'classroom') => {
+    if (studentSortField === field) {
+      if (studentSortDirection === 'asc') {
+        setStudentSortDirection('desc');
+      } else {
+        setStudentSortField(null);
+      }
+    } else {
+      setStudentSortField(field);
+      setStudentSortDirection('asc');
+    }
+  };
+
+  // Drag and drop event handlers for students list
+  const handleStudentDragStart = (e: React.DragEvent, id: string) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('input') || target.closest('button') || target.closest('select')) {
+      e.preventDefault();
+      return;
+    }
+    setDraggingStudentId(id);
+  };
+
+  const handleStudentDragOver = (e: React.DragEvent, id: string) => {
+    if (draggingStudentId && draggingStudentId !== id) {
+      e.preventDefault();
+      if (dragOverStudentId !== id) {
+        setDragOverStudentId(id);
+      }
+    }
+  };
+
+  const handleStudentDropRow = (targetId: string) => {
+    if (!draggingStudentId || draggingStudentId === targetId) return;
+
+    const sourceIndex = students.findIndex(s => s.id === draggingStudentId);
+    const targetIndex = students.findIndex(s => s.id === targetId);
+
+    if (sourceIndex === -1 || targetIndex === -1) return;
+
+    const updated = [...students];
+    const [movedItem] = updated.splice(sourceIndex, 1);
+    updated.splice(targetIndex, 0, movedItem);
+
+    // Update roll numbers sequentially for all students in the affected classroom(s)
+    const classroomIdsToUpdate = Array.from(new Set([movedItem.classroomId, students[targetIndex].classroomId]));
+    
+    classroomIdsToUpdate.forEach(classId => {
+      let count = 1;
+      for (let i = 0; i < updated.length; i++) {
+        if (updated[i].classroomId === classId) {
+          updated[i] = {
+            ...updated[i],
+            rollNumber: String(count++)
+          };
+        }
+      }
+    });
+
+    onUpdateStudents(updated);
+
+    setDraggingStudentId(null);
+    setDragOverStudentId(null);
+  };
+
+  const handleStudentDragEnd = () => {
+    setDraggingStudentId(null);
+    setDragOverStudentId(null);
+  };
 
   const handlePrintTrigger = () => {
     window.print();
@@ -1839,12 +2002,12 @@ export default function StudentManagement({
                   <div className="p-4 space-y-2">
                     <div className="flex justify-between items-start">
                       <span className="text-[10px] bg-teal-50 text-teal-800 font-extrabold px-2.5 py-1 rounded-lg uppercase tracking-wide whitespace-nowrap">
-                        កម្រិតថ្នាក់ទី {cls.grade}
+                        កម្រិតថ្នាក់ទី {toArabicClassname(cls.grade || '')}
                       </span>
                     </div>
 
                     <h3 className="text-base font-extrabold text-slate-800 truncate whitespace-nowrap">
-                      {cls.name}
+                      {toArabicClassnameWithPrefix(cls.name)}
                     </h3>
 
                     <div className="grid grid-cols-2 gap-2 text-[11px] font-bold text-slate-500 pt-0.5">
@@ -2266,7 +2429,7 @@ export default function StudentManagement({
                   >
                     <option value="">គ្រប់ថ្នាក់</option>
                     {classrooms.map(c => (
-                      <option key={c.id} value={c.id}>{(c.name || '').replace(/^ថ្នាក់ទី\s*/, '')}</option>
+                      <option key={c.id} value={c.id}>{toArabicClassname(c.name)}</option>
                     ))}
                   </select>
                 </div>
@@ -2307,46 +2470,145 @@ export default function StudentManagement({
 
           {/* Students Table */}
           <div className="border border-slate-200 rounded-none overflow-hidden shadow-xs w-full max-w-full">
-            <div className="overflow-x-auto scrollbar-thin">
-              <table className="w-full text-left border-collapse min-w-[700px]">
+            <div className="overflow-x-auto overflow-y-auto max-h-[550px] scrollbar-thin">
+              <table className="w-full text-left border-collapse table-auto whitespace-nowrap">
                 <thead>
-                  <tr className="bg-emerald-700 text-white font-bold text-xs uppercase" id="students-list-th-row">
-                    <th className="px-4 py-3 text-center">ល.រ</th>
-                    <th className="px-4 py-3 text-center">អត្តលេខសិស្ស</th>
-                    <th className="px-4 py-3">ឈ្មោះខ្មែរ</th>
-                    <th className="px-4 py-3">ឈ្មោះឡាតាំង</th>
-                    <th className="px-3 py-3 text-center">ភេទ</th>
-                    <th className="px-4 py-3">ថ្នាក់</th>
-                    <th className="px-4 py-3 text-right">សកម្មភាព</th>
+                  <tr className="bg-emerald-700 text-white font-bold text-xs uppercase sticky top-0 z-10" id="students-list-th-row">
+                    <th className="px-4 py-3 text-center bg-emerald-700">ល.រ</th>
+                    <th className="px-4 py-3 text-center bg-emerald-700">អត្តលេខ</th>
+                    <th 
+                      onClick={() => handleStudentSort('name')}
+                      className="px-4 py-3 bg-emerald-700 cursor-pointer select-none hover:bg-emerald-850 transition-colors"
+                      title="ចុចដើម្បីតម្រៀបតាមឈ្មោះ"
+                    >
+                      <div className="flex items-center gap-1.5 justify-start">
+                        <span>គោត្តនាម-នាម</span>
+                        <ArrowUpDown className={`w-3.5 h-3.5 transition-opacity shrink-0 ${
+                          studentSortField === 'name' ? 'text-white opacity-100' : 'text-emerald-200/60 opacity-60'
+                        }`} />
+                      </div>
+                    </th>
+                    <th className="px-3 py-3 text-center bg-emerald-700">ភេទ</th>
+                    <th className="px-4 py-3 text-center bg-emerald-700">ថ្ងៃខែឆ្នាំកំណើត</th>
+                    <th className="px-4 py-3 text-center bg-emerald-700">អាយុ</th>
+                    <th 
+                      onClick={() => handleStudentSort('classroom')}
+                      className="px-4 py-3 bg-emerald-700 cursor-pointer select-none hover:bg-emerald-850 transition-colors"
+                      title="ចុចដើម្បីតម្រៀបតាមថ្នាក់"
+                    >
+                      <div className="flex items-center gap-1.5 justify-start">
+                        <span>ថ្នាក់</span>
+                        <ArrowUpDown className={`w-3.5 h-3.5 transition-opacity shrink-0 ${
+                          studentSortField === 'classroom' ? 'text-white opacity-100' : 'text-emerald-200/60 opacity-60'
+                        }`} />
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 bg-emerald-700">ទីកន្លែងកំណើត</th>
+                    <th className="px-4 py-3 bg-emerald-700">ឈ្មោះឪពុក</th>
+                    <th className="px-4 py-3 bg-emerald-700">មុខរបរឪពុក</th>
+                    <th className="px-4 py-3 bg-emerald-700">ឈ្មោះម្ដាយ</th>
+                    <th className="px-4 py-3 bg-emerald-700">មុខរបរម្ដាយ</th>
+                    <th className="px-4 py-3 bg-emerald-700">លេខទូរស័ព្ទអាណាព្យាបាល</th>
+                    <th className="px-4 py-3 bg-emerald-700">ទីលំនៅបច្ចុប្បន្ន</th>
+                    <th className="px-4 py-3 bg-emerald-700">បញ្ហារបស់សិស្ស</th>
+                    <th className="px-4 py-3 bg-emerald-700">ជនជាតិដើមភាគតិច</th>
+                    <th className="px-4 py-3 text-right bg-emerald-700">សកម្មភាព</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredStudents.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-12 text-center text-slate-400 text-xs font-semibold">
+                      <td colSpan={17} className="px-4 py-12 text-center text-slate-400 text-xs font-semibold">
                         រកមិនឃើញទិន្នន័យសិស្សានុសិស្សត្រូវបានកំណត់ឡើយ។
                       </td>
                     </tr>
                   ) : (
-                    filteredStudents.map(s => {
+                    filteredStudents.map((s, idx) => {
                       const cls = classrooms.find(c => c.id === s.classroomId);
                       return (
                         <tr 
                           key={s.id} 
-                          className="border-b border-emerald-600 hover:bg-slate-50/50 transition-colors text-xs text-slate-700 font-medium"
+                          draggable={true}
+                          onDragStart={(e) => handleStudentDragStart(e, s.id)}
+                          onDragOver={(e) => handleStudentDragOver(e, s.id)}
+                          onDrop={() => handleStudentDropRow(s.id)}
+                          onDragEnd={handleStudentDragEnd}
+                          className={`border-b border-slate-100 transition-colors text-xs text-slate-700 font-medium group/row whitespace-nowrap
+                            ${draggingStudentId === s.id ? 'opacity-40 bg-emerald-50/20' : ''}
+                            ${dragOverStudentId === s.id ? 'bg-emerald-50/40 border-y-2 border-emerald-200' : 'hover:bg-slate-50/50'}
+                          `}
                         >
-                          <td className="px-4 py-3 text-center font-mono font-bold text-slate-400">{s.rollNumber}</td>
+                          <td className="px-4 py-3 text-center font-bold text-slate-400 whitespace-nowrap select-none">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <GripVertical className="w-3.5 h-3.5 text-slate-400 group-hover/row:text-emerald-600 hover:text-emerald-700 transition-colors cursor-grab active:cursor-grabbing shrink-0" />
+                              <span>{s.rollNumber}</span>
+                            </div>
+                          </td>
                           <td className="px-4 py-3 text-center font-mono font-semibold text-teal-600 bg-slate-50/30">{s.studentIdCard}</td>
-                          <td className="px-4 py-3 font-bold text-slate-800">{s.nameKhmer}</td>
-                          <td className="px-4 py-3 uppercase text-slate-500 font-mono font-bold">{s.nameLatin}</td>
+                          <td className="px-4 py-3 font-bold text-slate-800">
+                            <div className="flex items-center gap-2">
+                              {s.photoUrl ? (
+                                <img 
+                                  src={s.photoUrl} 
+                                  alt="រូបថតសិស្ស" 
+                                  className="w-6 h-6 rounded-full object-cover border border-slate-200 shrink-0"
+                                  referrerPolicy="no-referrer"
+                                />
+                              ) : (
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] text-white font-bold shrink-0 shadow-xs ${
+                                  s.gender === 'ប្រុស' ? 'bg-sky-500' : 'bg-pink-500'
+                                }`}>
+                                  {s.gender === 'ប្រុស' ? 'ប្រ' : 'ស្រ'}
+                                </div>
+                              )}
+                              <span>{s.nameKhmer}</span>
+                            </div>
+                          </td>
                           <td className="px-3 py-3 text-center">
-                            <span className={`px-2 py-0.5 rounded-sm text-[10px] font-bold ${
-                              s.gender === 'ប្រុស' ? 'bg-sky-50 text-sky-700' : 'bg-pink-50 text-pink-700'
+                            <span className={`text-xs font-bold ${
+                              s.gender === 'ប្រុស' ? 'text-sky-600' : 'text-pink-600'
                             }`}>
-                              {s.gender}
+                              {s.gender || '-'}
                             </span>
                           </td>
-                          <td className="px-4 py-3"><span className="font-bold text-slate-600">{cls?.name || '---'}</span></td>
+                          <td className="px-4 py-3 text-center text-slate-700 font-mono">
+                            {s.dob ? s.dob.split('-').reverse().join('-') : '-'}
+                          </td>
+                          <td className="px-4 py-3 text-center text-slate-750 font-bold">
+                            {calculateAge(s.dob) ? `${calculateAge(s.dob)} ឆ្នាំ` : '-'}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="font-bold text-slate-600">
+                              {cls ? toArabicClassname(cls.name) : '-'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-slate-600 max-w-xs truncate" title={s.pob}>
+                            {s.pob || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-slate-700 font-bold">
+                            {s.fatherName || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-slate-600">
+                            {s.fatherOccupation || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-slate-700 font-bold">
+                            {s.motherName || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-slate-600">
+                            {s.motherOccupation || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-center font-mono text-slate-700 font-bold">
+                            {s.parentPhone || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-slate-600 max-w-xs truncate" title={s.currentAddress}>
+                            {s.currentAddress || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-amber-700 font-bold">
+                            {s.studentIssue || 'គ្មាន'}
+                          </td>
+                          <td className="px-4 py-3 text-center font-bold text-slate-600">
+                            {s.indigenousGroup || 'ទេ'}
+                          </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center justify-end gap-1.5">
                               <button
@@ -2543,95 +2805,132 @@ export default function StudentManagement({
             </div>
 
             {/* Form scrollable panel */}
-            <form onSubmit={handleSaveStudent} className="flex-1 overflow-y-auto p-6 space-y-4">
-              {studentFormError && (
-                <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs font-bold font-sans flex items-center gap-2 animate-pulse">
+            <form onSubmit={handleSaveStudent} className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {studentFormError && (
+                  <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs font-bold font-sans flex items-center gap-2 animate-pulse">
                   <AlertTriangle className="w-4 h-4 shrink-0 text-red-500" />
                   <span>{studentFormError}</span>
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="student-roll-input" className="text-xs font-bold text-slate-700 block">លេខរៀង</label>
-                  <input
-                    id="student-roll-input"
-                    type="text"
-                    value={studentForm.rollNumber}
-                    onChange={e => setStudentForm({ ...studentForm, rollNumber: e.target.value })}
-                    placeholder="ឧ. ១"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label htmlFor="student-id-input" className="text-xs font-bold text-slate-700 block">អត្តលេខ <span className="text-red-600 font-extrabold text-sm ml-0.5">*</span></label>
-                  <input
-                    id="student-id-input"
-                    type="text"
-                    required
-                    value={studentForm.studentIdCard}
-                    onChange={e => setStudentForm({ ...studentForm, studentIdCard: e.target.value })}
-                    placeholder="ឧ. STD-701"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="student-kh-name-input" className="text-xs font-bold text-slate-700 block">ឈ្មោះខ្មែរ <span className="text-red-600 font-extrabold text-sm ml-0.5">*</span></label>
-                  <input
-                    id="student-kh-name-input"
-                    type="text"
-                    required
-                    value={studentForm.nameKhmer}
-                    onChange={e => {
-                      const val = e.target.value;
-                      const updatedForm = { ...studentForm, nameKhmer: val };
-                      if (!hasManuallyEditedLatin) {
-                        updatedForm.nameLatin = transliterateKhmerToLatin(val);
-                      }
-                      setStudentForm(updatedForm);
-                    }}
-                    placeholder="ឧ. សុខ វាសនា"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label htmlFor="student-en-name-input" className="text-xs font-bold text-slate-700 block">ឈ្មោះឡាតាំង</label>
-                  <input
-                    id="student-en-name-input"
-                    type="text"
-                    value={studentForm.nameLatin}
-                    onChange={e => {
-                      setHasManuallyEditedLatin(true);
-                      setStudentForm({ ...studentForm, nameLatin: e.target.value });
-                    }}
-                    placeholder="ឧ. SOK VEASNA"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white uppercase font-sans font-bold"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 block">ភេទ <span className="text-red-600 font-extrabold text-sm ml-0.5">*</span></label>
-                  <div className="flex gap-4 pt-1.5">
-                    {(['ប្រុស', 'ស្រី'] as const).map(g => (
-                      <label key={g} className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-700">
-                        <input
-                          type="radio"
-                          name="studentGender"
-                          checked={studentForm.gender === g}
-                          onChange={() => setStudentForm({ ...studentForm, gender: g })}
-                          className="text-teal-600 focus:ring-teal-500"
-                        />
-                        <span>{g}</span>
-                      </label>
-                    ))}
+              {/* Layout for Student Photo and Basic Identifiers */}
+              <div className="grid grid-cols-[1fr_130px] gap-4 items-start bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+                {/* Left side: Stacked Inputs */}
+                <div className="space-y-3.5">
+                  <div className="space-y-1.5">
+                    <label htmlFor="student-kh-name-input" className="text-xs font-bold text-slate-700 block">គោត្តនាម-នាម <span className="text-red-600 font-extrabold text-sm ml-0.5">*</span></label>
+                    <input
+                      id="student-kh-name-input"
+                      type="text"
+                      required
+                      value={studentForm.nameKhmer}
+                      onChange={e => {
+                        const val = e.target.value;
+                        const updatedForm = { ...studentForm, nameKhmer: val };
+                        if (!hasManuallyEditedLatin) {
+                          updatedForm.nameLatin = transliterateKhmerToLatin(val);
+                        }
+                        setStudentForm(updatedForm);
+                      }}
+                      placeholder="ឧ. ប៊ុនណា វិសិដ្ឋ"
+                      className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
+                    />
                   </div>
+
+                  <div className="space-y-1.5">
+                    <label htmlFor="student-id-input" className="text-xs font-bold text-slate-700 block">អត្តលេខ <span className="text-red-600 font-extrabold text-sm ml-0.5">*</span></label>
+                    <input
+                      id="student-id-input"
+                      type="text"
+                      required
+                      value={studentForm.studentIdCard}
+                      onChange={e => setStudentForm({ ...studentForm, studentIdCard: e.target.value })}
+                      placeholder="ឧ. 2016"
+                      className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
+                    />
+                  </div>
+                </div>
+
+                {/* Right side: Portrait Card Photo */}
+                <div className="flex flex-col items-center">
+                  <span className="text-[11px] font-bold text-slate-500 mb-1.5 block">រូបថតកាត</span>
+                  <div className="relative w-28 h-32 rounded-xl overflow-hidden bg-slate-100 border-2 border-dashed border-slate-300 shadow-xs flex items-center justify-center group shrink-0">
+                    {studentForm.photoUrl ? (
+                      <>
+                        <img 
+                          src={studentForm.photoUrl} 
+                          alt="រូបថតសិស្ស" 
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white text-[10px] font-bold cursor-pointer transition-all gap-1">
+                          <label 
+                            htmlFor="student-photo-upload" 
+                            className="w-full h-full flex flex-col items-center justify-center cursor-pointer gap-1"
+                          >
+                            <Camera className="w-4 h-4" />
+                            <span>ប្តូររូបភាព</span>
+                          </label>
+                        </div>
+                      </>
+                    ) : (
+                      <label 
+                        htmlFor="student-photo-upload" 
+                        className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 hover:text-teal-600 hover:bg-slate-50/50 cursor-pointer transition-all gap-1.5"
+                      >
+                        <Camera className="w-5 h-5 text-slate-400" />
+                        <span className="text-[9px] font-bold text-slate-500 text-center px-1">បញ្ចូលរូបថត</span>
+                      </label>
+                    )}
+                  </div>
+                  <input 
+                    id="student-photo-upload" 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setStudentForm(prev => ({
+                            ...prev,
+                            photoUrl: reader.result as string
+                          }));
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  {studentForm.photoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setStudentForm(prev => ({ ...prev, photoUrl: '' }))}
+                      className="mt-1 text-[9px] text-rose-600 hover:text-rose-750 font-bold hover:underline"
+                    >
+                      លុបរូបថតចេញ
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="student-gender-select" className="text-xs font-bold text-slate-700 block">ភេទ <span className="text-red-600 font-extrabold text-sm ml-0.5">*</span></label>
+                  <select
+                    id="student-gender-select"
+                    required
+                    value={studentForm.gender}
+                    onChange={e => setStudentForm({ ...studentForm, gender: e.target.value as any })}
+                    className={`w-full px-3 h-[38px] bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white cursor-pointer appearance-none ${
+                      studentForm.gender === '' ? 'text-slate-400 font-normal' : 'text-slate-700 font-bold'
+                    }`}
+                  >
+                    <option value="" className="text-slate-400 font-normal">ជ្រើសរើស</option>
+                    <option value="ប្រុស" className="text-slate-700 font-bold">ប្រុស</option>
+                    <option value="ស្រី" className="text-slate-700 font-bold">ស្រី</option>
+                  </select>
                 </div>
 
                 <div className="space-y-1.5">
@@ -2642,37 +2941,36 @@ export default function StudentManagement({
                     required
                     value={studentForm.dob}
                     onChange={e => setStudentForm({ ...studentForm, dob: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white font-semibold text-slate-800"
+                    className="w-full px-3 h-[38px] bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white font-semibold text-slate-800"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 block">អាយុ (គណនាស្វ័យប្រវត្តិ)</label>
+                  <input
+                    type="text"
+                    readOnly
+                    disabled
+                    value={calculateAge(studentForm.dob) ? `${calculateAge(studentForm.dob)} ឆ្នាំ` : '---'}
+                    className="w-full px-3 h-[38px] bg-slate-100 border border-slate-200 rounded-xl text-xs outline-none text-slate-500 font-bold"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
                   <label htmlFor="student-cls-select" className="text-xs font-bold text-slate-700 block">រៀបចំចូលថ្នាក់រៀន <span className="text-red-600 font-extrabold text-sm ml-0.5">*</span></label>
                   <select
                     id="student-cls-select"
                     value={studentForm.classroomId}
                     onChange={e => setStudentForm({ ...studentForm, classroomId: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white font-bold text-slate-700"
+                    className="w-full px-3 h-[38px] bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white font-bold text-slate-700 appearance-none"
                   >
                     <option value="" disabled>-- សូមជ្រើសរើសថ្នាក់ --</option>
                     {classrooms.map(c => (
-                      <option key={c.id} value={c.id}>{(c.name || '').replace(/^ថ្នាក់ទី\s*/, '')}</option>
+                      <option key={c.id} value={c.id}>{toArabicClassname(c.name)}</option>
                     ))}
                   </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label htmlFor="student-parent-phone" className="text-xs font-bold text-slate-700 block">លេខទូរស័ព្ទអាណាព្យាបាល</label>
-                  <input
-                    id="student-parent-phone"
-                    type="text"
-                    value={studentForm.parentPhone}
-                    onChange={e => setStudentForm({ ...studentForm, parentPhone: e.target.value })}
-                    placeholder="ឧ. 012 888 999"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
-                  />
                 </div>
               </div>
 
@@ -2696,13 +2994,13 @@ export default function StudentManagement({
                         value={studentForm.pobProvince || ''}
                         onChange={e => setStudentForm({ ...studentForm, pobProvince: e.target.value })}
                         placeholder="បញ្ចូលខេត្ត/ក្រុង"
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
+                        className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-lg text-xs outline-none"
                       />
                     ) : (
                       <select
                         value={studentForm.pobProvince || ''}
                         onChange={e => handlePobProvinceChange(e.target.value)}
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer"
+                        className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer appearance-none"
                       >
                         <option value="">ជ្រើសរើស</option>
                         {(() => {
@@ -2725,14 +3023,14 @@ export default function StudentManagement({
                         value={studentForm.pobDistrict || ''}
                         onChange={e => setStudentForm({ ...studentForm, pobDistrict: e.target.value })}
                         placeholder="បញ្ចូលស្រុក/ក្រុង/ខណ្ឌ"
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
+                        className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-lg text-xs outline-none"
                       />
                     ) : (
                       <select
                         value={studentForm.pobDistrict || ''}
                         onChange={e => handlePobDistrictChange(e.target.value)}
                         disabled={!studentForm.pobProvince}
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                        className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed appearance-none"
                       >
                         <option value="">ជ្រើសរើស</option>
                         {(() => {
@@ -2755,14 +3053,14 @@ export default function StudentManagement({
                         value={studentForm.pobCommune || ''}
                         onChange={e => setStudentForm({ ...studentForm, pobCommune: e.target.value })}
                         placeholder="បញ្ចូលឃុំ/សង្កាត់"
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
+                        className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-lg text-xs outline-none"
                       />
                     ) : (
                       <select
                         value={studentForm.pobCommune || ''}
                         onChange={e => handlePobCommuneChange(e.target.value)}
                         disabled={!studentForm.pobDistrict}
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                        className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed appearance-none"
                       >
                         <option value="">ជ្រើសរើស</option>
                         {(() => {
@@ -2785,14 +3083,14 @@ export default function StudentManagement({
                         value={studentForm.pobVillage || ''}
                         onChange={e => setStudentForm({ ...studentForm, pobVillage: e.target.value })}
                         placeholder="បញ្ចូលភូមិ"
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
+                        className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-lg text-xs outline-none"
                       />
                     ) : (
                       <select
                         value={studentForm.pobVillage || ''}
                         onChange={e => setStudentForm({ ...studentForm, pobVillage: e.target.value })}
                         disabled={!studentForm.pobCommune}
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                        className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed appearance-none"
                       >
                         <option value="">ជ្រើសរើស</option>
                         {(() => {
@@ -2807,6 +3105,81 @@ export default function StudentManagement({
                       </select>
                     )}
                   </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="student-father-name" className="text-xs font-bold text-slate-700 block">ឈ្មោះឪពុក</label>
+                  <input
+                    id="student-father-name"
+                    type="text"
+                    value={studentForm.fatherName || ''}
+                    onChange={e => setStudentForm({ ...studentForm, fatherName: e.target.value })}
+                    placeholder="ឧ. ផៃ ប៊ុនណា"
+                    className="w-full px-3 h-[38px] bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="student-father-occupation" className="text-xs font-bold text-slate-700 block">មុខរបរឪពុក</label>
+                  <input
+                    id="student-father-occupation"
+                    type="text"
+                    value={studentForm.fatherOccupation || ''}
+                    onChange={e => setStudentForm({ ...studentForm, fatherOccupation: e.target.value })}
+                    placeholder="ឧ. គ្រូបង្រៀន"
+                    className="w-full px-3 h-[38px] bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="student-mother-name" className="text-xs font-bold text-slate-700 block">ឈ្មោះម្ដាយ</label>
+                  <input
+                    id="student-mother-name"
+                    type="text"
+                    value={studentForm.motherName || ''}
+                    onChange={e => setStudentForm({ ...studentForm, motherName: e.target.value })}
+                    placeholder="ឧ. រ៉ង ខន្តី"
+                    className="w-full px-3 h-[38px] bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="student-mother-occupation" className="text-xs font-bold text-slate-700 block">មុខរបរម្ដាយ</label>
+                  <input
+                    id="student-mother-occupation"
+                    type="text"
+                    value={studentForm.motherOccupation || ''}
+                    onChange={e => setStudentForm({ ...studentForm, motherOccupation: e.target.value })}
+                    placeholder="ឧ. មេផ្ទះ"
+                    className="w-full px-3 h-[38px] bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="student-parent-phone" className="text-xs font-bold text-slate-700 block">លេខទូរស័ព្ទអាណាព្យាបាលខ្សែទី១</label>
+                  <input
+                    id="student-parent-phone"
+                    type="text"
+                    value={studentForm.parentPhone}
+                    onChange={e => setStudentForm({ ...studentForm, parentPhone: e.target.value })}
+                    placeholder="ឧ. 095 539 373"
+                    className="w-full px-3 h-[38px] bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="student-parent-phone-2" className="text-xs font-bold text-slate-700 block">លេខទូរស័ព្ទអាណាព្យាបាលខ្សែទី២</label>
+                  <input
+                    id="student-parent-phone-2"
+                    type="text"
+                    value={studentForm.parentPhone2 || ''}
+                    onChange={e => setStudentForm({ ...studentForm, parentPhone2: e.target.value })}
+                    placeholder="ឧ. 088 520 6868"
+                    className="w-full px-3 h-[38px] bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
+                  />
                 </div>
               </div>
 
@@ -2830,13 +3203,13 @@ export default function StudentManagement({
                         value={studentForm.currentAddressProvince || ''}
                         onChange={e => setStudentForm({ ...studentForm, currentAddressProvince: e.target.value })}
                         placeholder="បញ្ចូលខេត្ត/ក្រុង"
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
+                        className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-lg text-xs outline-none"
                       />
                     ) : (
                       <select
                         value={studentForm.currentAddressProvince || ''}
                         onChange={e => handleCurrentAddressProvinceChange(e.target.value)}
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer"
+                        className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer appearance-none"
                       >
                         <option value="">ជ្រើសរើស</option>
                         {(() => {
@@ -2859,14 +3232,14 @@ export default function StudentManagement({
                         value={studentForm.currentAddressDistrict || ''}
                         onChange={e => setStudentForm({ ...studentForm, currentAddressDistrict: e.target.value })}
                         placeholder="បញ្ចូលស្រុក/ក្រុង/ខណ្ឌ"
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
+                        className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-lg text-xs outline-none"
                       />
                     ) : (
                       <select
                         value={studentForm.currentAddressDistrict || ''}
                         onChange={e => handleCurrentAddressDistrictChange(e.target.value)}
                         disabled={!studentForm.currentAddressProvince}
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                        className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed appearance-none"
                       >
                         <option value="">ជ្រើសរើស</option>
                         {(() => {
@@ -2889,14 +3262,14 @@ export default function StudentManagement({
                         value={studentForm.currentAddressCommune || ''}
                         onChange={e => setStudentForm({ ...studentForm, currentAddressCommune: e.target.value })}
                         placeholder="បញ្ចូលឃុំ/សង្កាត់"
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
+                        className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-lg text-xs outline-none"
                       />
                     ) : (
                       <select
                         value={studentForm.currentAddressCommune || ''}
                         onChange={e => handleCurrentAddressCommuneChange(e.target.value)}
                         disabled={!studentForm.currentAddressDistrict}
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                        className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed appearance-none"
                       >
                         <option value="">ជ្រើសរើស</option>
                         {(() => {
@@ -2919,14 +3292,14 @@ export default function StudentManagement({
                         value={studentForm.currentAddressVillage || ''}
                         onChange={e => setStudentForm({ ...studentForm, currentAddressVillage: e.target.value })}
                         placeholder="បញ្ចូលភូមិ"
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none"
+                        className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-lg text-xs outline-none"
                       />
                     ) : (
                       <select
                         value={studentForm.currentAddressVillage || ''}
                         onChange={e => setStudentForm({ ...studentForm, currentAddressVillage: e.target.value })}
                         disabled={!studentForm.currentAddressCommune}
-                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                        className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed appearance-none"
                       >
                         <option value="">ជ្រើសរើស</option>
                         {(() => {
@@ -2944,11 +3317,56 @@ export default function StudentManagement({
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-100 flex justify-end gap-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="student-issue" className="text-xs font-bold text-slate-700 block">បញ្ហារបស់សិស្ស</label>
+                  <select
+                    id="student-issue"
+                    value={studentForm.studentIssue || ''}
+                    onChange={e => setStudentForm({ ...studentForm, studentIssue: e.target.value })}
+                    className="w-full px-3 h-[38px] bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white cursor-pointer appearance-none"
+                  >
+                    <option value="">គ្មាន</option>
+                    <option value="ពិបាកក្នុងការធ្វើចលនា">ពិបាកក្នុងការធ្វើចលនា</option>
+                    <option value="ពិបាកក្នុងការស្ដាប់">ពិបាកក្នុងការស្ដាប់</option>
+                    <option value="ពិបាកក្នុងការនិយាយ">ពិបាកក្នុងការនិយាយ</option>
+                    <option value="ពិបាកក្នុងការមើល">ពិបាកក្នុងការមើល</option>
+                    <option value="ពិការសរីរាង្គខាងក្នុង">ពិការសរីរាង្គខាងក្នុង</option>
+                    <option value="ពិការសតិបញ្ញា">ពិការសតិបញ្ញា</option>
+                    <option value="ពិបាកខាងផ្លូវចិត្ត">ពិបាកខាងផ្លូវចិត្ត</option>
+                    <option value="ពិការផ្សេងៗ">ពិការផ្សេងៗ</option>
+                    <option value="ខ្វះអាហារូបត្ថមធ្ងន់ធ្ងរ">ខ្វះអាហារូបត្ថមធ្ងន់ធ្ងរ</option>
+                    <option value="សុខភាព/ជំងឺប្រចាំកាយ">សុខភាព/ជំងឺប្រចាំកាយ</option>
+                    <option value="មកពីគ្រួសារផ្លាស់ប្ដូរទីលំនៅ">មកពីគ្រួសារផ្លាស់ប្ដូរទីលំនៅ</option>
+                    <option value="កុមារកំព្រា">កុមារកំព្រា</option>
+                    <option value="កុមាររងគ្រោះដោយ HIV/AIDS">កុមាររងគ្រោះដោយ HIV/AIDS</option>
+                    <option value="កុមាររងអំពើហឹង្សាក្នុងគ្រួសារ">កុមាររងអំពើហឹង្សាក្នុងគ្រួសារ</option>
+                    <option value="កុមាររងការកេងប្រវ័ញ្ចពលកម្ម">កុមាររងការកេងប្រវ័ញ្ចពលកម្ម</option>
+                    <option value="កុមារដែលមកពីគ្រួសារក្រីក្រ">កុមារដែលមកពីគ្រួសារក្រីក្រ</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="student-indigenous-group" className="text-xs font-bold text-slate-700 block">ជនជាតិដើមភាគតិច</label>
+                  <select
+                    id="student-indigenous-group"
+                    value={studentForm.indigenousGroup || 'ទេ'}
+                    onChange={e => setStudentForm({ ...studentForm, indigenousGroup: e.target.value })}
+                    className="w-full px-3 h-[38px] bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white cursor-pointer appearance-none font-bold text-slate-700"
+                  >
+                    <option value="ទេ">ទេ</option>
+                    <option value="បាទ/ចាស">បាទ/ចាស</option>
+                  </select>
+                </div>
+              </div>
+
+              </div>
+
+              {/* Action buttons (Fixed at bottom) */}
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsStudentModalOpen(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold cursor-pointer transition-colors"
+                  className="px-4 py-2 bg-white border border-red-500 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold cursor-pointer transition-colors"
                 >
                   បោះបង់
                 </button>
