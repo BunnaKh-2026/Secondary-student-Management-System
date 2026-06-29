@@ -627,6 +627,8 @@ export default function ClassroomDetails({
                     <th className="px-4 py-3 bg-emerald-700">ថ្នាក់</th>
                     <th className="px-4 py-3 bg-emerald-700">ទីកន្លែងកំណើត</th>
                     <th className="px-4 py-3 bg-emerald-700">បញ្ហារបស់សិស្ស</th>
+                    <th className="px-4 py-3 bg-emerald-700">ស្ថានភាពសិស្ស</th>
+                    <th className="px-4 py-3 bg-emerald-700">ប្រភេទសិស្ស</th>
                     <th className="px-4 py-3 bg-emerald-700">ជនជាតិដើមភាគតិច</th>
                     <th className="px-4 py-3 bg-emerald-700">ឈ្មោះឪពុក</th>
                     <th className="px-4 py-3 bg-emerald-700">មុខរបរឪពុក</th>
@@ -640,7 +642,7 @@ export default function ClassroomDetails({
                 <tbody>
                   {filteredStudents.length === 0 ? (
                     <tr>
-                      <td colSpan={18} className="px-4 py-12 text-center text-slate-400 text-xs font-semibold">
+                      <td colSpan={20} className="px-4 py-12 text-center text-slate-400 text-xs font-semibold">
                         រកមិនឃើញទិន្នន័យសិស្សានុសិស្សត្រូវបានកំណត់ឡើយ។
                       </td>
                     </tr>
@@ -701,6 +703,19 @@ export default function ClassroomDetails({
                           </td>
                           <td className="px-4 py-3 text-amber-700 font-bold">
                             {s.studentIssue || 'គ្មាន'}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={`font-bold ${
+                              s.studentStatus === 'ឈប់រៀន' ? 'text-rose-600' :
+                              s.studentStatus === 'ផ្ទេរចេញ' ? 'text-amber-600' :
+                              s.studentStatus === 'ព្យួរការសិក្សា' ? 'text-indigo-600' :
+                              'text-emerald-600'
+                            }`}>
+                              {s.studentStatus || 'កំពុងរៀន'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center text-slate-800 font-bold">
+                            {s.studentType || '-'}
                           </td>
                           <td className="px-4 py-3 text-center font-bold text-slate-600">
                             {s.indigenousGroup || 'ទេ'}

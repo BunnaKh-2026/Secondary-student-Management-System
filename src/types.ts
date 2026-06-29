@@ -92,7 +92,13 @@ export interface Student {
   motherName?: string;
   motherOccupation?: string;
   studentIssue?: string;
+  studentStatus?: string;
+  studentType?: string;
   indigenousGroup?: string;
+  diplomaExamSession?: string;
+  diplomaExamCenter?: string;
+  diplomaExamRoom?: string;
+  diplomaExamTable?: string;
 }
 
 export interface StudentScore {

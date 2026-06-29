@@ -5,6 +5,7 @@ import {
   Eye, ArrowUpDown, Camera, FileSpreadsheet, FileDown, FileUp, AlertTriangle
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import JSZip from 'jszip';
 import { Teacher, TeacherAttendance, SchoolInfo, Classroom } from '../types';
 import { STANDARD_SUBJECTS_LAYOUT } from '../data/subjectLayouts';
 import { transliterateKhmerToLatin } from './StudentManagement';
@@ -399,6 +400,12 @@ export default function TeacherManagement({
     return str;
   };
 
+  const getTeacherPhotoFilename = (t: Teacher): string => {
+    if (!t) return '';
+    const identifier = (t.idNumber || t.name || '').trim().replace(/[\s\/\\]/g, '_');
+    return `${identifier}.png`;
+  };
+
   const handleDownloadTemplate = () => {
     const headers = [
       "ល.រ",
@@ -416,7 +423,8 @@ export default function TeacherManagement({
       "ជនជាតិភាគតិច",
       "កម្រិតវប្បធម៌",
       "ថ្ងៃចូលបង្រើការងារ",
-      "លេខទូរសព្ទ"
+      "លេខទូរសព្ទ",
+      "ឈ្មោះឯកសាររូបភាព"
     ];
     
     const sampleData = [
@@ -436,7 +444,8 @@ export default function TeacherManagement({
         "ជនជាតិភាគតិច": "ទេ",
         "កម្រិតវប្បធម៌": "បរិញ្ញាបត្រជាន់ខ្ពស់",
         "ថ្ងៃចូលបង្រើការងារ": "01-10-2012",
-        "លេខទូរសព្ទ": 95539373
+        "លេខទូរសព្ទ": 95539373,
+        "ឈ្មោះឯកសាររូបភាព": "1900100036.png"
       }
     ];
 
@@ -476,7 +485,8 @@ export default function TeacherManagement({
         "ជនជាតិភាគតិច": t.ethnicity || "ទេ",
         "កម្រិតវប្បធម៌": t.educationLevel || "",
         "ថ្ងៃចូលបង្រើការងារ": formatToDDMMYYYY(t.joinDate),
-        "លេខទូរសព្ទ": t.phone || ""
+        "លេខទូរសព្ទ": t.phone || "",
+        "ឈ្មោះឯកសាររូបភាព": t.photoUrl ? getTeacherPhotoFilename(t) : ""
       };
     });
 
@@ -489,11 +499,246 @@ export default function TeacherManagement({
     showToast("បាននាំចេញទិន្នន័យគ្រូបង្រៀនជោគជ័យ!", "success");
   };
 
-  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleExportTeachersZip = async () => {
+    if (teachers.length === 0) {
+      showToast("មិនមានទិន្នន័យគ្រូបង្រៀនសម្រាប់នាំចេញទេ!", "error");
+      return;
+    }
+
+    const exportData = teachers.map((t, idx) => {
+      let idNum = (t.idNumber || '').trim();
+      if (/^\d+$/.test(idNum)) {
+        idNum = idNum.padStart(10, '0');
+      }
+      return {
+        "ល.រ": idx + 1,
+        "អត្តលេខមន្ត្រី": idNum,
+        "គោត្តនាម-នាម": t.name,
+        "ឈ្មោះឡាតាំង": t.nameLatin || "",
+        "ភេទ": t.gender,
+        "ថ្ងៃខែឆ្នាំកំណើត": formatToDDMMYYYY(t.dob),
+        "តួនាទី": t.role || "គ្រូបង្រៀន",
+        "ក្របខណ្ឌ": t.framework || "",
+        "កាំប្រាក់": t.salaryRank || "",
+        "ឯកទេស": t.subject,
+        "មុខវិជ្ជាបង្រៀន": t.teachingSubjects || "",
+        "បន្ទុកថ្នាក់": cleanClassroomValue(t.classCharge),
+        "ជនជាតិភាគតិច": t.ethnicity || "ទេ",
+        "កម្រិតវប្បធម៌": t.educationLevel || "",
+        "ថ្ងៃចូលបង្រើការងារ": formatToDDMMYYYY(t.joinDate),
+        "លេខទូរសព្ទ": t.phone || "",
+        "ឈ្មោះឯកសាររូបភាព": t.photoUrl ? getTeacherPhotoFilename(t) : ""
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "បញ្ជីឈ្មោះគ្រូ");
+
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+
+    const zip = new JSZip();
+    const dtStr = getKhmerDateTimeString();
+    zip.file(`បញ្ជីឈ្មោះគ្រូបង្រៀន_${dtStr}.xlsx`, excelBuffer);
+
+    const photosFolder = zip.folder("photos");
+    let photoCount = 0;
+
+    teachers.forEach(t => {
+      if (t.photoUrl) {
+        const base64Parts = t.photoUrl.split(';base64,');
+        const base64Data = base64Parts.length > 1 ? base64Parts[1] : base64Parts[0];
+        const filename = getTeacherPhotoFilename(t);
+        if (photosFolder) {
+          photosFolder.file(filename, base64Data, { base64: true });
+          photoCount++;
+        }
+      }
+    });
+
+    try {
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(zipBlob);
+      link.download = `បញ្ជីឈ្មោះគ្រូបង្រៀន_រួមរូបថត_${dtStr}.zip`;
+      link.click();
+      if (photoCount > 0) {
+        showToast(`បាននាំចេញទិន្នន័យគ្រូបង្រៀន រួមទាំងរូបថតចំនួន ${photoCount} សន្លឹកជាឯកសារ ZIP ជោគជ័យ!`, "success");
+      } else {
+        showToast("បាននាំចេញទិន្នន័យគ្រូបង្រៀនជាឯកសារ ZIP ជោគជ័យ! (មិនមានរូបថត)", "success");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("មានបញ្ហាក្នុងការបង្កើតឯកសារ ZIP!", "error");
+    }
+  };
+
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     const file = files[0];
+
+    // 1. ZIP File Import
+    if (file.name.toLowerCase().endsWith('.zip')) {
+      try {
+        const zip = await JSZip.loadAsync(file);
+        // Find the first excel file inside the ZIP
+        const excelKey = Object.keys(zip.files).find(key => key.toLowerCase().endsWith('.xlsx') && !key.startsWith('__MACOSX'));
+        if (!excelKey) {
+          showToast("មិនមានឯកសារ Excel (.xlsx) នៅក្នុងឯកសារ ZIP ទេ!", "error");
+          e.target.value = '';
+          return;
+        }
+
+        const excelFile = zip.files[excelKey];
+        const arrayBuffer = await excelFile.async("arraybuffer");
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const rawData = XLSX.utils.sheet_to_json<any>(worksheet);
+
+        if (rawData.length === 0) {
+          showToast("ឯកសារ Excel ក្នុង ZIP មិនមានទិន្នន័យទេ!", "error");
+          e.target.value = '';
+          return;
+        }
+
+        const importedTeachers: Teacher[] = [];
+        let errorCount = 0;
+
+        for (let index = 0; index < rawData.length; index++) {
+          const row = rawData[index];
+          const idNumberRaw = row["អត្តលេខមន្ត្រី"] || row["ID_NUMBER"] || row["idNumber"];
+          const idNumber = formatImportIdNumber(idNumberRaw, index);
+          const name = String(row["គោត្តនាម-នាម"] || row["ឈ្មោះ"] || row["NAME"] || row["name"] || "").trim();
+          
+          if (!name) {
+            errorCount++;
+            continue;
+          }
+
+          const nameLatin = String(row["ឈ្មោះឡាតាំង"] || row["NAME_LATIN"] || row["nameLatin"] || "").trim();
+          
+          let genderRaw = String(row["ភេទ"] || row["ភេទ (ប្រុស/ស្រី)"] || row["GENDER"] || row["gender"] || "").trim();
+          let gender: 'ប្រុស' | 'ស្រី' = 'ប្រុស';
+          if (genderRaw) {
+            const trimmedL = genderRaw.toLowerCase();
+            if (trimmedL === 'ស្រី' || trimmedL === 'ស' || trimmedL === 'female' || trimmedL === 'f') {
+              gender = 'ស្រី';
+            } else if (trimmedL === 'ប្រុស' || trimmedL === 'ប' || trimmedL === 'male' || trimmedL === 'm') {
+              gender = 'ប្រុស';
+            }
+          }
+
+          const dobRaw = row["ថ្ងៃខែឆ្នាំកំណើត"] || row["ថ្ងៃខែឆ្នាំកំណើត (YYYY-MM-DD)"] || row["DOB"] || row["dob"];
+          const dob = parseImportDate(dobRaw);
+
+          const phoneRaw = row["លេខទូរសព្ទ"] || row["លេខទូរស័ព្ទ"] || row["PHONE"] || row["phone"];
+          const phone = formatImportPhone(phoneRaw);
+          const subject = String(row["ឯកទេស"] || row["ឯកទេស / មុខវិជ្ជាចម្បង"] || row["SUBJECT"] || row["subject"] || "").trim();
+          const role = String(row["តួនាទី"] || row["ROLE"] || row["role"] || "គ្រូបង្រៀន").trim();
+
+          const responsibilities: string[] = [];
+
+          const salaryRank = String(row["កាំប្រាក់"] || row["SALARY_RANK"] || row["salaryRank"] || "").trim();
+          const framework = String(row["ក្របខណ្ឌ"] || row["ក្របខ័ណ្ឌ"] || row["FRAMEWORK"] || row["framework"] || "").trim();
+          const teachingSubjects = String(row["មុខវិជ្ជាបង្រៀន"] || row["TEACHING_SUBJECTS"] || row["teachingSubjects"] || "").trim();
+          
+          const classChargeRaw = String(row["បន្ទុកថ្នាក់"] || row["CLASS_CHARGE"] || row["classCharge"] || "").trim();
+          const classCharge = cleanClassroomValue(classChargeRaw);
+          
+          let ethnicity = String(row["ជនជាតិភាគតិច"] || row["ជន.ភាគតិច"] || row["ETHNICITY"] || row["ethnicity"] || "").trim();
+          if (!ethnicity) ethnicity = "ទេ";
+
+          const educationLevel = String(row["កម្រិតវប្បធម៌"] || row["EDUCATION_LEVEL"] || row["educationLevel"] || "").trim();
+          
+          const joinDateRaw = row["ថ្ងៃចូលបង្រើការងារ"] || row["ថ្ងៃចូលធ្វើការ"] || row["ថ្ងៃចូលបម្រើការងារ"] || row["JOIN_DATE"] || row["joinDate"];
+          const joinDate = parseImportDate(joinDateRaw);
+
+          // Find photo in ZIP if specified
+          const photoFilename = String(row["ឈ្មោះឯកសាររូបភាព"] || row["IMAGE_FILENAME"] || row["imageFilename"] || "").trim();
+          let photoUrl = '';
+
+          if (photoFilename) {
+            const zipPhotoKey = Object.keys(zip.files).find(key => 
+              key.toLowerCase() === photoFilename.toLowerCase() || 
+              key.toLowerCase().endsWith('/' + photoFilename.toLowerCase())
+            );
+            if (zipPhotoKey) {
+              const base64Data = await zip.files[zipPhotoKey].async("base64");
+              let mimeType = 'image/png';
+              if (zipPhotoKey.toLowerCase().endsWith('.jpg') || zipPhotoKey.toLowerCase().endsWith('.jpeg')) {
+                mimeType = 'image/jpeg';
+              } else if (zipPhotoKey.toLowerCase().endsWith('.webp')) {
+                mimeType = 'image/webp';
+              }
+              photoUrl = `data:${mimeType};base64,${base64Data}`;
+            }
+          }
+
+          const newTeacher: Teacher = {
+            id: `TCH-IMPORT-${Date.now()}-${index}-${Math.floor(Math.random() * 1000)}`,
+            idNumber,
+            name,
+            nameLatin: nameLatin || transliterateKhmerToLatin(name),
+            gender: gender as 'ប្រុស' | 'ស្រី',
+            dob,
+            phone,
+            subject: subject || "គ្រូបង្រៀន",
+            role: role || "គ្រូបង្រៀន",
+            responsibilities,
+            salaryRank,
+            framework,
+            teachingSubjects,
+            classCharge,
+            ethnicity,
+            educationLevel,
+            joinDate,
+            photoUrl
+          };
+
+          importedTeachers.push(newTeacher);
+        }
+
+        if (importedTeachers.length > 0) {
+          const mergedTeachers = [...teachers];
+          let addedNew = 0;
+          let updatedOld = 0;
+
+          importedTeachers.forEach(impT => {
+            const duplicateIndex = mergedTeachers.findIndex(t => t.idNumber && t.idNumber === impT.idNumber);
+            if (duplicateIndex !== -1) {
+              // Preserve existing photoUrl if imported photoUrl is empty
+              const finalPhotoUrl = impT.photoUrl || mergedTeachers[duplicateIndex].photoUrl || '';
+              mergedTeachers[duplicateIndex] = {
+                ...mergedTeachers[duplicateIndex],
+                ...impT,
+                photoUrl: finalPhotoUrl,
+                id: mergedTeachers[duplicateIndex].id
+              };
+              updatedOld++;
+            } else {
+              mergedTeachers.push(impT);
+              addedNew++;
+            }
+          });
+
+          onUpdateTeachers(mergedTeachers);
+          showToast(`បាននាំចូលជោគជ័យពី ZIP៖ បញ្ចូលថ្មី ${addedNew} នាក់ និងធ្វើបច្ចុប្បន្នភាព ${updatedOld} នាក់។`, 'success');
+        } else {
+          showToast(`មិនមានទិន្នន័យគ្រូបង្រៀនត្រឹមត្រូវសម្រាប់នាំចូលទេ!`, 'error');
+        }
+
+      } catch (err) {
+        console.error(err);
+        showToast("មានបញ្ហាក្នុងការអានឯកសារ ZIP! សូមពិនិត្យឯកសារឡើងវិញ។", "error");
+      }
+      e.target.value = '';
+      return;
+    }
+
+    // 2. Regular XLSX / XLS File Import
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
@@ -594,6 +839,7 @@ export default function TeacherManagement({
               mergedTeachers[duplicateIndex] = {
                 ...mergedTeachers[duplicateIndex],
                 ...impT,
+                photoUrl: mergedTeachers[duplicateIndex].photoUrl || '', // Keep existing photo if importing from Excel without photo
                 id: mergedTeachers[duplicateIndex].id
               };
               updatedOld++;
@@ -1183,7 +1429,7 @@ export default function TeacherManagement({
                   type="file"
                   ref={fileInputRef}
                   onChange={handleImportExcel}
-                  accept=".xlsx, .xls"
+                  accept=".xlsx, .xls, .zip"
                   className="hidden"
                 />
 
@@ -1198,7 +1444,7 @@ export default function TeacherManagement({
                   </button>
 
                   {showImportExportDropdown && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-150 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                    <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-150 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
                       <button
                         type="button"
                         onClick={() => {
@@ -1219,7 +1465,7 @@ export default function TeacherManagement({
                         className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors"
                       >
                         <FileUp className="w-4 h-4 text-slate-500 shrink-0" />
-                        នាំទិន្នន័យចូល
+                        នាំទិន្នន័យចូល (Excel/ZIP)
                       </button>
                       <button
                         type="button"
@@ -1230,7 +1476,18 @@ export default function TeacherManagement({
                         className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors"
                       >
                         <FileSpreadsheet className="w-4 h-4 text-slate-500 shrink-0" />
-                        នាំទិន្នន័យចេញ
+                        នាំចេញជា Excel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleExportTeachersZip();
+                          setShowImportExportDropdown(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors"
+                      >
+                        <FileSpreadsheet className="w-4 h-4 text-slate-500 shrink-0" />
+                        នាំចេញជា ZIP (រួមទាំងរូបថត)
                       </button>
                     </div>
                   )}

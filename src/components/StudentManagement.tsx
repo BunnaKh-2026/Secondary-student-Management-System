@@ -849,8 +849,14 @@ export default function StudentManagement({
     motherName: '',
     motherOccupation: '',
     studentIssue: '',
+    studentStatus: 'កំពុងរៀន',
+    studentType: '',
     indigenousGroup: 'ទេ',
     photoUrl: '',
+    diplomaExamSession: '',
+    diplomaExamCenter: '',
+    diplomaExamRoom: '',
+    diplomaExamTable: '',
   });
   const [studentFormError, setStudentFormError] = useState<string | null>(null);
   const [duplicateIdError, setDuplicateIdError] = useState<string | null>(null);
@@ -1202,8 +1208,14 @@ export default function StudentManagement({
       motherName: '',
       motherOccupation: '',
       studentIssue: '',
+      studentStatus: 'កំពុងរៀន',
+      studentType: '',
       indigenousGroup: 'ទេ',
       photoUrl: '',
+      diplomaExamSession: '',
+      diplomaExamCenter: '',
+      diplomaExamRoom: '',
+      diplomaExamTable: '',
     });
     setIsStudentModalOpen(true);
   };
@@ -1243,8 +1255,14 @@ export default function StudentManagement({
       motherName: s.motherName || '',
       motherOccupation: s.motherOccupation || '',
       studentIssue: s.studentIssue || '',
+      studentStatus: s.studentStatus || 'កំពុងរៀន',
+      studentType: s.studentType || '',
       indigenousGroup: s.indigenousGroup || '',
       photoUrl: s.photoUrl || '',
+      diplomaExamSession: s.diplomaExamSession || '',
+      diplomaExamCenter: s.diplomaExamCenter || '',
+      diplomaExamRoom: s.diplomaExamRoom || '',
+      diplomaExamTable: s.diplomaExamTable || '',
     });
     setIsStudentModalOpen(true);
   };
@@ -2525,21 +2543,22 @@ export default function StudentManagement({
           <div className="border border-slate-200 rounded-none overflow-hidden shadow-xs w-full max-w-full">
             <div className="overflow-x-auto overflow-y-auto max-h-[550px] scrollbar-thin">
               <table className="w-full text-left border-collapse table-auto whitespace-nowrap">
-                <thead>
-                  <tr className="bg-emerald-700 text-white font-bold text-xs uppercase sticky top-0 z-10" id="students-list-th-row">
-                    <th className="px-4 py-3 text-center bg-emerald-700">ល.រ</th>
-                    <th className="px-4 py-3 text-center bg-emerald-700">អត្តលេខ</th>
+                <thead className="sticky top-0 z-20 bg-emerald-700 whitespace-nowrap">
+                  <tr className="bg-emerald-700 text-white font-bold text-xs uppercase whitespace-nowrap" id="students-list-th-row">
+                    <th className="px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-l border-r border-b border-white" rowSpan={2}>ល.រ</th>
+                    <th className="px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>អត្តលេខ</th>
                     <th 
-                      className={`px-4 py-3 bg-emerald-700 relative select-none ${
+                      rowSpan={2}
+                      className={`px-4 py-3 bg-emerald-700 relative select-none whitespace-nowrap border-r border-b border-white ${
                         activeSortMenu === 'name' ? 'z-30' : 'z-10'
                       }`}
                     >
                       <div 
                         onClick={() => setActiveSortMenu(activeSortMenu === 'name' ? null : 'name')}
-                        className="flex items-center gap-1.5 justify-start cursor-pointer hover:text-emerald-100 transition-colors"
+                        className="flex items-center gap-1.5 justify-start cursor-pointer hover:text-emerald-100 transition-colors whitespace-nowrap"
                         title="ជម្រើសតម្រៀបតាមឈ្មោះ"
                       >
-                        <span>គោត្តនាម-នាម</span>
+                        <span className="whitespace-nowrap">គោត្តនាម-នាម</span>
                         <ArrowUpDown className={`w-3.5 h-3.5 transition-opacity shrink-0 ${
                           studentSortField === 'name' ? 'text-white opacity-100' : 'text-emerald-200/60 opacity-60'
                         }`} />
@@ -2548,7 +2567,7 @@ export default function StudentManagement({
                       {activeSortMenu === 'name' && (
                         <>
                           <div className="fixed inset-0 z-40" onClick={() => setActiveSortMenu(null)} />
-                          <div className="absolute left-2 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1.5 min-w-[170px] text-slate-700 font-sans font-medium text-xs normal-case">
+                          <div className="absolute left-2 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1.5 min-w-[170px] text-slate-700 font-sans font-medium text-xs normal-case whitespace-nowrap">
                             <button
                               type="button"
                               onClick={() => {
@@ -2556,11 +2575,9 @@ export default function StudentManagement({
                                 setStudentSortDirection('asc');
                                 setActiveSortMenu(null);
                               }}
-                              className={`w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-colors ${
-                                studentSortField === 'name' && studentSortDirection === 'asc' ? 'text-emerald-600 bg-emerald-50/40 font-bold' : ''
-                              }`}
+                              className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-colors whitespace-nowrap"
                             >
-                              <span>តម្រៀប កើនឡើង (ក-អ)</span>
+                              <span className="whitespace-nowrap">តម្រៀប កើនឡើង (ក-អ)</span>
                               {studentSortField === 'name' && studentSortDirection === 'asc' && (
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                               )}
@@ -2572,11 +2589,9 @@ export default function StudentManagement({
                                 setStudentSortDirection('desc');
                                 setActiveSortMenu(null);
                               }}
-                              className={`w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-colors ${
-                                studentSortField === 'name' && studentSortDirection === 'desc' ? 'text-emerald-600 bg-emerald-50/40 font-bold' : ''
-                              }`}
+                              className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-colors whitespace-nowrap"
                             >
-                              <span>តម្រៀប ថយចុះ (អ-ក)</span>
+                              <span className="whitespace-nowrap">តម្រៀប ថយចុះ (អ-ក)</span>
                               {studentSortField === 'name' && studentSortDirection === 'desc' && (
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                               )}
@@ -2588,30 +2603,31 @@ export default function StudentManagement({
                                   setStudentSortField(null);
                                   setActiveSortMenu(null);
                                 }}
-                                className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 border-t border-slate-100 flex items-center gap-2 cursor-pointer transition-colors"
+                                className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 border-t border-slate-100 flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap"
                               >
-                                លុបការតម្រៀប
+                                <span className="whitespace-nowrap">លុបការតម្រៀប</span>
                               </button>
                             )}
                           </div>
                         </>
                       )}
                     </th>
-                    <th className="px-4 py-3 bg-emerald-700">ឈ្មោះឡាតាំង</th>
-                    <th className="px-3 py-3 text-center bg-emerald-700">ភេទ</th>
-                    <th className="px-4 py-3 text-center bg-emerald-700">ថ្ងៃខែឆ្នាំកំណើត</th>
-                    <th className="px-4 py-3 text-center bg-emerald-700">អាយុ</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>ឈ្មោះឡាតាំង</th>
+                    <th className="px-3 py-3 text-center bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>ភេទ</th>
+                    <th className="px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>ថ្ងៃខែឆ្នាំកំណើត</th>
+                    <th className="px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>អាយុ</th>
                     <th 
-                      className={`px-4 py-3 bg-emerald-700 relative select-none ${
+                      rowSpan={2}
+                      className={`px-4 py-3 bg-emerald-700 relative select-none whitespace-nowrap border-r border-b border-white ${
                         activeSortMenu === 'classroom' ? 'z-30' : 'z-10'
                       }`}
                     >
                       <div 
                         onClick={() => setActiveSortMenu(activeSortMenu === 'classroom' ? null : 'classroom')}
-                        className="flex items-center gap-1.5 justify-start cursor-pointer hover:text-emerald-100 transition-colors"
+                        className="flex items-center gap-1.5 justify-start cursor-pointer hover:text-emerald-100 transition-colors whitespace-nowrap"
                         title="ជម្រើសតម្រៀបតាមថ្នាក់"
                       >
-                        <span>ថ្នាក់</span>
+                        <span className="whitespace-nowrap">ថ្នាក់</span>
                         <ArrowUpDown className={`w-3.5 h-3.5 transition-opacity shrink-0 ${
                           studentSortField === 'classroom' ? 'text-white opacity-100' : 'text-emerald-200/60 opacity-60'
                         }`} />
@@ -2620,7 +2636,7 @@ export default function StudentManagement({
                       {activeSortMenu === 'classroom' && (
                         <>
                           <div className="fixed inset-0 z-40" onClick={() => setActiveSortMenu(null)} />
-                          <div className="absolute left-2 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1.5 min-w-[210px] text-slate-700 font-sans font-medium text-xs normal-case">
+                          <div className="absolute left-2 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1.5 min-w-[210px] text-slate-700 font-sans font-medium text-xs normal-case whitespace-nowrap">
                             <button
                               type="button"
                               onClick={() => {
@@ -2628,11 +2644,9 @@ export default function StudentManagement({
                                 setStudentSortDirection('asc');
                                 setActiveSortMenu(null);
                               }}
-                              className={`w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-colors ${
-                                studentSortField === 'classroom' && studentSortDirection === 'asc' ? 'text-emerald-600 bg-emerald-50/40 font-bold' : ''
-                              }`}
+                              className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-colors whitespace-nowrap"
                             >
-                              <span>តម្រៀប កើនឡើង (ថ្នាក់ ៧-១២)</span>
+                              <span className="whitespace-nowrap">តម្រៀប កើនឡើង (ថ្នាក់ ៧-១២)</span>
                               {studentSortField === 'classroom' && studentSortDirection === 'asc' && (
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                               )}
@@ -2644,11 +2658,9 @@ export default function StudentManagement({
                                 setStudentSortDirection('desc');
                                 setActiveSortMenu(null);
                               }}
-                              className={`w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-colors ${
-                                studentSortField === 'classroom' && studentSortDirection === 'desc' ? 'text-emerald-600 bg-emerald-50/40 font-bold' : ''
-                              }`}
+                              className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-colors whitespace-nowrap"
                             >
-                              <span>តម្រៀប ថយចុះ (ថ្នាក់ ១២-៧)</span>
+                              <span className="whitespace-nowrap">តម្រៀប ថយចុះ (ថ្នាក់ ១២-៧)</span>
                               {studentSortField === 'classroom' && studentSortDirection === 'desc' && (
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                               )}
@@ -2660,31 +2672,76 @@ export default function StudentManagement({
                                   setStudentSortField(null);
                                   setActiveSortMenu(null);
                                 }}
-                                className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 border-t border-slate-100 flex items-center gap-2 cursor-pointer transition-colors"
+                                className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 border-t border-slate-100 flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap"
                               >
-                                លុបការតម្រៀប
+                                <span className="whitespace-nowrap">លុបការតម្រៀប</span>
                               </button>
                             )}
                           </div>
                         </>
                       )}
                     </th>
-                    <th className="px-4 py-3 bg-emerald-700">ទីកន្លែងកំណើត</th>
-                    <th className="px-4 py-3 bg-emerald-700">បញ្ហារបស់សិស្ស</th>
-                    <th className="px-4 py-3 bg-emerald-700">ជនជាតិដើមភាគតិច</th>
-                    <th className="px-4 py-3 bg-emerald-700">ឈ្មោះឪពុក</th>
-                    <th className="px-4 py-3 bg-emerald-700">មុខរបរឪពុក</th>
-                    <th className="px-4 py-3 bg-emerald-700">ឈ្មោះម្ដាយ</th>
-                    <th className="px-4 py-3 bg-emerald-700">មុខរបរម្ដាយ</th>
-                    <th className="px-4 py-3 bg-emerald-700">លេខទូរស័ព្ទអាណាព្យាបាល</th>
-                    <th className="px-4 py-3 bg-emerald-700">ទីលំនៅបច្ចុប្បន្ន</th>
-                    <th className="px-4 py-3 text-right bg-emerald-700">សកម្មភាព</th>
+                    {/* ទីកន្លែងកំណើត មាន ៤ ជួរឈរតូច */}
+                    <th 
+                      colSpan={4} 
+                      className="px-4 py-2 text-center bg-emerald-700 border-r border-b border-white font-bold whitespace-nowrap"
+                      style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}
+                    >
+                      ទីកន្លែងកំណើត
+                    </th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>បញ្ហារបស់សិស្ស</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>ស្ថានភាពសិស្ស</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>ប្រភេទសិស្ស</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>ជនជាតិដើមភាគតិច</th>
+                    
+                    {/* បន្ថែមជួរឈរ "ប្រឡងសញ្ញាបត្រមធ្យមសិក្សាបឋមភូមិ" មាន ៤ ជួរឈរតូច */}
+                    <th 
+                      colSpan={4} 
+                      className="px-4 py-2 text-center bg-emerald-700 border-r border-b border-white font-bold whitespace-nowrap"
+                      style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}
+                    >
+                      ប្រឡងសញ្ញាបត្រមធ្យមសិក្សាបឋមភូមិ
+                    </th>
+
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>ឈ្មោះឪពុក</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>មុខរបរឪពុក</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>ឈ្មោះម្ដាយ</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>មុខរបរម្ដាយ</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>លេខទូរស័ព្ទអាណាព្យាបាល</th>
+                    {/* ទីលំនៅបច្ចុប្បន្ន មាន ៤ ជួរឈរតូច */}
+                    <th 
+                      colSpan={4} 
+                      className="px-4 py-2 text-center bg-emerald-700 border-r border-b border-white font-bold whitespace-nowrap"
+                      style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}
+                    >
+                      ទីលំនៅបច្ចុប្បន្ន
+                    </th>
+                    <th className="px-4 py-3 text-right bg-emerald-700 whitespace-nowrap border-b border-white" rowSpan={2}>សកម្មភាព</th>
+                  </tr>
+                  <tr className="bg-emerald-700 text-white font-bold text-[10px] uppercase border-b border-emerald-600/30 whitespace-nowrap">
+                    {/* ទីកន្លែងកំណើត sub-headers */}
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>រាជធានី/ខេត្ត</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ស្រុក/ក្រុង/ខណ្ឌ</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ឃុំ/សង្កាត់</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ភូមិ</th>
+
+                    {/* ប្រឡងសញ្ញាបត្រ sub-headers */}
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>សម័យប្រឡង</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>មណ្ឌលប្រឡង</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>លេខបន្ទប់</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>លេខតុ</th>
+
+                    {/* ទីលំនៅបច្ចុប្បន្ន sub-headers */}
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>រាជធានី/ខេត្ត</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ស្រុក/ក្រុង/ខណ្ឌ</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ឃុំ/សង្កាត់</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ភូមិ</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredStudents.length === 0 ? (
                     <tr>
-                      <td colSpan={18} className="px-4 py-12 text-center text-slate-400 text-xs font-semibold">
+                      <td colSpan={30} className="px-4 py-12 text-center text-slate-400 text-xs font-semibold border-b border-emerald-700">
                         រកមិនឃើញទិន្នន័យសិស្សានុសិស្សត្រូវបានកំណត់ឡើយ។
                       </td>
                     </tr>
@@ -2699,86 +2756,135 @@ export default function StudentManagement({
                           onDragOver={(e) => handleStudentDragOver(e, s.id)}
                           onDrop={() => handleStudentDropRow(s.id)}
                           onDragEnd={handleStudentDragEnd}
-                          className={`border-b border-slate-100 transition-colors text-xs text-slate-700 font-medium group/row whitespace-nowrap
+                          className={`border-b border-emerald-700 transition-colors text-xs text-slate-700 font-medium group/row whitespace-nowrap
                             ${draggingStudentId === s.id ? 'opacity-40 bg-emerald-50/20' : ''}
                             ${dragOverStudentId === s.id ? 'bg-emerald-50/40 border-y-2 border-emerald-200' : 'hover:bg-slate-50/50'}
                           `}
                         >
-                          <td className="px-4 py-3 text-center font-bold text-slate-400 whitespace-nowrap select-none">
-                            <div className="flex items-center justify-center gap-1.5">
+                          <td className="px-4 py-3 text-center font-bold text-slate-400 whitespace-nowrap select-none border-l border-r border-slate-200 border-b border-emerald-700">
+                            <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
                               <GripVertical className="w-3.5 h-3.5 text-slate-400 group-hover/row:text-emerald-600 hover:text-emerald-700 transition-colors cursor-grab active:cursor-grabbing shrink-0" />
-                              <span>{s.rollNumber}</span>
+                              <span className="whitespace-nowrap">{s.rollNumber}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-center font-mono font-semibold text-teal-600 bg-slate-50/30">{s.studentIdCard}</td>
-                          <td className="px-4 py-3 font-bold text-slate-800">
-                            <div className="flex items-center gap-2">
+                          <td className="px-4 py-3 text-center font-mono font-semibold text-teal-600 bg-slate-50/30 whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">{s.studentIdCard}</td>
+                          <td className="px-4 py-3 font-bold text-slate-800 whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
+                            <div className="flex items-center gap-2 whitespace-nowrap">
                               {s.photoUrl ? (
                                 <img 
                                   src={s.photoUrl} 
                                   alt="រូបថតសិស្ស" 
                                   className="w-6 h-6 rounded-full object-cover border border-slate-200 shrink-0"
                                   referrerPolicy="no-referrer"
+                                  loading="lazy"
                                 />
                               ) : (
-                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] text-white font-bold shrink-0 shadow-xs ${
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] text-white font-bold shrink-0 shadow-xs whitespace-nowrap ${
                                   s.gender === 'ប្រុស' ? 'bg-sky-500' : 'bg-pink-500'
                                 }`}>
                                   {s.gender === 'ប្រុស' ? 'ប្រ' : 'ស្រ'}
                                 </div>
                               )}
-                              <span>{s.nameKhmer}</span>
+                              <span className="whitespace-nowrap">{s.nameKhmer}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 font-bold text-slate-600 font-mono">
+                          <td className="px-4 py-3 font-bold text-slate-600 font-mono whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
                             {s.nameLatin || '-'}
                           </td>
-                          <td className="px-3 py-3 text-center">
-                            <span className={`text-xs font-bold ${
+                          <td className="px-3 py-3 text-center whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
+                            <span className={`text-xs font-bold whitespace-nowrap ${
                               s.gender === 'ប្រុស' ? 'text-sky-600' : 'text-pink-600'
                             }`}>
                               {s.gender || '-'}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center text-slate-700 font-mono">
+                          <td className="px-4 py-3 text-center text-slate-700 font-mono whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
                             {s.dob ? s.dob.split('-').reverse().join('-') : '-'}
                           </td>
-                          <td className="px-4 py-3 text-center text-slate-750 font-bold">
+                          <td className="px-4 py-3 text-center text-slate-750 font-bold whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
                             {calculateAge(s.dob, schoolInfo.studentAgeLimitDate) ? `${calculateAge(s.dob, schoolInfo.studentAgeLimitDate)} ឆ្នាំ` : '-'}
                           </td>
-                          <td className="px-4 py-3">
-                            <span className="font-bold text-slate-600">
+                          <td className="px-4 py-3 whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
+                            <span className="font-bold text-slate-600 whitespace-nowrap">
                               {cls ? toArabicClassname(cls.name) : '-'}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-slate-600 max-w-xs truncate" title={s.pob}>
-                            {s.pob || '-'}
+                          {/* ៤ ជួរឈរទិន្នន័យ ទីកន្លែងកំណើត */}
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold bg-slate-50/5 border-r border-slate-200 border-b border-emerald-700 whitespace-nowrap">
+                            {s.pobProvince || '-'}
                           </td>
-                          <td className="px-4 py-3 text-amber-700 font-bold">
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold bg-slate-50/5 border-r border-slate-200 border-b border-emerald-700 whitespace-nowrap">
+                            {s.pobDistrict || '-'}
+                          </td>
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold bg-slate-50/5 border-r border-slate-200 border-b border-emerald-700 whitespace-nowrap">
+                            {s.pobCommune || '-'}
+                          </td>
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold bg-slate-50/5 border-r border-slate-200 border-b border-emerald-700 whitespace-nowrap">
+                            {s.pobVillage || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-amber-700 font-bold whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
                             {s.studentIssue || 'គ្មាន'}
                           </td>
-                          <td className="px-4 py-3 text-center font-bold text-slate-600">
+                          <td className="px-4 py-3 text-center whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
+                            <span className={`font-bold whitespace-nowrap ${
+                              s.studentStatus === 'ឈប់រៀន' ? 'text-rose-600' :
+                              s.studentStatus === 'ផ្ទេរចេញ' ? 'text-amber-600' :
+                              s.studentStatus === 'ព្យួរការសិក្សា' ? 'text-indigo-600' :
+                              'text-emerald-600'
+                            }`}>
+                              {s.studentStatus || 'កំពុងរៀន'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center text-slate-800 font-bold whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
+                            {s.studentType || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-center font-bold text-slate-600 whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
                             {s.indigenousGroup || 'ទេ'}
                           </td>
-                          <td className="px-4 py-3 text-slate-700 font-bold">
+                          
+                          {/* ៤ ជួរឈរទិន្នន័យ ប្រឡងសញ្ញាបត្រមធ្យមសិក្សាបឋមភូមិ */}
+                          <td className="px-3 py-3 text-center font-mono text-slate-700 bg-emerald-50/5 border-r border-slate-200 border-b border-emerald-700 whitespace-nowrap">
+                            {s.diplomaExamSession ? s.diplomaExamSession.split('-').reverse().join('-') : '-'}
+                          </td>
+                          <td className="px-3 py-3 text-center text-slate-700 bg-emerald-50/5 border-r border-slate-200 border-b border-emerald-700 font-bold whitespace-nowrap">
+                            {s.diplomaExamCenter || '-'}
+                          </td>
+                          <td className="px-3 py-3 text-center font-mono text-slate-700 bg-emerald-50/5 border-r border-slate-200 border-b border-emerald-700 font-bold whitespace-nowrap">
+                            {s.diplomaExamRoom || '-'}
+                          </td>
+                          <td className="px-3 py-3 text-center font-mono text-slate-700 bg-emerald-50/5 border-r border-slate-200 border-b border-emerald-700 font-bold whitespace-nowrap">
+                            {s.diplomaExamTable || '-'}
+                          </td>
+
+                          <td className="px-4 py-3 text-slate-700 font-bold whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
                             {s.fatherName || '-'}
                           </td>
-                          <td className="px-4 py-3 text-slate-600">
+                          <td className="px-4 py-3 text-slate-600 whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
                             {s.fatherOccupation || '-'}
                           </td>
-                          <td className="px-4 py-3 text-slate-700 font-bold">
+                          <td className="px-4 py-3 text-slate-700 font-bold whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
                             {s.motherName || '-'}
                           </td>
-                          <td className="px-4 py-3 text-slate-600">
+                          <td className="px-4 py-3 text-slate-600 whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
                             {s.motherOccupation || '-'}
                           </td>
-                          <td className="px-4 py-3 text-center font-mono text-slate-700 font-bold">
+                          <td className="px-4 py-3 text-center font-mono text-slate-700 font-bold whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
                             {s.parentPhone || '-'}
                           </td>
-                          <td className="px-4 py-3 text-slate-600 max-w-xs truncate" title={s.currentAddress}>
-                            {s.currentAddress || '-'}
+                          {/* ៤ ជួរឈរទិន្នន័យ ទីលំនៅបច្ចុប្បន្ន */}
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold bg-slate-50/5 border-r border-slate-200 border-b border-emerald-700 whitespace-nowrap">
+                            {s.currentAddressProvince || '-'}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold bg-slate-50/5 border-r border-slate-200 border-b border-emerald-700 whitespace-nowrap">
+                            {s.currentAddressDistrict || '-'}
+                          </td>
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold bg-slate-50/5 border-r border-slate-200 border-b border-emerald-700 whitespace-nowrap">
+                            {s.currentAddressCommune || '-'}
+                          </td>
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold bg-slate-50/5 border-r border-slate-200 border-b border-emerald-700 whitespace-nowrap">
+                            {s.currentAddressVillage || '-'}
+                          </td>
+                          <td className="px-4 py-3 border-b border-emerald-700">
                             <div className="flex items-center justify-end gap-1.5">
                               <button
                                 onClick={() => setViewingStudent(s)}
@@ -3344,6 +3450,41 @@ export default function StudentManagement({
                   </select>
                 </div>
                 <div className="space-y-1.5">
+                  <label htmlFor="student-status" className="text-xs font-bold text-slate-700 block">ស្ថានភាពសិស្ស</label>
+                  <select
+                    id="student-status"
+                    value={studentForm.studentStatus || 'កំពុងរៀន'}
+                    onChange={e => setStudentForm({ ...studentForm, studentStatus: e.target.value })}
+                    className="w-full px-3 h-[38px] bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white cursor-pointer appearance-none font-bold text-slate-800"
+                  >
+                    <option value="កំពុងរៀន">កំពុងរៀន</option>
+                    <option value="ឈប់រៀន">ឈប់រៀន</option>
+                    <option value="ផ្ទេរចេញ">ផ្ទេរចេញ</option>
+                    <option value="ព្យួរការសិក្សា">ព្យួរការសិក្សា</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="student-type" className="text-xs font-bold text-slate-700 block">ប្រភេទសិស្ស</label>
+                  <select
+                    id="student-type"
+                    value={studentForm.studentType || ''}
+                    onChange={e => setStudentForm({ ...studentForm, studentType: e.target.value })}
+                    className={`w-full px-3 h-[38px] bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white cursor-pointer appearance-none ${
+                      studentForm.studentType ? 'text-slate-800 font-bold' : 'text-slate-400 font-normal'
+                    }`}
+                  >
+                    <option value="" className="text-slate-400 font-normal">ជ្រើសរើស</option>
+                    <option value="ឡើងថ្នាក់" className="text-slate-800 font-bold">ឡើងថ្នាក់</option>
+                    <option value="ចូលថ្មី" className="text-slate-800 font-bold">ចូលថ្មី</option>
+                    <option value="ផ្ទេរចូល" className="text-slate-800 font-bold">ផ្ទេរចូល</option>
+                    <option value="ត្រួតថ្នាក់" className="text-slate-800 font-bold">ត្រួតថ្នាក់</option>
+                    <option value="ចូលរៀនវិញ" className="text-slate-800 font-bold">ចូលរៀនវិញ</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
                   <label htmlFor="student-indigenous-group" className="text-xs font-bold text-slate-700 block">ជនជាតិដើមភាគតិច</label>
                   <select
                     id="student-indigenous-group"
@@ -3354,6 +3495,61 @@ export default function StudentManagement({
                     <option value="ទេ">ទេ</option>
                     <option value="បាទ/ចាស">បាទ/ចាស</option>
                   </select>
+                </div>
+              </div>
+
+              {/* ផ្នែកព័ត៌មានប្រឡងសញ្ញាបត្រមធ្យមសិក្សាបឋមភូមិ */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                <h4 className="text-xs font-bold text-slate-800 border-b border-slate-200 pb-1.5 flex items-center gap-2" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  ប្រឡងសញ្ញាបត្រមធ្យមសិក្សាបឋមភូមិ
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label htmlFor="student-diploma-session" className="text-xs font-bold text-slate-700 block">សម័យប្រឡង</label>
+                    <input
+                      id="student-diploma-session"
+                      type="date"
+                      value={studentForm.diplomaExamSession || ''}
+                      onChange={e => setStudentForm({ ...studentForm, diplomaExamSession: e.target.value })}
+                      className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-emerald-500 font-bold text-slate-800"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="student-diploma-center" className="text-xs font-bold text-slate-700 block">មណ្ឌលប្រឡង</label>
+                    <input
+                      id="student-diploma-center"
+                      type="text"
+                      value={studentForm.diplomaExamCenter || ''}
+                      onChange={e => setStudentForm({ ...studentForm, diplomaExamCenter: e.target.value })}
+                      placeholder="ឧ. វិទ្យាល័យ អនុវត្ត"
+                      className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-emerald-500 font-bold text-slate-800"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label htmlFor="student-diploma-room" className="text-xs font-bold text-slate-700 block">លេខបន្ទប់</label>
+                    <input
+                      id="student-diploma-room"
+                      type="text"
+                      value={studentForm.diplomaExamRoom || ''}
+                      onChange={e => setStudentForm({ ...studentForm, diplomaExamRoom: e.target.value })}
+                      placeholder="ឧ. 12"
+                      className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-emerald-500 font-bold text-slate-800"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="student-diploma-table" className="text-xs font-bold text-slate-700 block">លេខតុ</label>
+                    <input
+                      id="student-diploma-table"
+                      type="text"
+                      value={studentForm.diplomaExamTable || ''}
+                      onChange={e => setStudentForm({ ...studentForm, diplomaExamTable: e.target.value })}
+                      placeholder="ឧ. 288"
+                      className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-emerald-500 font-bold text-slate-800"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -4207,6 +4403,17 @@ export default function StudentManagement({
 
                       <span className="col-span-1 font-bold">បញ្ហាផ្សេងៗ:</span>
                       <span className="col-span-2 text-red-700 font-bold leading-relaxed">{viewingStudent.studentIssue || 'គ្មាន'}</span>
+
+                      <span className="col-span-1 font-bold">ស្ថានភាពសិស្ស:</span>
+                      <span className={`col-span-2 font-bold ${
+                        viewingStudent.studentStatus === 'ឈប់រៀន' ? 'text-rose-600' :
+                        viewingStudent.studentStatus === 'ផ្ទេរចេញ' ? 'text-amber-600' :
+                        viewingStudent.studentStatus === 'ព្យួរការសិក្សា' ? 'text-indigo-600' :
+                        'text-emerald-700'
+                      }`}>{viewingStudent.studentStatus || 'កំពុងរៀន'}</span>
+
+                      <span className="col-span-1 font-bold">ប្រភេទសិស្ស:</span>
+                      <span className="col-span-2 text-slate-800 font-bold">{viewingStudent.studentType || '-'}</span>
                     </div>
                   </div>
 
@@ -4236,6 +4443,36 @@ export default function StudentManagement({
                     </div>
                   </div>
                 </div>
+
+                {/* ផ្នែកព័ត៌មានប្រឡងសញ្ញាបត្រ */}
+                {(viewingStudent.diplomaExamSession || viewingStudent.diplomaExamCenter || viewingStudent.diplomaExamRoom || viewingStudent.diplomaExamTable) && (
+                  <div className="bg-emerald-50/30 p-3 rounded-xl border border-emerald-100/50 space-y-1.5 text-[11px] mt-1.5">
+                    <h5 className="font-bold text-emerald-800 border-b border-emerald-100/30 pb-1 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      ព័ត៌មានប្រឡងសញ្ញាបត្រមធ្យមសិក្សាបឋមភូមិ
+                    </h5>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-y-1.5 gap-x-4 text-slate-600">
+                      <div>
+                        <span className="font-bold block text-slate-500">សម័យប្រឡង:</span>
+                        <span className="text-slate-800 font-bold">
+                          {viewingStudent.diplomaExamSession ? viewingStudent.diplomaExamSession.split('-').reverse().join('-') : '-'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="font-bold block text-slate-500">មណ្ឌលប្រឡង:</span>
+                        <span className="text-slate-800 font-bold">{viewingStudent.diplomaExamCenter || '-'}</span>
+                      </div>
+                      <div>
+                        <span className="font-bold block text-slate-500">លេខបន្ទប់:</span>
+                        <span className="text-slate-800 font-bold">{viewingStudent.diplomaExamRoom || '-'}</span>
+                      </div>
+                      <div>
+                        <span className="font-bold block text-slate-500">លេខតុ:</span>
+                        <span className="text-slate-800 font-bold">{viewingStudent.diplomaExamTable || '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Action Buttons inside footer */}
                 <div className="flex justify-end pt-1.5 border-t border-slate-100">
