@@ -18,6 +18,7 @@ export interface Teacher {
   id: string; // ID uniquely identifying teacher
   idNumber: string; // Staff ID, e.g. TCH-001
   name: string;
+  nameLatin?: string; // Latin name
   gender: 'ប្រុស' | 'ស្រី';
   dob: string; // Date of birth
   phone: string;

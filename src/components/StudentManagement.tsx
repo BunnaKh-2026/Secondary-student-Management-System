@@ -219,7 +219,7 @@ const calculateAge = (dobString: string, referenceDateString?: string): string =
   return age >= 0 ? String(age) : '';
 };
 
-const transliterateKhmerToLatin = (khText: string): string => {
+export const transliterateKhmerToLatin = (khText: string): string => {
   if (!khText) return '';
   
   const A_SERIES = new Set(['ក', 'ខ', 'ច', 'ឆ', 'ដ', 'ឋ', 'ណ', 'ត', 'ថ', 'ប', 'ផ', 'ស', 'ហ', 'ឡ', 'អ']);
@@ -853,6 +853,7 @@ export default function StudentManagement({
     photoUrl: '',
   });
   const [studentFormError, setStudentFormError] = useState<string | null>(null);
+  const [duplicateIdError, setDuplicateIdError] = useState<string | null>(null);
 
   // Student Drag & Drop states
   const [draggingStudentId, setDraggingStudentId] = useState<string | null>(null);
@@ -1264,7 +1265,9 @@ export default function StudentManagement({
       (!editingStudent || s.id !== editingStudent.id)
     );
     if (isDuplicate) {
-      setStudentFormError(`អត្តលេខសិស្ស "${studentForm.studentIdCard}" នេះមានរួចហើយ! សូមបញ្ចូលអត្តលេខផ្សេងដែលមិនជាន់គ្នា។`);
+      const errorMsg = `អត្តលេខសិស្ស "${studentForm.studentIdCard}" នេះមានរួចហើយ! សូមបញ្ចូលអត្តលេខផ្សេងដែលមិនជាន់គ្នា។`;
+      setStudentFormError(errorMsg);
+      setDuplicateIdError(errorMsg);
       return;
     }
 
@@ -2594,6 +2597,7 @@ export default function StudentManagement({
                         </>
                       )}
                     </th>
+                    <th className="px-4 py-3 bg-emerald-700">ឈ្មោះឡាតាំង</th>
                     <th className="px-3 py-3 text-center bg-emerald-700">ភេទ</th>
                     <th className="px-4 py-3 text-center bg-emerald-700">ថ្ងៃខែឆ្នាំកំណើត</th>
                     <th className="px-4 py-3 text-center bg-emerald-700">អាយុ</th>
@@ -2666,21 +2670,21 @@ export default function StudentManagement({
                       )}
                     </th>
                     <th className="px-4 py-3 bg-emerald-700">ទីកន្លែងកំណើត</th>
+                    <th className="px-4 py-3 bg-emerald-700">បញ្ហារបស់សិស្ស</th>
+                    <th className="px-4 py-3 bg-emerald-700">ជនជាតិដើមភាគតិច</th>
                     <th className="px-4 py-3 bg-emerald-700">ឈ្មោះឪពុក</th>
                     <th className="px-4 py-3 bg-emerald-700">មុខរបរឪពុក</th>
                     <th className="px-4 py-3 bg-emerald-700">ឈ្មោះម្ដាយ</th>
                     <th className="px-4 py-3 bg-emerald-700">មុខរបរម្ដាយ</th>
                     <th className="px-4 py-3 bg-emerald-700">លេខទូរស័ព្ទអាណាព្យាបាល</th>
                     <th className="px-4 py-3 bg-emerald-700">ទីលំនៅបច្ចុប្បន្ន</th>
-                    <th className="px-4 py-3 bg-emerald-700">បញ្ហារបស់សិស្ស</th>
-                    <th className="px-4 py-3 bg-emerald-700">ជនជាតិដើមភាគតិច</th>
                     <th className="px-4 py-3 text-right bg-emerald-700">សកម្មភាព</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredStudents.length === 0 ? (
                     <tr>
-                      <td colSpan={17} className="px-4 py-12 text-center text-slate-400 text-xs font-semibold">
+                      <td colSpan={18} className="px-4 py-12 text-center text-slate-400 text-xs font-semibold">
                         រកមិនឃើញទិន្នន័យសិស្សានុសិស្សត្រូវបានកំណត់ឡើយ។
                       </td>
                     </tr>
@@ -2726,6 +2730,9 @@ export default function StudentManagement({
                               <span>{s.nameKhmer}</span>
                             </div>
                           </td>
+                          <td className="px-4 py-3 font-bold text-slate-600 font-mono">
+                            {s.nameLatin || '-'}
+                          </td>
                           <td className="px-3 py-3 text-center">
                             <span className={`text-xs font-bold ${
                               s.gender === 'ប្រុស' ? 'text-sky-600' : 'text-pink-600'
@@ -2747,6 +2754,12 @@ export default function StudentManagement({
                           <td className="px-4 py-3 text-slate-600 max-w-xs truncate" title={s.pob}>
                             {s.pob || '-'}
                           </td>
+                          <td className="px-4 py-3 text-amber-700 font-bold">
+                            {s.studentIssue || 'គ្មាន'}
+                          </td>
+                          <td className="px-4 py-3 text-center font-bold text-slate-600">
+                            {s.indigenousGroup || 'ទេ'}
+                          </td>
                           <td className="px-4 py-3 text-slate-700 font-bold">
                             {s.fatherName || '-'}
                           </td>
@@ -2764,12 +2777,6 @@ export default function StudentManagement({
                           </td>
                           <td className="px-4 py-3 text-slate-600 max-w-xs truncate" title={s.currentAddress}>
                             {s.currentAddress || '-'}
-                          </td>
-                          <td className="px-4 py-3 text-amber-700 font-bold">
-                            {s.studentIssue || 'គ្មាន'}
-                          </td>
-                          <td className="px-4 py-3 text-center font-bold text-slate-600">
-                            {s.indigenousGroup || 'ទេ'}
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center justify-end gap-1.5">
@@ -2988,6 +2995,19 @@ export default function StudentManagement({
                 {/* Left side: Stacked Inputs */}
                 <div className="space-y-3.5">
                   <div className="space-y-1.5">
+                    <label htmlFor="student-id-input" className="text-xs font-bold text-slate-700 block">អត្តលេខ <span className="text-red-600 font-extrabold text-sm ml-0.5">*</span></label>
+                    <input
+                      id="student-id-input"
+                      type="text"
+                      required
+                      value={studentForm.studentIdCard}
+                      onChange={e => setStudentForm({ ...studentForm, studentIdCard: e.target.value })}
+                      placeholder="ឧ. 2016"
+                      className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
                     <label htmlFor="student-kh-name-input" className="text-xs font-bold text-slate-700 block">គោត្តនាម-នាម <span className="text-red-600 font-extrabold text-sm ml-0.5">*</span></label>
                     <input
                       id="student-kh-name-input"
@@ -3008,16 +3028,32 @@ export default function StudentManagement({
                   </div>
 
                   <div className="space-y-1.5">
-                    <label htmlFor="student-id-input" className="text-xs font-bold text-slate-700 block">អត្តលេខ <span className="text-red-600 font-extrabold text-sm ml-0.5">*</span></label>
-                    <input
-                      id="student-id-input"
-                      type="text"
-                      required
-                      value={studentForm.studentIdCard}
-                      onChange={e => setStudentForm({ ...studentForm, studentIdCard: e.target.value })}
-                      placeholder="ឧ. 2016"
-                      className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
-                    />
+                    <label htmlFor="student-latin-name-input" className="text-xs font-bold text-slate-700 block">ឈ្មោះឡាតាំង</label>
+                    <div className="relative flex items-center">
+                      <input
+                        id="student-latin-name-input"
+                        type="text"
+                        value={studentForm.nameLatin}
+                        onChange={e => {
+                          setHasManuallyEditedLatin(true);
+                          setStudentForm({ ...studentForm, nameLatin: e.target.value });
+                        }}
+                        placeholder="ឧ. BUNNA VISITH"
+                        className="w-full pl-3 pr-14 h-[38px] bg-white border border-slate-200 rounded-xl text-xs outline-none focus:bg-white font-mono uppercase"
+                      />
+                      {(studentForm.nameLatin || '') && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setHasManuallyEditedLatin(true);
+                            setStudentForm({ ...studentForm, nameLatin: '' });
+                          }}
+                          className="absolute right-2 px-2 py-1 text-[10px] font-bold text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
+                        >
+                          ជម្រះ
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -3281,6 +3317,48 @@ export default function StudentManagement({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
+                  <label htmlFor="student-issue" className="text-xs font-bold text-slate-700 block">បញ្ហារបស់សិស្ស</label>
+                  <select
+                    id="student-issue"
+                    value={studentForm.studentIssue || ''}
+                    onChange={e => setStudentForm({ ...studentForm, studentIssue: e.target.value })}
+                    className="w-full px-3 h-[38px] bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white cursor-pointer appearance-none"
+                  >
+                    <option value="">គ្មាន</option>
+                    <option value="ពិបាកក្នុងការធ្វើចលនា">ពិបាកក្នុងការធ្វើចលនា</option>
+                    <option value="ពិបាកក្នុងការស្ដាប់">ពិបាកក្នុងការស្ដាប់</option>
+                    <option value="ពិបាកក្នុងការនិយាយ">ពិបាកក្នុងការនិយាយ</option>
+                    <option value="ពិបាកក្នុងការមើល">ពិបាកក្នុងការមើល</option>
+                    <option value="ពិការសរីរាង្គខាងក្នុង">ពិការសរីរាង្គខាងក្នុង</option>
+                    <option value="ពិការសតិបញ្ញា">ពិការសតិបញ្ញា</option>
+                    <option value="ពិបាកខាងផ្លូវចិត្ត">ពិបាកខាងផ្លូវចិត្ត</option>
+                    <option value="ពិការផ្សេងៗ">ពិការផ្សេងៗ</option>
+                    <option value="ខ្វះអាហារូបត្ថមធ្ងន់ធ្ងរ">ខ្វះអាហារូបត្ថមធ្ងន់ធ្ងរ</option>
+                    <option value="សុខភាព/ជំងឺប្រចាំកាយ">សុខភាព/ជំងឺប្រចាំកាយ</option>
+                    <option value="មកពីគ្រួសារផ្លាស់ប្ដូរទីលំនៅ">មកពីគ្រួសារផ្លាស់ប្ដូរទីលំនៅ</option>
+                    <option value="កុមារកំព្រា">កុមារកំព្រា</option>
+                    <option value="កុមាររងគ្រោះដោយ HIV/AIDS">កុមាររងគ្រោះដោយ HIV/AIDS</option>
+                    <option value="កុមាររងអំពើហឹង្សាក្នុងគ្រួសារ">កុមាររងអំពើហឹង្សាក្នុងគ្រួសារ</option>
+                    <option value="កុមាររងការកេងប្រវ័ញ្ចពលកម្ម">កុមាររងការកេងប្រវ័ញ្ចពលកម្ម</option>
+                    <option value="កុមារដែលមកពីគ្រួសារក្រីក្រ">កុមារដែលមកពីគ្រួសារក្រីក្រ</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="student-indigenous-group" className="text-xs font-bold text-slate-700 block">ជនជាតិដើមភាគតិច</label>
+                  <select
+                    id="student-indigenous-group"
+                    value={studentForm.indigenousGroup || 'ទេ'}
+                    onChange={e => setStudentForm({ ...studentForm, indigenousGroup: e.target.value })}
+                    className="w-full px-3 h-[38px] bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white cursor-pointer appearance-none font-bold text-slate-700"
+                  >
+                    <option value="ទេ">ទេ</option>
+                    <option value="បាទ/ចាស">បាទ/ចាស</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
                   <label htmlFor="student-father-name" className="text-xs font-bold text-slate-700 block">ឈ្មោះឪពុក</label>
                   <input
                     id="student-father-name"
@@ -3485,48 +3563,6 @@ export default function StudentManagement({
                       </select>
                     )}
                   </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="student-issue" className="text-xs font-bold text-slate-700 block">បញ្ហារបស់សិស្ស</label>
-                  <select
-                    id="student-issue"
-                    value={studentForm.studentIssue || ''}
-                    onChange={e => setStudentForm({ ...studentForm, studentIssue: e.target.value })}
-                    className="w-full px-3 h-[38px] bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white cursor-pointer appearance-none"
-                  >
-                    <option value="">គ្មាន</option>
-                    <option value="ពិបាកក្នុងការធ្វើចលនា">ពិបាកក្នុងការធ្វើចលនា</option>
-                    <option value="ពិបាកក្នុងការស្ដាប់">ពិបាកក្នុងការស្ដាប់</option>
-                    <option value="ពិបាកក្នុងការនិយាយ">ពិបាកក្នុងការនិយាយ</option>
-                    <option value="ពិបាកក្នុងការមើល">ពិបាកក្នុងការមើល</option>
-                    <option value="ពិការសរីរាង្គខាងក្នុង">ពិការសរីរាង្គខាងក្នុង</option>
-                    <option value="ពិការសតិបញ្ញា">ពិការសតិបញ្ញា</option>
-                    <option value="ពិបាកខាងផ្លូវចិត្ត">ពិបាកខាងផ្លូវចិត្ត</option>
-                    <option value="ពិការផ្សេងៗ">ពិការផ្សេងៗ</option>
-                    <option value="ខ្វះអាហារូបត្ថមធ្ងន់ធ្ងរ">ខ្វះអាហារូបត្ថមធ្ងន់ធ្ងរ</option>
-                    <option value="សុខភាព/ជំងឺប្រចាំកាយ">សុខភាព/ជំងឺប្រចាំកាយ</option>
-                    <option value="មកពីគ្រួសារផ្លាស់ប្ដូរទីលំនៅ">មកពីគ្រួសារផ្លាស់ប្ដូរទីលំនៅ</option>
-                    <option value="កុមារកំព្រា">កុមារកំព្រា</option>
-                    <option value="កុមាររងគ្រោះដោយ HIV/AIDS">កុមាររងគ្រោះដោយ HIV/AIDS</option>
-                    <option value="កុមាររងអំពើហឹង្សាក្នុងគ្រួសារ">កុមាររងអំពើហឹង្សាក្នុងគ្រួសារ</option>
-                    <option value="កុមាររងការកេងប្រវ័ញ្ចពលកម្ម">កុមាររងការកេងប្រវ័ញ្ចពលកម្ម</option>
-                    <option value="កុមារដែលមកពីគ្រួសារក្រីក្រ">កុមារដែលមកពីគ្រួសារក្រីក្រ</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="student-indigenous-group" className="text-xs font-bold text-slate-700 block">ជនជាតិដើមភាគតិច</label>
-                  <select
-                    id="student-indigenous-group"
-                    value={studentForm.indigenousGroup || 'ទេ'}
-                    onChange={e => setStudentForm({ ...studentForm, indigenousGroup: e.target.value })}
-                    className="w-full px-3 h-[38px] bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white cursor-pointer appearance-none font-bold text-slate-700"
-                  >
-                    <option value="ទេ">ទេ</option>
-                    <option value="បាទ/ចាស">បាទ/ចាស</option>
-                  </select>
                 </div>
               </div>
 
@@ -4082,8 +4118,8 @@ export default function StudentManagement({
                 </button>
               </div>
 
-              {/* Profile Content - meticulously designed to fit completely without any scrollbar */}
-              <div className="p-4 space-y-3">
+              {/* Profile Content - meticulously designed to fit completely on desktop and scrollable on mobile */}
+              <div className="p-4 space-y-3 overflow-y-auto max-h-[75vh] md:max-h-none md:overflow-visible">
                 {/* Top Summary Banner */}
                 <div className="flex items-center gap-4 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100/60">
                   {viewingStudent.photoUrl ? (
@@ -4144,8 +4180,8 @@ export default function StudentManagement({
                   </div>
                 </div>
 
-                {/* 2-Column Info Grid */}
-                <div className="grid grid-cols-2 gap-3 text-[11px]">
+                {/* Info Grid - 1 column on mobile, 2 columns on medium screens and up */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
                   {/* Left Column: Personal info */}
                   <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100 space-y-1.5">
                     <h5 className="font-bold text-emerald-800 border-b border-slate-100 pb-1 flex items-center gap-1.5">
@@ -4216,6 +4252,31 @@ export default function StudentManagement({
           </div>
         );
       })()}
+      {/* ៤.៥. DUPLICATE ID ERROR MODAL */}
+      {duplicateIdError && (
+        <div className="fixed inset-0 bg-slate-950/55 backdrop-blur-xs flex items-center justify-center z-[100] p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 border border-slate-100 shadow-2xl flex flex-col items-center text-center space-y-4 animate-scale-up">
+            <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center border border-rose-150 shrink-0">
+              <AlertTriangle className="w-6 h-6 text-rose-500" />
+            </div>
+            <div className="space-y-1.5">
+              <h4 className="font-bold text-slate-800 text-sm font-sans">
+                កំហុស៖ អត្តលេខស្ទួន
+              </h4>
+              <p className="text-xs text-slate-500 leading-relaxed font-medium">
+                {duplicateIdError}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDuplicateIdError(null)}
+              className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-colors shadow-md shadow-rose-200 cursor-pointer"
+            >
+              យល់ព្រម
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

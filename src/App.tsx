@@ -99,7 +99,40 @@ export default function App() {
   };
 
   const handleUpdateTeachers = (list: Teacher[]) => {
-    setState(prev => ({ ...prev, teachers: list }));
+    const updatedClassrooms = state.classrooms.map(c => {
+      const chargeTeacher = list.find(t => t.classCharge === c.name);
+      const newHTName = chargeTeacher ? chargeTeacher.name : 'មិនទាន់កំណត់';
+      if (c.preStartConfig && c.preStartConfig.homeTeacherName !== newHTName) {
+        return {
+          ...c,
+          preStartConfig: {
+            ...c.preStartConfig,
+            homeTeacherName: newHTName
+          }
+        };
+      }
+      if (!c.preStartConfig && chargeTeacher) {
+        return {
+          ...c,
+          preStartConfig: {
+            classroomId: c.id,
+            homeTeacherName: newHTName,
+            academicYear: '២០២៥-២០២៦',
+            semester1Months: ['វិច្ឆិកា', 'ធ្នូ', 'មករា', 'កុម្ភៈ', 'មីនា'],
+            semester2Months: ['មេសា', 'ឧសភា', 'មិថុនា', 'កក្កដា', 'សីហា'],
+            activeMonthsForAverage: ['វិច្ឆិកា', 'ធ្នូ'],
+            subjects: []
+          }
+        };
+      }
+      return c;
+    });
+
+    setState(prev => ({ 
+      ...prev, 
+      teachers: list,
+      classrooms: updatedClassrooms
+    }));
   };
 
   const handleUpdateClassrooms = (list: Classroom[]) => {
@@ -127,10 +160,28 @@ export default function App() {
   };
 
   const handleUpdatePreStartConfig = (classId: string, config: PreStartConfig) => {
+    const targetClass = state.classrooms.find(c => c.id === classId);
+    const className = targetClass ? targetClass.name : '';
+    
+    const updatedTeachers = state.teachers.map(t => {
+      if (t.classCharge === className && t.name !== config.homeTeacherName) {
+        return { ...t, classCharge: '' };
+      }
+      if (t.name === config.homeTeacherName && config.homeTeacherName !== 'មិនទាន់កំណត់') {
+        return { ...t, classCharge: className };
+      }
+      return t;
+    });
+
     const updatedClasses = state.classrooms.map(c => 
       c.id === classId ? { ...c, preStartConfig: config } : c
     );
-    setState(prev => ({ ...prev, classrooms: updatedClasses }));
+
+    setState(prev => ({ 
+      ...prev, 
+      classrooms: updatedClasses,
+      teachers: updatedTeachers
+    }));
   };
 
   const handleNavigate = (tab: string, activeId?: string) => {
@@ -166,7 +217,10 @@ export default function App() {
   const appNameKh = "ប្រព័ន្ធគ្រប់គ្រងទិន្នន័យសិស្សមធ្យមសិក្សា";
 
   return (
-    <div id="secondary-school-management-root" className="min-h-screen bg-slate-50 flex text-slate-800">
+    <div 
+      id="secondary-school-management-root" 
+      className={`${activeTab === 'teachers' ? 'h-screen overflow-hidden' : 'min-h-screen'} bg-slate-50 flex text-slate-800`}
+    >
       
       {/* Mobile background backdrop overlay to close sidebar easily on tap */}
       {isSidebarOpen && (
@@ -413,16 +467,11 @@ export default function App() {
                   <School className="absolute left-3 top-2.5 w-3.5 h-3.5 text-teal-500 pointer-events-none" />
                 </div>
 
-                {/* Home Teacher Display name under Selected Class */}
-                <div className="px-2.5 py-1 text-[11px] font-bold text-red-600 block truncate">
-                  គ្រូបន្ទុក៖ {activeClassroomFull?.preStartConfig?.homeTeacherName || 'មិនទាន់កំណត់'}
-                </div>
-
                 {/* Sub-tabs under selected class */}
                 <div className="space-y-0.5 pt-1">
                   {[
                     { id: 'register', label: 'បញ្ជីឈ្មោះសិស្ស', icon: Users },
-                    { id: 'config', label: 'ព័ត៌មានថ្នាក់', icon: Settings },
+                    { id: 'config', label: 'ព័ត៌មានគ្រូបន្ទុក', icon: Settings },
                     { id: 'tasks', label: 'កិច្ចការគ្រូបន្ទុក', icon: CheckSquare },
                     { id: 'attendance', label: 'វត្តមានសិស្ស', icon: Calendar },
                     { id: 'scores', label: 'ស្រង់ពិន្ទុប្រឡង', icon: GraduationCap },
@@ -458,27 +507,35 @@ export default function App() {
       {/* 2. MAIN APP CONTAINER WRAPPER */}
       <div className={`flex-1 flex flex-col pt-[88px] sm:pt-16 transition-all duration-300 focus:outline-none min-w-0 max-w-full overflow-hidden ${
         isSidebarOpen ? 'md:pl-40' : 'md:pl-0'
-      }`}>
+      } ${activeTab === 'teachers' ? 'h-full overflow-hidden' : ''}`}>
         
         {/* MAIN BODY CORE CONTENT SECTION */}
-        <main className="flex-1 p-4 md:p-8 outline-none print:p-0 print:m-0 min-w-0 max-w-full">
+        <main className={`flex-1 p-4 md:p-8 outline-none print:p-0 print:m-0 min-w-0 max-w-full ${
+          activeTab === 'teachers' ? 'h-full flex flex-col overflow-hidden min-h-0 pb-4 md:pb-6' : ''
+        }`}>
           
           {/* Conditional rendering depending on target views */}
-          <div className="print:hidden w-full min-w-0 max-w-full">
+          <div className={`print:hidden w-full min-w-0 max-w-full ${
+            activeTab === 'teachers' ? 'flex-1 flex flex-col overflow-hidden min-h-0' : ''
+          }`}>
             {/* If selected classroom is active, render ClassroomDetails sheets directly */}
             {selectedClassroomId && activeClassroomFull ? (
               <ClassroomDetails
                 classroom={activeClassroomFull}
+                classrooms={state.classrooms}
                 students={state.students}
                 studentScores={state.studentScores}
                 studentAttendance={state.studentAttendance}
                 htTasks={state.htTasks}
                 schoolInfo={state.schoolInfo}
+                teachers={state.teachers}
+                onUpdateTeachers={handleUpdateTeachers}
                 onBack={() => handleNavigate('students', 'classes')}
                 onUpdatePreStartConfig={handleUpdatePreStartConfig}
                 onUpdateScores={handleUpdateScores}
                 onUpdateAttendance={handleUpdateStudentAttendance}
                 onUpdateHTTasks={handleUpdateHTTasks}
+                onUpdateStudents={handleUpdateStudents}
                 activeTab={classroomActiveTab}
                 onActiveTabChange={setClassroomActiveTab}
               />

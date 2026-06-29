@@ -2,10 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Users, UserPlus, Trash2, Edit2, Calendar, FileText, CheckCircle, 
   XSquare, Clock, MapPin, Phone, Printer, Plus, X, Search, XCircle, BookOpen, GripVertical,
-  Eye, ArrowUpDown, Camera
+  Eye, ArrowUpDown, Camera, FileSpreadsheet, FileDown, FileUp, AlertTriangle
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { Teacher, TeacherAttendance, SchoolInfo, Classroom } from '../types';
 import { STANDARD_SUBJECTS_LAYOUT } from '../data/subjectLayouts';
+import { transliterateKhmerToLatin } from './StudentManagement';
 
 // Helper to map Khmer digits and letters in class names to standard Arabic equivalents (e.g., ៧អា -> 7A, ថ្នាក់ទី ៧A -> 7A)
 const toArabicClassname = (name: string): string => {
@@ -262,17 +264,374 @@ export default function TeacherManagement({
     };
   }, []);
 
+  // Import/Export dropdown state
+  const [showImportExportDropdown, setShowImportExportDropdown] = useState(false);
+  const importExportDropdownRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Click outside listener for import/export dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (importExportDropdownRef.current && !importExportDropdownRef.current.contains(event.target as Node)) {
+        setShowImportExportDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const getKhmerDateTimeString = () => {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    return `${day}-${month}-${year}_${hours}:${minutes}:${seconds}`;
+  };
+
+  const parseImportDate = (val: any): string => {
+    if (!val) return '';
+    if (val instanceof Date) {
+      const year = val.getFullYear();
+      const month = String(val.getMonth() + 1).padStart(2, '0');
+      const day = String(val.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    let str = String(val).trim();
+    if (!str) return '';
+
+    if (str.includes('T')) {
+      const parts = str.split('T')[0];
+      if (/^\d{4}-\d{2}-\d{2}$/.test(parts)) {
+        return parts;
+      }
+    }
+
+    // Handle Excel numeric date serials if imported as number
+    if (/^\d{5}(\.\d+)?$/.test(str)) {
+      try {
+        const dateObj = XLSX.SSF.parse_date_code(Number(str));
+        const year = dateObj.y;
+        const month = String(dateObj.m).padStart(2, '0');
+        const day = String(dateObj.d).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      } catch (e) {
+        // fallback
+      }
+    }
+
+    // Standard ISO YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+      return str;
+    }
+
+    // DD-MM-YYYY or DD/MM/YYYY or DD.MM.YYYY
+    const dmyMatch = str.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
+    if (dmyMatch) {
+      const day = dmyMatch[1].padStart(2, '0');
+      const month = dmyMatch[2].padStart(2, '0');
+      const year = dmyMatch[3];
+      return `${year}-${month}-${day}`;
+    }
+
+    // YYYY/MM/DD or YYYY.MM.DD
+    const ymdMatch = str.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+    if (ymdMatch) {
+      const year = ymdMatch[1];
+      const month = ymdMatch[2].padStart(2, '0');
+      const day = ymdMatch[3].padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    // Try parsing as generic date if possible
+    const parsedTimestamp = Date.parse(str);
+    if (!isNaN(parsedTimestamp)) {
+      const d = new Date(parsedTimestamp);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    return str;
+  };
+
+  const formatImportPhone = (val: any): string => {
+    if (!val) return '';
+    let str = String(val).trim();
+    if (!str) return '';
+    
+    // Remove any spaces, hyphens, or brackets commonly used in phone numbers
+    str = str.replace(/[\s\-\(\)]/g, '');
+    
+    if (/^\d+$/.test(str)) {
+      if (str.startsWith('855')) {
+        str = '0' + str.slice(3);
+      } else if (!str.startsWith('0') && (str.length === 8 || str.length === 9)) {
+        str = '0' + str;
+      }
+    }
+    return str;
+  };
+
+  const cleanClassroomValue = (val: string): string => {
+    if (!val) return '';
+    return val.replace(/^ថ្នាក់ទី\s*/, '').trim();
+  };
+
+  const formatImportIdNumber = (val: any, index: number): string => {
+    if (!val) {
+      const base = String(Date.now() + index);
+      return base.slice(-10).padStart(10, '0');
+    }
+    const str = String(val).trim();
+    if (!str) {
+      const base = String(Date.now() + index);
+      return base.slice(-10).padStart(10, '0');
+    }
+    if (/^\d+$/.test(str)) {
+      return str.padStart(10, '0');
+    }
+    return str;
+  };
+
+  const handleDownloadTemplate = () => {
+    const headers = [
+      "ល.រ",
+      "អត្តលេខមន្ត្រី",
+      "គោត្តនាម-នាម",
+      "ឈ្មោះឡាតាំង",
+      "ភេទ",
+      "ថ្ងៃខែឆ្នាំកំណើត",
+      "តួនាទី",
+      "ក្របខណ្ឌ",
+      "កាំប្រាក់",
+      "ឯកទេស",
+      "មុខវិជ្ជាបង្រៀន",
+      "បន្ទុកថ្នាក់",
+      "ជនជាតិភាគតិច",
+      "កម្រិតវប្បធម៌",
+      "ថ្ងៃចូលបង្រើការងារ",
+      "លេខទូរសព្ទ"
+    ];
+    
+    const sampleData = [
+      {
+        "ល.រ": 1,
+        "អត្តលេខមន្ត្រី": 1900100036,
+        "គោត្តនាម-នាម": "ផៃ ប៊ុនណា",
+        "ឈ្មោះឡាតាំង": "PHAI BUNNA",
+        "ភេទ": "ប្រុស",
+        "ថ្ងៃខែឆ្នាំកំណើត": "05-04-1990",
+        "តួនាទី": "គ្រូបង្រៀន",
+        "ក្របខណ្ឌ": "ម.ទុតិយភូមិ",
+        "កាំប្រាក់": "ក.២.៣",
+        "ឯកទេស": "គណិតវិទ្យា",
+        "មុខវិជ្ជាបង្រៀន": "គណិតវិទ្យា, រូបវិទ្យា",
+        "បន្ទុកថ្នាក់": "7A",
+        "ជនជាតិភាគតិច": "ទេ",
+        "កម្រិតវប្បធម៌": "បរិញ្ញាបត្រជាន់ខ្ពស់",
+        "ថ្ងៃចូលបង្រើការងារ": "01-10-2012",
+        "លេខទូរសព្ទ": 95539373
+      }
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(sampleData, { header: headers });
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "គំរូឯកសារគ្រូ");
+
+    const dtStr = getKhmerDateTimeString();
+    XLSX.writeFile(workbook, `គំរូឯកសារគ្រូបង្រៀន_${dtStr}.xlsx`);
+    showToast("បានទាញយកគំរូឯកសារជោគជ័យ!", "success");
+  };
+
+  const handleExportTeachers = () => {
+    if (teachers.length === 0) {
+      showToast("មិនមានទិន្នន័យគ្រូបង្រៀនសម្រាប់នាំចេញទេ!", "error");
+      return;
+    }
+
+    const exportData = teachers.map((t, idx) => {
+      let idNum = (t.idNumber || '').trim();
+      if (/^\d+$/.test(idNum)) {
+        idNum = idNum.padStart(10, '0');
+      }
+      return {
+        "ល.រ": idx + 1,
+        "អត្តលេខមន្ត្រី": idNum,
+        "គោត្តនាម-នាម": t.name,
+        "ឈ្មោះឡាតាំង": t.nameLatin || "",
+        "ភេទ": t.gender,
+        "ថ្ងៃខែឆ្នាំកំណើត": formatToDDMMYYYY(t.dob),
+        "តួនាទី": t.role || "គ្រូបង្រៀន",
+        "ក្របខណ្ឌ": t.framework || "",
+        "កាំប្រាក់": t.salaryRank || "",
+        "ឯកទេស": t.subject,
+        "មុខវិជ្ជាបង្រៀន": t.teachingSubjects || "",
+        "បន្ទុកថ្នាក់": cleanClassroomValue(t.classCharge),
+        "ជនជាតិភាគតិច": t.ethnicity || "ទេ",
+        "កម្រិតវប្បធម៌": t.educationLevel || "",
+        "ថ្ងៃចូលបង្រើការងារ": formatToDDMMYYYY(t.joinDate),
+        "លេខទូរសព្ទ": t.phone || ""
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "បញ្ជីឈ្មោះគ្រូ");
+
+    const dtStr = getKhmerDateTimeString();
+    XLSX.writeFile(workbook, `បញ្ជីឈ្មោះគ្រូបង្រៀន_${dtStr}.xlsx`);
+    showToast("បាននាំចេញទិន្នន័យគ្រូបង្រៀនជោគជ័យ!", "success");
+  };
+
+  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const workbook = XLSX.read(bstr, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const rawData = XLSX.utils.sheet_to_json<any>(worksheet);
+
+        if (rawData.length === 0) {
+          showToast("ឯកសារដែលបានជ្រើសរើសមិនមានទិន្នន័យទេ!", "error");
+          return;
+        }
+
+        const importedTeachers: Teacher[] = [];
+        let errorCount = 0;
+
+        rawData.forEach((row: any, index: number) => {
+          const idNumberRaw = row["អត្តលេខមន្ត្រី"] || row["ID_NUMBER"] || row["idNumber"];
+          const idNumber = formatImportIdNumber(idNumberRaw, index);
+          const name = String(row["គោត្តនាម-នាម"] || row["ឈ្មោះ"] || row["NAME"] || row["name"] || "").trim();
+          
+          if (!name) {
+            errorCount++;
+            return;
+          }
+
+          const nameLatin = String(row["ឈ្មោះឡាតាំង"] || row["NAME_LATIN"] || row["nameLatin"] || "").trim();
+          
+          let genderRaw = String(row["ភេទ"] || row["ភេទ (ប្រុស/ស្រី)"] || row["GENDER"] || row["gender"] || "").trim();
+          let gender: 'ប្រុស' | 'ស្រី' = 'ប្រុស';
+          if (genderRaw) {
+            const trimmedL = genderRaw.toLowerCase();
+            if (trimmedL === 'ស្រី' || trimmedL === 'ស' || trimmedL === 'female' || trimmedL === 'f') {
+              gender = 'ស្រី';
+            } else if (trimmedL === 'ប្រុស' || trimmedL === 'ប' || trimmedL === 'male' || trimmedL === 'm') {
+              gender = 'ប្រុស';
+            }
+          }
+
+          const dobRaw = row["ថ្ងៃខែឆ្នាំកំណើត"] || row["ថ្ងៃខែឆ្នាំកំណើត (YYYY-MM-DD)"] || row["DOB"] || row["dob"];
+          const dob = parseImportDate(dobRaw);
+
+          const phoneRaw = row["លេខទូរសព្ទ"] || row["លេខទូរស័ព្ទ"] || row["PHONE"] || row["phone"];
+          const phone = formatImportPhone(phoneRaw);
+          const subject = String(row["ឯកទេស"] || row["ឯកទេស / មុខវិជ្ជាចម្បង"] || row["SUBJECT"] || row["subject"] || "").trim();
+          const role = String(row["តួនាទី"] || row["ROLE"] || row["role"] || "គ្រូបង្រៀន").trim();
+
+          const responsibilities: string[] = [];
+
+          const salaryRank = String(row["កាំប្រាក់"] || row["SALARY_RANK"] || row["salaryRank"] || "").trim();
+          const framework = String(row["ក្របខណ្ឌ"] || row["ក្របខ័ណ្ឌ"] || row["FRAMEWORK"] || row["framework"] || "").trim();
+          const teachingSubjects = String(row["មុខវិជ្ជាបង្រៀន"] || row["TEACHING_SUBJECTS"] || row["teachingSubjects"] || "").trim();
+          
+          const classChargeRaw = String(row["បន្ទុកថ្នាក់"] || row["CLASS_CHARGE"] || row["classCharge"] || "").trim();
+          const classCharge = cleanClassroomValue(classChargeRaw);
+          
+          let ethnicity = String(row["ជនជាតិភាគតិច"] || row["ជន.ភាគតិច"] || row["ETHNICITY"] || row["ethnicity"] || "").trim();
+          if (!ethnicity) ethnicity = "ទេ";
+
+          const educationLevel = String(row["កម្រិតវប្បធម៌"] || row["EDUCATION_LEVEL"] || row["educationLevel"] || "").trim();
+          
+          const joinDateRaw = row["ថ្ងៃចូលបង្រើការងារ"] || row["ថ្ងៃចូលធ្វើការ"] || row["ថ្ងៃចូលបម្រើការងារ"] || row["JOIN_DATE"] || row["joinDate"];
+          const joinDate = parseImportDate(joinDateRaw);
+
+          const newTeacher: Teacher = {
+            id: `TCH-IMPORT-${Date.now()}-${index}-${Math.floor(Math.random() * 1000)}`,
+            idNumber,
+            name,
+            nameLatin: nameLatin || transliterateKhmerToLatin(name),
+            gender: gender as 'ប្រុស' | 'ស្រី',
+            dob,
+            phone,
+            subject: subject || "គ្រូបង្រៀន",
+            role: role || "គ្រូបង្រៀន",
+            responsibilities,
+            salaryRank,
+            framework,
+            teachingSubjects,
+            classCharge,
+            ethnicity,
+            educationLevel,
+            joinDate,
+            photoUrl: ""
+          };
+
+          importedTeachers.push(newTeacher);
+        });
+
+        if (importedTeachers.length > 0) {
+          const mergedTeachers = [...teachers];
+          let addedNew = 0;
+          let updatedOld = 0;
+
+          importedTeachers.forEach(impT => {
+            const duplicateIndex = mergedTeachers.findIndex(t => t.idNumber && t.idNumber === impT.idNumber);
+            if (duplicateIndex !== -1) {
+              mergedTeachers[duplicateIndex] = {
+                ...mergedTeachers[duplicateIndex],
+                ...impT,
+                id: mergedTeachers[duplicateIndex].id
+              };
+              updatedOld++;
+            } else {
+              mergedTeachers.push(impT);
+              addedNew++;
+            }
+          });
+
+          onUpdateTeachers(mergedTeachers);
+          showToast(`បាននាំចូលជោគជ័យ៖ បញ្ចូលថ្មី ${addedNew} នាក់ និងធ្វើបច្ចុប្បន្នភាព ${updatedOld} នាក់។`, 'success');
+        } else {
+          showToast(`មិនមានទិន្នន័យគ្រូបង្រៀនត្រឹមត្រូវសម្រាប់នាំចូលទេ!`, 'error');
+        }
+
+      } catch (err) {
+        console.error(err);
+        showToast("មានបញ្ហាក្នុងការអានឯកសារ Excel! សូមពិនិត្យទម្រង់ទិន្នន័យឡើងវិញ។", "error");
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = '';
+  };
+
   // Drag and drop states for teachers list
   const [draggingTeacherId, setDraggingTeacherId] = useState<string | null>(null);
   const [dragOverTeacherId, setDragOverTeacherId] = useState<string | null>(null);
 
   // Modal / Form States
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [duplicateIdError, setDuplicateIdError] = useState<string | null>(null);
   const [isBadgeModalOpen, setIsBadgeModalOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
+  const [hasManuallyEditedLatin, setHasManuallyEditedLatin] = useState(false);
   const [formData, setFormData] = useState<Omit<Teacher, 'id'>>({
     idNumber: '',
     name: '',
+    nameLatin: '',
     gender: 'ប្រុស',
     dob: '',
     phone: '',
@@ -546,9 +905,11 @@ export default function TeacherManagement({
 
   const handleOpenAdd = () => {
     setEditingTeacher(null);
+    setHasManuallyEditedLatin(false);
     setFormData({
       idNumber: '',
       name: '',
+      nameLatin: '',
       gender: 'ប្រុស',
       dob: '',
       phone: '',
@@ -571,9 +932,11 @@ export default function TeacherManagement({
 
   const handleOpenEdit = (t: Teacher) => {
     setEditingTeacher(t);
+    setHasManuallyEditedLatin(!!t.nameLatin);
     setFormData({
       idNumber: t.idNumber || '',
       name: t.name || '',
+      nameLatin: t.nameLatin || '',
       gender: t.gender || 'ប្រុស',
       dob: t.dob || '',
       phone: t.phone || '',
@@ -596,16 +959,39 @@ export default function TeacherManagement({
 
   const handleSaveTeacher = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    let finalIdNumber = (formData.idNumber || '').trim();
+    if (!finalIdNumber) {
+      finalIdNumber = String(Date.now()).slice(-10).padStart(10, '0');
+    } else if (/^\d+$/.test(finalIdNumber)) {
+      finalIdNumber = finalIdNumber.padStart(10, '0');
+    }
+
+    // Check unique idNumber constraint (absolutely mandatory)
+    const isDuplicate = teachers.some(t => 
+      t.idNumber && t.idNumber.trim().toLowerCase() === finalIdNumber.toLowerCase() && 
+      (!editingTeacher || t.id !== editingTeacher.id)
+    );
+    if (isDuplicate) {
+      setDuplicateIdError(`អត្តលេខមន្ត្រី "${finalIdNumber}" នេះមានរួចហើយ! សូមបញ្ចូលអត្តលេខផ្សេងដែលមិនជាន់គ្នា។`);
+      return;
+    }
+
+    const finalData = {
+      ...formData,
+      idNumber: finalIdNumber
+    };
+
     if (editingTeacher) {
       // Update
-      const updated = teachers.map(t => t.id === editingTeacher.id ? { ...t, ...formData } : t);
+      const updated = teachers.map(t => t.id === editingTeacher.id ? { ...t, ...finalData } : t);
       onUpdateTeachers(updated);
       showToast(`បានកែសម្រួលព័ត៌មានគ្រូបង្រៀនឈ្មោះ "${formData.name}" ដោយជោគជ័យ។`);
     } else {
       // Create new
       const newTch: Teacher = {
         id: `TCH-${Date.now()}`,
-        ...formData,
+        ...finalData,
       };
       onUpdateTeachers([...teachers, newTch]);
       showToast(`បានចុះឈ្មោះគ្រូបង្រៀនថ្មីឈ្មោះ "${formData.name}" ទទួលបានជោគជ័យ!`);
@@ -759,7 +1145,7 @@ export default function TeacherManagement({
   const header = getHeaderDetails();
 
   return (
-    <div id="school-teachers-section" className="space-y-6">
+    <div id="school-teachers-section" className={`space-y-6 ${activeSubTab === 'list' ? 'flex-1 flex flex-col overflow-hidden h-full min-h-0' : ''}`}>
       {/* Tab Header Selector */}
       {activeSubTab !== 'list' && (
         <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-xs">
@@ -772,7 +1158,7 @@ export default function TeacherManagement({
 
       {/* ៣.១-៣.២ SUBTAB: TEACHERS LIST & IDENTITY BADGES */}
       {activeSubTab === 'list' && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-5">
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-5 flex-1 flex flex-col overflow-hidden min-h-0">
           {/* Integrated Header Container */}
           <div className="border-b border-slate-100 pb-4 flex flex-col xl:flex-row gap-4 items-start xl:items-center justify-between w-full">
             <h1 className="text-lg font-bold text-slate-800 tracking-tight text-left self-start shrink-0">ព័ត៌មានគ្រូបង្រៀន</h1>
@@ -793,6 +1179,63 @@ export default function TeacherManagement({
               </div>
 
               <div className="flex gap-2 w-full sm:w-auto shrink-0">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImportExcel}
+                  accept=".xlsx, .xls"
+                  className="hidden"
+                />
+
+                <div className="relative animate-none" ref={importExportDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setShowImportExportDropdown(!showImportExportDropdown)}
+                    className="flex-1 sm:flex-none px-4 py-2 bg-white border border-emerald-600 hover:bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
+                    នាំទិន្នន័យ
+                  </button>
+
+                  {showImportExportDropdown && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-150 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleDownloadTemplate();
+                          setShowImportExportDropdown(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors"
+                      >
+                        <FileDown className="w-4 h-4 text-slate-500 shrink-0" />
+                        គំរូឯកសារ
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          fileInputRef.current?.click();
+                          setShowImportExportDropdown(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors"
+                      >
+                        <FileUp className="w-4 h-4 text-slate-500 shrink-0" />
+                        នាំទិន្នន័យចូល
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleExportTeachers();
+                          setShowImportExportDropdown(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors"
+                      >
+                        <FileSpreadsheet className="w-4 h-4 text-slate-500 shrink-0" />
+                        នាំទិន្នន័យចេញ
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 <button
                   type="button"
                   onClick={handleOpenAdd}
@@ -821,10 +1264,10 @@ export default function TeacherManagement({
           </div>
 
           {/* List Table - Integrated under the same white container */}
-          <div className="border border-slate-100 rounded-none overflow-hidden shadow-xs">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse table-auto whitespace-nowrap">
-                <thead>
+          <div className="border border-slate-100 rounded-xl shadow-xs flex-1 flex flex-col overflow-hidden min-h-0">
+            <div className="flex-1 overflow-y-auto overflow-x-auto min-h-0">
+              <table className="w-full text-left border-collapse table-auto whitespace-nowrap relative">
+                <thead className="sticky top-0 z-10 bg-emerald-700 text-white shadow-xs">
                   <tr className="bg-emerald-700 text-white font-bold text-xs uppercase whitespace-nowrap" id="teachers-list-th-row">
                     <th className="px-3 py-3 text-center w-12 whitespace-nowrap">ល.រ</th>
                     <th className="px-4 py-3 text-center whitespace-nowrap">អត្តលេខមន្ត្រី</th>
@@ -879,9 +1322,11 @@ export default function TeacherManagement({
                         </div>
                       </div>
                     </th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap">ឈ្មោះឡាតាំង</th>
                     <th className="px-3 py-3 text-center whitespace-nowrap">ភេទ</th>
                     <th className="px-4 py-3 text-center whitespace-nowrap">ថ្ងៃខែឆ្នាំកំណើត</th>
                     <th className="px-4 py-3 text-center whitespace-nowrap">អាយុ</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap">តួនាទី</th>
                     <th className="px-4 py-3 text-center whitespace-nowrap">ក្របខ័ណ្ឌ</th>
                     <th className="px-4 py-3 text-center whitespace-nowrap">កាំប្រាក់</th>
                     <th className="px-4 py-3 text-center whitespace-nowrap">ឯកទេស</th>
@@ -897,7 +1342,7 @@ export default function TeacherManagement({
                 <tbody>
                   {filteredTeachers.length === 0 ? (
                     <tr>
-                      <td colSpan={16} className="px-4 py-12 text-center text-slate-400 text-xs font-medium whitespace-nowrap">
+                      <td colSpan={18} className="px-4 py-12 text-center text-slate-400 text-xs font-medium whitespace-nowrap">
                         គ្មានសំណុំទិន្នន័យគ្រូបង្រៀនត្រូវបានរកឃើញទេ។
                       </td>
                     </tr>
@@ -943,10 +1388,11 @@ export default function TeacherManagement({
                             <span>{t.name}</span>
                           </div>
                         </td>
+                        <td className="px-4 py-3 font-bold text-slate-600 font-mono text-center uppercase whitespace-nowrap">
+                          {t.nameLatin || '-'}
+                        </td>
                         <td className="px-3 py-3 text-center whitespace-nowrap">
-                          <span className={`px-2 py-0.5 rounded-sm text-[10px] font-bold ${
-                            t.gender === 'ប្រុស' ? 'bg-sky-50 text-sky-700' : 'bg-pink-50 text-pink-700'
-                          }`}>
+                          <span className={t.gender === 'ប្រុស' ? 'text-sky-600 font-bold' : 'text-pink-600 font-bold'}>
                             {t.gender}
                           </span>
                         </td>
@@ -956,14 +1402,13 @@ export default function TeacherManagement({
                         <td className="px-4 py-3 text-center text-slate-750 font-bold whitespace-nowrap">
                           {calculateTeacherAge(t.dob) ? `${calculateTeacherAge(t.dob)} ឆ្នាំ` : '-'}
                         </td>
-                        <td className="px-4 py-3 text-center whitespace-nowrap">
-                          {t.framework ? (
-                            <span className="px-2 py-0.5 rounded-sm text-[10px] font-semibold bg-indigo-50 text-indigo-700">
-                              {t.framework}
-                            </span>
-                          ) : '-'}
+                        <td className="px-4 py-3 text-center text-slate-600 font-semibold whitespace-nowrap">
+                          {t.role || 'គ្រូបង្រៀន'}
                         </td>
-                        <td className="px-4 py-3 text-center font-mono font-medium whitespace-nowrap">
+                        <td className="px-4 py-3 text-center text-slate-600 font-semibold whitespace-nowrap">
+                          {t.framework || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-center font-sans font-medium whitespace-nowrap">
                           {t.salaryRank || '-'}
                         </td>
                         <td className="px-4 py-3 text-slate-600 font-semibold whitespace-nowrap">
@@ -975,16 +1420,14 @@ export default function TeacherManagement({
                         <td className="px-4 py-3 text-center whitespace-nowrap">
                           {t.classCharge ? (
                             <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-amber-50 text-amber-800">
-                              {toArabicClassnameWithPrefix(t.classCharge)}
+                              {t.classCharge}
                             </span>
                           ) : '-'}
                         </td>
-                        <td className="px-4 py-3 text-center whitespace-nowrap">
-                          <span className={`px-2 py-0.5 rounded-sm text-[10px] font-semibold ${
-                            t.ethnicity === 'បាទ/ចាស' ? 'bg-amber-50 text-amber-700 font-bold' : 'bg-slate-50 text-slate-500'
-                          }`}>
-                            {t.ethnicity || 'ទេ'}
-                          </span>
+                        <td className={`px-4 py-3 text-center whitespace-nowrap ${
+                          t.ethnicity === 'បាទ/ចាស' ? 'text-amber-700 font-bold' : 'text-slate-500 font-medium'
+                        }`}>
+                          {t.ethnicity || 'ទេ'}
                         </td>
                         <td className="px-4 py-3 text-center font-semibold text-slate-600 whitespace-nowrap">
                           {t.educationLevel || '-'}
@@ -1247,10 +1690,46 @@ export default function TeacherManagement({
                         type="text"
                         required
                         value={formData.name}
-                        onChange={e => setFormData({ ...formData, name: e.target.value })}
+                        onChange={e => {
+                          const val = e.target.value;
+                          const updated = { ...formData, name: val };
+                          if (!hasManuallyEditedLatin) {
+                            updated.nameLatin = transliterateKhmerToLatin(val);
+                          }
+                          setFormData(updated);
+                        }}
                         placeholder="ផៃ ប៊ុនណា"
                         className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
                       />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label htmlFor="teacher-latin-name-input" className="text-xs font-bold text-slate-700 block">ឈ្មោះឡាតាំង</label>
+                      <div className="relative flex items-center">
+                        <input
+                          id="teacher-latin-name-input"
+                          type="text"
+                          value={formData.nameLatin || ''}
+                          onChange={e => {
+                            setHasManuallyEditedLatin(true);
+                            setFormData({ ...formData, nameLatin: e.target.value });
+                          }}
+                          placeholder="PHAI BUNNA"
+                          className="w-full pl-3 pr-14 h-[38px] bg-white border border-slate-200 rounded-xl text-xs outline-none focus:bg-white font-mono uppercase"
+                        />
+                        {(formData.nameLatin || '') && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setHasManuallyEditedLatin(true);
+                              setFormData({ ...formData, nameLatin: '' });
+                            }}
+                            className="absolute right-2 px-2 py-1 text-[10px] font-bold text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
+                          >
+                            ជម្រះ
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -1355,18 +1834,27 @@ export default function TeacherManagement({
                 </div>
               </div>
 
-              {/* Added: កាំប្រាក់, ក្របខ័ណ្ឌ */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* Added: តួនាទី, ក្របខ័ណ្ឌ, កាំប្រាក់ */}
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-1.5">
-                  <label htmlFor="teacher-salaryRank-input" className="text-xs font-bold text-slate-600">កាំប្រាក់</label>
-                  <input
-                    id="teacher-salaryRank-input"
-                    type="text"
-                    value={formData.salaryRank || ''}
-                    onChange={e => setFormData({ ...formData, salaryRank: e.target.value })}
-                    placeholder="ឧ. គ.២"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
-                  />
+                  <label htmlFor="teacher-role-select" className="text-xs font-bold text-slate-600">តួនាទី</label>
+                  <select
+                    id="teacher-role-select"
+                    value={formData.role || ''}
+                    onChange={e => setFormData({ ...formData, role: e.target.value })}
+                    className={`w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white appearance-none cursor-pointer ${formData.role ? 'text-slate-800 font-semibold' : 'text-slate-400/90 font-normal'}`}
+                  >
+                    <option value="" className="text-slate-400">ជ្រើសរើស</option>
+                    <option value="នាយក" className="text-slate-800 font-semibold">នាយក</option>
+                    <option value="នាយិកា" className="text-slate-800 font-semibold">នាយិកា</option>
+                    <option value="នាយករង" className="text-slate-800 font-semibold">នាយករង</option>
+                    <option value="នាយិការង" className="text-slate-800 font-semibold">នាយិការង</option>
+                    <option value="លេខា" className="text-slate-800 font-semibold">លេខា</option>
+                    <option value="គណនេយ្យ" className="text-slate-800 font-semibold">គណនេយ្យ</option>
+                    <option value="បណ្ណារក្ស" className="text-slate-800 font-semibold">បណ្ណារក្ស</option>
+                    <option value="គ្រូបង្រៀន" className="text-slate-800 font-semibold">គ្រូបង្រៀន</option>
+                    <option value="ផ្សេងៗ" className="text-slate-800 font-semibold">ផ្សេងៗ</option>
+                  </select>
                 </div>
 
                 <div className="space-y-1.5">
@@ -1383,6 +1871,18 @@ export default function TeacherManagement({
                     <option value="បឋមសិក្សា" className="text-slate-800 font-semibold">បឋមសិក្សា</option>
                     <option value="ផ្សេងៗ" className="text-slate-800 font-semibold">ផ្សេងៗ</option>
                   </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="teacher-salaryRank-input" className="text-xs font-bold text-slate-600">កាំប្រាក់</label>
+                  <input
+                    id="teacher-salaryRank-input"
+                    type="text"
+                    value={formData.salaryRank || ''}
+                    onChange={e => setFormData({ ...formData, salaryRank: e.target.value })}
+                    placeholder="ឧ. គ.២"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white text-slate-800 font-semibold placeholder:font-normal placeholder:text-slate-400"
+                  />
                 </div>
               </div>
 
@@ -2132,7 +2632,7 @@ export default function TeacherManagement({
                     <span className="col-span-2 text-slate-800 font-semibold">{viewingTeacher.framework || '-'}</span>
 
                     <span className="col-span-1 font-bold">កាំប្រាក់:</span>
-                    <span className="col-span-2 text-slate-800 font-mono font-semibold">{viewingTeacher.salaryRank || '-'}</span>
+                    <span className="col-span-2 text-slate-800 font-sans font-semibold">{viewingTeacher.salaryRank || '-'}</span>
 
                     <span className="col-span-1 font-bold">ថ្ងៃចូលធ្វើការ:</span>
                     <span className="col-span-2 text-slate-800 font-semibold">{formatToDDMMYYYY(viewingTeacher.joinDate)}</span>
@@ -2156,6 +2656,31 @@ export default function TeacherManagement({
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* ៤.៥. DUPLICATE ID ERROR MODAL */}
+      {duplicateIdError && (
+        <div className="fixed inset-0 bg-slate-950/55 backdrop-blur-xs flex items-center justify-center z-[100] p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 border border-slate-100 shadow-2xl flex flex-col items-center text-center space-y-4 animate-scale-up">
+            <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center border border-rose-150 shrink-0">
+              <AlertTriangle className="w-6 h-6 text-rose-500" />
+            </div>
+            <div className="space-y-1.5">
+              <h4 className="font-bold text-slate-800 text-sm font-sans">
+                កំហុស៖ អត្តលេខស្ទួន
+              </h4>
+              <p className="text-xs text-slate-500 leading-relaxed font-medium">
+                {duplicateIdError}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDuplicateIdError(null)}
+              className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-colors shadow-md shadow-rose-200 cursor-pointer"
+            >
+              យល់ព្រម
+            </button>
           </div>
         </div>
       )}

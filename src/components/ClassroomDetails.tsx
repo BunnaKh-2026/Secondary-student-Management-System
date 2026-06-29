@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ArrowLeft, Settings, Users, CheckSquare, Edit, FileText, 
-  Calendar, Award, Plus, Trash2, CheckCircle2, Save, X, Star, Printer 
+  Calendar, Award, Plus, Trash2, CheckCircle2, Save, X, Star, Printer,
+  Search, Eye, Edit2, GraduationCap
 } from 'lucide-react';
 import { 
   Classroom, Student, StudentScore, StudentAttendance, 
-  HomeTeacherTask, PreStartConfig, SubjectConfig, SchoolInfo 
+  HomeTeacherTask, PreStartConfig, SubjectConfig, SchoolInfo,
+  Teacher
 } from '../types';
 import { getDefaultSubjectsForClass } from '../data/subjectLayouts';
 
@@ -66,34 +68,99 @@ const toArabicClassnameWithPrefix = (name: string): string => {
     .replace(/\s+/g, '');
 };
 
+const formatToDDMMYYYY = (dateStr: string): string => {
+  if (!dateStr) return '-';
+  const clean = dateStr.trim();
+  
+  // Try matching standard YYYY-MM-DD
+  const matchIso = clean.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (matchIso) {
+    return `${matchIso[3]}-${matchIso[2]}-${matchIso[1]}`;
+  }
+  
+  // If it matches DD-MM-YYYY or DD/MM/YYYY, return with hyphens
+  const matchDmy = clean.match(/^(\d{2})[-/](\d{2})[-/](\d{4})$/);
+  if (matchDmy) {
+    return `${matchDmy[1]}-${matchDmy[2]}-${matchDmy[3]}`;
+  }
+  
+  // Try fallback parsing via native Date
+  const d = new Date(clean);
+  if (!isNaN(d.getTime())) {
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
+  }
+  
+  return dateStr;
+};
+
+const calculateYearsOfService = (dateStr?: string, teacherServiceLimitDate?: string): number => {
+  if (!dateStr) return 0;
+  const joinDateObj = new Date(dateStr);
+  const today = teacherServiceLimitDate ? new Date(teacherServiceLimitDate) : new Date();
+  if (isNaN(joinDateObj.getTime())) return 0;
+  
+  let diffYears = today.getFullYear() - joinDateObj.getFullYear();
+  const monthDiff = today.getMonth() - joinDateObj.getMonth();
+  const dayDiff = today.getDate() - joinDateObj.getDate();
+  
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+    diffYears--;
+  }
+  return Math.max(0, diffYears);
+};
+
+const calculateTeacherAge = (dobStr: string, teacherAgeLimitDate?: string): string => {
+  if (!dobStr) return '';
+  const birthDate = new Date(dobStr);
+  if (isNaN(birthDate.getTime())) return '';
+  const today = teacherAgeLimitDate ? new Date(teacherAgeLimitDate) : new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age >= 0 ? String(age) : '';
+};
+
 interface ClassroomDetailsProps {
   classroom: Classroom;
+  classrooms: Classroom[];
   students: Student[];
   studentScores: StudentScore[];
   studentAttendance: StudentAttendance[];
   htTasks: HomeTeacherTask[];
   schoolInfo: SchoolInfo;
+  teachers?: Teacher[];
+  onUpdateTeachers?: (teachers: Teacher[]) => void;
   onBack: () => void;
   onUpdatePreStartConfig: (classId: string, config: PreStartConfig) => void;
   onUpdateScores: (scores: StudentScore[]) => void;
   onUpdateAttendance: (attendance: StudentAttendance[]) => void;
   onUpdateHTTasks: (tasks: HomeTeacherTask[]) => void;
+  onUpdateStudents?: (students: Student[]) => void;
   activeTab?: 'config' | 'register' | 'tasks' | 'scores' | 'results' | 'attendance';
   onActiveTabChange?: (tab: 'config' | 'register' | 'tasks' | 'scores' | 'results' | 'attendance') => void;
 }
 
 export default function ClassroomDetails({
   classroom,
+  classrooms,
   students,
   studentScores,
   studentAttendance,
   htTasks,
   schoolInfo,
+  teachers = [],
+  onUpdateTeachers,
   onBack,
   onUpdatePreStartConfig,
   onUpdateScores,
   onUpdateAttendance,
   onUpdateHTTasks,
+  onUpdateStudents,
   activeTab: activeTabProp,
   onActiveTabChange: onActiveTabChangeProp,
 }: ClassroomDetailsProps) {
@@ -129,9 +196,145 @@ export default function ClassroomDetails({
   // Filter students belonging to this class
   const classStudents = useMemo(() => students.filter(s => s.classroomId === classroom.id), [students, classroom]);
 
+  // Student List Search, Filter, Sort States
+  const [searchTerm, setSearchTerm] = useState('');
+  const [classFilter, setClassFilter] = useState(classroom.id); // Defaults to current classroom ID!
+  const [studentSortField, setStudentSortField] = useState<'name' | 'classroom' | null>(null);
+  const [studentSortDirection, setStudentSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [activeSortMenu, setActiveSortMenu] = useState<'name' | 'classroom' | null>(null);
+
+  // Drag and drop states for students list
+  const [draggingStudentId, setDraggingStudentId] = useState<string | null>(null);
+  const [dragOverStudentId, setDragOverStudentId] = useState<string | null>(null);
+
+  // Viewing/editing modals
+  const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
+
+  useEffect(() => {
+    setClassFilter(classroom.id);
+  }, [classroom.id]);
+
+  const calculateAge = (dobString: string, referenceDateString?: string): string => {
+    if (!dobString) return '';
+    const birthDate = new Date(dobString);
+    if (isNaN(birthDate.getTime())) return '';
+    const today = referenceDateString ? new Date(referenceDateString) : new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age >= 0 ? String(age) : '';
+  };
+
+  const filteredStudents = useMemo(() => {
+    const filtered = students.filter(s => {
+      const matchesSearch = s.nameKhmer.includes(searchTerm) || 
+        s.nameLatin.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.studentIdCard.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesClass = classFilter ? s.classroomId === classFilter : true;
+      return matchesSearch && matchesClass;
+    });
+
+    if (!studentSortField) {
+      return filtered;
+    }
+
+    return [...filtered].sort((a, b) => {
+      let comparison = 0;
+      if (studentSortField === 'name') {
+        comparison = a.nameKhmer.localeCompare(b.nameKhmer, 'km');
+      } else if (studentSortField === 'classroom') {
+        const clsA = classrooms.find(c => c.id === a.classroomId)?.name || '';
+        const clsB = classrooms.find(c => c.id === b.classroomId)?.name || '';
+        comparison = clsA.localeCompare(clsB, 'km');
+      }
+      return studentSortDirection === 'asc' ? comparison : -comparison;
+    });
+  }, [students, searchTerm, classFilter, studentSortField, studentSortDirection, classrooms]);
+
+  const handleStudentDragStart = (e: React.DragEvent, id: string) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('input') || target.closest('button') || target.closest('select')) {
+      e.preventDefault();
+      return;
+    }
+    setDraggingStudentId(id);
+  };
+
+  const handleStudentDragOver = (e: React.DragEvent, id: string) => {
+    if (draggingStudentId && draggingStudentId !== id) {
+      e.preventDefault();
+      if (dragOverStudentId !== id) {
+        setDragOverStudentId(id);
+      }
+    }
+  };
+
+  const handleStudentDropRow = (targetId: string) => {
+    if (!draggingStudentId || draggingStudentId === targetId || !onUpdateStudents) return;
+
+    const sourceIndex = students.findIndex(s => s.id === draggingStudentId);
+    const targetIndex = students.findIndex(s => s.id === targetId);
+
+    if (sourceIndex === -1 || targetIndex === -1) return;
+
+    const updated = [...students];
+    const [movedItem] = updated.splice(sourceIndex, 1);
+    updated.splice(targetIndex, 0, movedItem);
+
+    const classroomIdsToUpdate = Array.from(new Set([movedItem.classroomId, students[targetIndex].classroomId]));
+    
+    classroomIdsToUpdate.forEach(classId => {
+      let count = 1;
+      for (let i = 0; i < updated.length; i++) {
+        if (updated[i].classroomId === classId) {
+          updated[i] = {
+            ...updated[i],
+            rollNumber: String(count++)
+          };
+        }
+      }
+    });
+
+    onUpdateStudents(updated);
+
+    setDraggingStudentId(null);
+    setDragOverStudentId(null);
+  };
+
+  const handleStudentDragEnd = () => {
+    setDraggingStudentId(null);
+    setDragOverStudentId(null);
+  };
+
+  const handleDeleteStudent = (studentId: string, nameKhmer: string) => {
+    if (!onUpdateStudents) return;
+    const confirmDelete = window.confirm(`តើអ្នកពិតជាចង់លុបទិន្នន័យរបស់សិស្សឈ្មោះ «${nameKhmer}» មែនទេ?`);
+    if (confirmDelete) {
+      const updated = students.filter(s => s.id !== studentId);
+      onUpdateStudents(updated);
+    }
+  };
+
   // General Month Selector helper mapping
   const allConfigMonths = useMemo(() => [...config.semester1Months, ...config.semester2Months], [config]);
   const [selectedScoreMonth, setSelectedScoreMonth] = useState<string>(allConfigMonths[0] || 'វិច្ឆិកា');
+
+  const selectedTeacher = useMemo(() => {
+    return teachers.find(t => t.classCharge === classroom.name) || null;
+  }, [teachers, classroom.name]);
+
+  // Keep homeTeacherName in PreStartConfig automatically synchronized with the matched teacher
+  useEffect(() => {
+    const correctHTName = selectedTeacher ? selectedTeacher.name : 'មិនទាន់កំណត់';
+    if (config.homeTeacherName !== correctHTName) {
+      onUpdatePreStartConfig(classroom.id, {
+        ...config,
+        homeTeacherName: correctHTName,
+      });
+    }
+  }, [selectedTeacher, config, classroom.id, onUpdatePreStartConfig]);
 
   // Input states for scores layout matrix
   const [editingScoresLocal, setEditingScoresLocal] = useState<{ [studentId: string]: { [subjId: string]: string } }>({});
@@ -375,166 +578,289 @@ export default function ClassroomDetails({
     <div id="classroom-details-roster" className="space-y-6">
       {/* 2. REGISTER TAB - LIST OF CLASSROOM STUDENTS */}
       {activeTab === 'register' && (
-        <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b pb-3 border-slate-100">
+        <div className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs space-y-5 animate-fade-in text-slate-755 w-full max-w-full overflow-hidden">
+          {/* Integrated Header Container */}
+          <div className="border-b border-slate-100 pb-4 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 w-full">
+            {/* Title */}
             <h2 className="font-bold text-slate-800 text-sm flex items-center gap-2">
               <Users className="w-5 h-5 text-teal-600" />
               បញ្ជីឈ្មោះសិស្ស {toArabicClassnameWithPrefix(classroom.name)}
             </h2>
+            
+            {/* Controls Container */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between xl:justify-end gap-3 w-full xl:w-auto">
+              
+              {/* Left Group: Search box */}
+              <div className="flex flex-row items-center gap-2 w-full sm:w-auto min-w-0">
+                {/* Search box */}
+                <div className="relative flex-1 sm:w-44 xl:w-48 sm:shrink-0 min-w-0">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <Search className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    placeholder="ស្វែងរកសិស្ស"
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    className="block w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:ring-1 focus:ring-teal-500 outline-none font-medium"
+                  />
+                </div>
+              </div>
+
+            </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold text-xs">
-                  <th className="px-4 py-3 text-center">លេខរៀង</th>
-                  <th className="px-4 py-3 text-center">អត្តលេខសិស្ស</th>
-                  <th className="px-4 py-3">ឈ្មោះខ្មែរ</th>
-                  <th className="px-4 py-3">ឈ្មោះឡាតាំង</th>
-                  <th className="px-3 py-3 text-center">ភេទ</th>
-                  <th className="px-4 py-3">ថ្ងៃខែឆ្នាំកំណើត</th>
-                  <th className="px-4 py-3">លេខអណាព្យាបាល</th>
-                </tr>
-              </thead>
-              <tbody>
-                {classStudents.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-12 text-center text-slate-400 text-xs font-medium">
-                      មិនទាន់មានសិស្សានុសិស្សត្រូវបានចាត់បញ្ចូលថ្នាក់នេះនៅឡើយទេ។
-                    </td>
+          {/* Students Table */}
+          <div className="border border-slate-200 rounded-none overflow-hidden shadow-xs w-full max-w-full">
+            <div className="overflow-x-auto overflow-y-auto max-h-[550px] scrollbar-thin">
+              <table className="w-full text-left border-collapse table-auto whitespace-nowrap">
+                <thead>
+                  <tr className="bg-emerald-700 text-white font-bold text-xs uppercase sticky top-0 z-10" id="students-list-th-row">
+                    <th className="px-4 py-3 text-center bg-emerald-700">ល.រ</th>
+                    <th className="px-4 py-3 text-center bg-emerald-700">អត្តលេខ</th>
+                    <th className="px-4 py-3 bg-emerald-700">គោត្តនាម-នាម</th>
+                    <th className="px-4 py-3 bg-emerald-700">ឈ្មោះឡាតាំង</th>
+                    <th className="px-3 py-3 text-center bg-emerald-700">ភេទ</th>
+                    <th className="px-4 py-3 text-center bg-emerald-700">ថ្ងៃខែឆ្នាំកំណើត</th>
+                    <th className="px-4 py-3 text-center bg-emerald-700">អាយុ</th>
+                    <th className="px-4 py-3 bg-emerald-700">ថ្នាក់</th>
+                    <th className="px-4 py-3 bg-emerald-700">ទីកន្លែងកំណើត</th>
+                    <th className="px-4 py-3 bg-emerald-700">បញ្ហារបស់សិស្ស</th>
+                    <th className="px-4 py-3 bg-emerald-700">ជនជាតិដើមភាគតិច</th>
+                    <th className="px-4 py-3 bg-emerald-700">ឈ្មោះឪពុក</th>
+                    <th className="px-4 py-3 bg-emerald-700">មុខរបរឪពុក</th>
+                    <th className="px-4 py-3 bg-emerald-700">ឈ្មោះម្ដាយ</th>
+                    <th className="px-4 py-3 bg-emerald-700">មុខរបរម្ដាយ</th>
+                    <th className="px-4 py-3 bg-emerald-700">លេខទូរស័ព្ទអាណាព្យាបាល</th>
+                    <th className="px-4 py-3 bg-emerald-700">ទីលំនៅបច្ចុប្បន្ន</th>
+                    <th className="px-4 py-3 text-right bg-emerald-700">សកម្មភាព</th>
                   </tr>
-                ) : (
-                  classStudents.map(s => (
-                    <tr 
-                      key={s.id} 
-                      className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors text-xs text-slate-700 font-semibold"
-                    >
-                      <td className="px-4 py-3 text-center font-mono text-slate-400">{s.rollNumber}</td>
-                      <td className="px-4 py-3 text-center font-mono font-bold text-teal-600">{s.studentIdCard}</td>
-                      <td className="px-4 py-3 font-bold text-slate-800">{s.nameKhmer}</td>
-                      <td className="px-4 py-3 font-mono text-slate-500 uppercase">{s.nameLatin}</td>
-                      <td className="px-3 py-3 text-center">
-                        <span className={`px-2 py-0.5 rounded-sm text-[10px] font-bold ${
-                          s.gender === 'ប្រុស' ? 'bg-sky-50 text-sky-700' : 'bg-pink-50 text-pink-700'
-                        }`}>
-                          {s.gender}
-                        </span>
+                </thead>
+                <tbody>
+                  {filteredStudents.length === 0 ? (
+                    <tr>
+                      <td colSpan={18} className="px-4 py-12 text-center text-slate-400 text-xs font-semibold">
+                        រកមិនឃើញទិន្នន័យសិស្សានុសិស្សត្រូវបានកំណត់ឡើយ។
                       </td>
-                      <td className="px-4 py-3 font-sans">{s.dob || '---'}</td>
-                      <td className="px-4 py-3 font-sans text-slate-500">{s.parentPhone}</td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    filteredStudents.map((s, idx) => {
+                      const cls = classrooms.find(c => c.id === s.classroomId);
+                      return (
+                        <tr 
+                          key={s.id} 
+                          className="border-b border-slate-100 transition-colors text-xs text-slate-700 font-medium group/row whitespace-nowrap hover:bg-slate-50/50"
+                        >
+                          <td className="px-4 py-3 text-center font-bold text-slate-400 whitespace-nowrap select-none">
+                            {s.rollNumber}
+                          </td>
+                          <td className="px-4 py-3 text-center font-mono font-semibold text-teal-600 bg-slate-50/30">{s.studentIdCard}</td>
+                          <td className="px-4 py-3 font-bold text-slate-800">
+                            <div className="flex items-center gap-2">
+                              {s.photoUrl ? (
+                                <img 
+                                  src={s.photoUrl} 
+                                  alt="រូបថតសិស្ស" 
+                                  className="w-6 h-6 rounded-full object-cover border border-slate-200 shrink-0"
+                                  referrerPolicy="no-referrer"
+                                />
+                              ) : (
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] text-white font-bold shrink-0 shadow-xs ${
+                                  s.gender === 'ប្រុស' ? 'bg-sky-500' : 'bg-pink-500'
+                                }`}>
+                                  {s.gender === 'ប្រុស' ? 'ប្រ' : 'ស្រ'}
+                                </div>
+                              )}
+                              <span>{s.nameKhmer}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 font-bold text-slate-600 font-mono">
+                            {s.nameLatin || '-'}
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            <span className={`text-xs font-bold ${
+                              s.gender === 'ប្រុស' ? 'text-sky-600' : 'text-pink-600'
+                            }`}>
+                              {s.gender || '-'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center text-slate-700 font-mono">
+                            {s.dob ? s.dob.split('-').reverse().join('-') : '-'}
+                          </td>
+                          <td className="px-4 py-3 text-center text-slate-755 font-bold">
+                            {calculateAge(s.dob, schoolInfo.studentAgeLimitDate) ? `${calculateAge(s.dob, schoolInfo.studentAgeLimitDate)} ឆ្នាំ` : '-'}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="font-bold text-slate-600">
+                              {cls ? toArabicClassname(cls.name) : '-'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-slate-600 max-w-xs truncate" title={s.pob}>
+                            {s.pob || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-amber-700 font-bold">
+                            {s.studentIssue || 'គ្មាន'}
+                          </td>
+                          <td className="px-4 py-3 text-center font-bold text-slate-600">
+                            {s.indigenousGroup || 'ទេ'}
+                          </td>
+                          <td className="px-4 py-3 text-slate-700 font-bold">
+                            {s.fatherName || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-slate-600">
+                            {s.fatherOccupation || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-slate-700 font-bold">
+                            {s.motherName || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-slate-600">
+                            {s.motherOccupation || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-center font-mono text-slate-700 font-bold">
+                            {s.parentPhone || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-slate-600 max-w-xs truncate" title={s.currentAddress}>
+                            {s.currentAddress || '-'}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => setViewingStudent(s)}
+                                title="មើលព័ត៌មានលម្អិត"
+                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg cursor-pointer"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
 
-      {/* 1. CONFIG START TAB - ព័ត៌មានមុនចាប់ផ្ដើម */}
+      {/* 1. CONFIG START TAB - ព័ត៌មានគ្រូទទួលបន្ទុកថ្នាក់ */}
       {activeTab === 'config' && (
         <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm space-y-6">
-          <div className="space-y-1 border-b border-slate-100 pb-3">
-            <h2 className="font-bold text-slate-800 text-lg">ព័ត៌មានមុនចាប់ផ្ដើម (កំណត់លក្ខខណ្ឌថ្នាក់សិក្សា)</h2>
-            <p className="text-slate-500 text-xs">កំណត់គ្រូបន្ទុកថ្នាក់ កាលបរិច្ឆេទខែសិក្សា ចាត់ចែងមុខវិជ្ជាសកម្ម និងមេគុណសម្រាប់ឆមាសនីមួយៗ</p>
+          <div className="space-y-1 border-b border-slate-100 pb-4">
+            <h2 className="font-bold text-slate-800 text-lg">ព័ត៌មានគ្រូទទួលបន្ទុកថ្នាក់</h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* General parameters */}
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <label htmlFor="config-home-teacher-input" className="text-xs font-bold text-slate-600 block">១. គ្រូបន្ទុកថ្នាក់បច្ចុប្បន្ន</label>
-                <input
-                  id="config-home-teacher-input"
-                  type="text"
-                  value={configHTName}
-                  onChange={e => setConfigHTName(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
-                />
-              </div>
+          <div className="max-w-4xl mx-auto">
+            {selectedTeacher ? (
+              <div className="bg-gradient-to-br from-slate-50 to-slate-100/50 border border-slate-150 rounded-2xl p-6 md:p-8 space-y-6 shadow-xs">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+                  {selectedTeacher.photoUrl ? (
+                    <img
+                      src={selectedTeacher.photoUrl}
+                      alt={selectedTeacher.name}
+                      referrerPolicy="no-referrer"
+                      className="w-24 h-32 rounded-2xl object-contain bg-slate-100 border-4 border-white shadow-md"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-2xl bg-teal-600 text-white flex items-center justify-center text-3xl font-bold uppercase border-4 border-white shadow-md">
+                      {selectedTeacher.name.charAt(0)}
+                    </div>
+                  )}
+                  <div className="text-center sm:text-left space-y-2">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-100/70 text-teal-800 font-bold text-[10px]">
+                      គ្រូទទួលបន្ទុកថ្នាក់ផ្លូវការ
+                    </span>
+                    <h3 className="font-bold text-slate-800 text-xl flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                      {selectedTeacher.name}
+                      {selectedTeacher.nameLatin && (
+                        <span className="font-mono text-xs text-slate-400 font-semibold uppercase bg-slate-200/60 px-2 py-0.5 rounded-md">
+                          {selectedTeacher.nameLatin}
+                        </span>
+                      )}
+                    </h3>
+                    <p className="text-xs text-slate-500 font-medium">អត្តលេខបុគ្គលិក៖ {selectedTeacher.idNumber}</p>
+                  </div>
+                </div>
 
-              <div className="space-y-1.5">
-                <label htmlFor="config-year-input" className="text-xs font-bold text-slate-600 block">២. ឆ្នាំសិក្សាសាលា</label>
-                <input
-                  id="config-year-input"
-                  type="text"
-                  value={configYear}
-                  onChange={e => setConfigYear(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
-                />
-              </div>
+                <hr className="border-slate-200/60" />
 
-              {/* Toggle averaging months */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-600 block">៣. ជ្រើសរើសខែយកមកបូកបញ្ចូលមធ្យមពិន្ទុ</label>
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {allConfigMonths.map(mon => {
-                    const isSel = activeMonthsLocal.includes(mon);
-                    return (
-                      <button
-                        key={mon}
-                        type="button"
-                        onClick={() => handleToggleMonthAverage(mon)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition ${
-                          isSel
-                            ? 'bg-teal-600 border-teal-600 text-white'
-                            : 'bg-white border-slate-250 text-slate-600'
-                        }`}
-                      >
-                        {mon} {isSel && '✓'}
-                      </button>
-                    );
-                  })}
+                {/* Info Grid - 1 column on mobile, 2 columns on medium screens and up */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  {/* Left Column: Personal info */}
+                  <div className="bg-white p-4 rounded-xl border border-slate-100 space-y-3 shadow-xs">
+                    <h5 className="font-bold text-emerald-800 border-b border-slate-100 pb-1.5 flex items-center gap-1.5 text-xs">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      ព័ត៌មានផ្ទាល់ខ្លួន
+                    </h5>
+                    <div className="grid grid-cols-3 gap-y-2 text-slate-600">
+                      <span className="col-span-1 font-bold">ភេទ:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold">{selectedTeacher.gender}</span>
+
+                      <span className="col-span-1 font-bold">ថ្ងៃខែឆ្នាំកំណើត:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold">{formatToDDMMYYYY(selectedTeacher.dob)}</span>
+                      
+                      <span className="col-span-1 font-bold">អាយុ:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold">{calculateTeacherAge(selectedTeacher.dob, schoolInfo.teacherAgeLimitDate) ? `${calculateTeacherAge(selectedTeacher.dob, schoolInfo.teacherAgeLimitDate)} ឆ្នាំ` : '-'}</span>
+                      
+                      <span className="col-span-1 font-bold">លេខទូរស័ព្ទ:</span>
+                      <span className="col-span-2 text-slate-800 font-mono font-semibold">{selectedTeacher.phone || '-'}</span>
+
+                      <span className="col-span-1 font-bold">ជនជាតិភាគតិច:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold">{selectedTeacher.ethnicity || 'ទេ'}</span>
+
+                      <span className="col-span-1 font-bold">កម្រិតវប្បធម៌:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold">{selectedTeacher.educationLevel || '-'}</span>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Work info */}
+                  <div className="bg-white p-4 rounded-xl border border-slate-100 space-y-3 shadow-xs">
+                    <h5 className="font-bold text-emerald-800 border-b border-slate-100 pb-1.5 flex items-center gap-1.5 text-xs">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      ព័ត៌មានបម្រើការងារ
+                    </h5>
+                    <div className="grid grid-cols-3 gap-y-2 text-slate-600">
+                      <span className="col-span-1 font-bold">ឯកទេស:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold">{selectedTeacher.subject}</span>
+                      
+                      <span className="col-span-1 font-bold">មុខវិជ្ជាបង្រៀន:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold">{selectedTeacher.teachingSubjects || '-'}</span>
+                      
+                      <span className="col-span-1 font-bold">បន្ទុកថ្នាក់:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 font-bold text-[11px]">
+                          {selectedTeacher.classCharge ? toArabicClassnameWithPrefix(selectedTeacher.classCharge) : '-'}
+                        </span>
+                      </span>
+
+                      <span className="col-span-1 font-bold">ក្របខ័ណ្ឌ:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold">{selectedTeacher.framework || '-'}</span>
+
+                      <span className="col-span-1 font-bold">កាំប្រាក់:</span>
+                      <span className="col-span-2 text-slate-800 font-mono font-semibold">{selectedTeacher.salaryRank || '-'}</span>
+
+                      <span className="col-span-1 font-bold">ថ្ងៃចូលធ្វើការ:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold">{formatToDDMMYYYY(selectedTeacher.joinDate || '')}</span>
+
+                      <span className="col-span-1 font-bold">ឆ្នាំបម្រើការ:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold">{calculateYearsOfService(selectedTeacher.joinDate, schoolInfo.teacherServiceLimitDate) ? `${calculateYearsOfService(selectedTeacher.joinDate, schoolInfo.teacherServiceLimitDate)} ឆ្នាំ` : '-'}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-
-            {/* Subject weight coefficients and toggles */}
-            <div className="space-y-3">
-              <label className="text-xs font-bold text-slate-600 block">៤. មុខវិជ្ជាសកម្ម & កំណត់មេគុណស្ដង់ដារ</label>
-              <div className="border border-slate-100 rounded-xl overflow-hidden max-h-72 overflow-y-auto divide-y divide-slate-100">
-                {subjectsLocal.map(subj => (
-                  <div key={subj.id} className="p-3 flex items-center justify-between text-xs bg-slate-50/30">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={subj.isActive}
-                        onChange={() => handleToggleSubjectActive(subj.id)}
-                        className="w-4 h-4 text-teal-600 border-slate-200 focus:ring-teal-500 rounded"
-                      />
-                      <span className={`font-bold ${subj.isActive ? 'text-slate-800' : 'text-slate-400 line-through'}`}>
-                        {subj.name}
-                      </span>
-                    </div>
-
-                    {subj.isActive && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-slate-400 font-semibold">មេគុណ៖</span>
-                        <input
-                          type="number"
-                          step="0.5"
-                          min="1"
-                          max="4"
-                          value={subj.coefficient}
-                          onChange={e => handleUpdateSubjectCoeff(subj.id, parseFloat(e.target.value) || 1)}
-                          className="w-12 px-1.5 py-0.5 bg-white border border-slate-200 rounded text-center text-xs font-bold text-teal-700"
-                        />
-                      </div>
-                    )}
-                  </div>
-                ))}
+            ) : (
+              <div className="min-h-[250px] border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center p-8 text-center space-y-3 bg-slate-50/50">
+                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200">
+                  <Users className="w-6 h-6" />
+                </div>
+                <h4 className="font-bold text-slate-700 text-sm KhmerOS">មិនទាន់មានគ្រូទទួលបន្ទុកថ្នាក់នៅឡើយទេ</h4>
+                <p className="text-xs text-slate-400 max-w-md leading-relaxed">
+                  សូមចូលទៅកាន់ផ្នែក <span className="font-bold text-slate-600">«ព័ត៌មានគ្រូបង្រៀន»</span> រួចចុះឈ្មោះ ឬកែសម្រួលព័ត៌មានគ្រូបង្រៀនដោយកំណត់ជ្រើសរើស <span className="font-bold text-teal-600">«បន្ទុកថ្នាក់»</span> របស់គាត់ឱ្យមកថ្នាក់ <span className="font-bold text-teal-600">{toArabicClassnameWithPrefix(classroom.name)}</span> នេះ។
+                </p>
               </div>
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-slate-100 flex justify-end">
-            <button
-              onClick={handleSaveConfig}
-              className="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs cursor-pointer"
-            >
-              <Save className="w-4 h-4" />
-              រក្សាទុកការកំណត់ទាំងអស់
-            </button>
+            )}
           </div>
         </div>
       )}
@@ -1046,6 +1372,162 @@ export default function ClassroomDetails({
           </div>
         </div>
       )}
+
+      {/* VIEW STUDENT DETAILS MODAL */}
+      {viewingStudent && (() => {
+        const cls = classrooms.find(c => c.id === viewingStudent.classroomId);
+        const className = cls ? toArabicClassname(cls.name) : '-';
+        return (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl max-w-2xl w-full overflow-hidden border border-slate-100 shadow-xl flex flex-col">
+              {/* Header */}
+              <div className="px-5 py-3.5 bg-emerald-700 text-white flex items-center justify-between">
+                <h3 className="font-bold text-xs flex items-center gap-2">
+                  <GraduationCap className="w-4 h-4" />
+                  <span>ព័ត៌មានលម្អិតរបស់សិស្សានុសិស្ស</span>
+                </h3>
+                <button 
+                  onClick={() => setViewingStudent(null)}
+                  className="p-1 hover:bg-emerald-800 rounded-full text-white/80 hover:text-white transition cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Profile Content - scrollable on mobile */}
+              <div className="p-4 space-y-3 overflow-y-auto max-h-[75vh] md:max-h-none md:overflow-visible">
+                {/* Top Summary Banner */}
+                <div className="flex items-center gap-4 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100/60">
+                  {viewingStudent.photoUrl ? (
+                    <img 
+                      src={viewingStudent.photoUrl} 
+                      alt={viewingStudent.nameKhmer} 
+                      className="w-24 h-30 rounded-lg object-cover object-top border-2 border-emerald-200 shrink-0 shadow-sm"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className={`w-24 h-30 rounded-lg flex flex-col items-center justify-center text-sm text-white font-bold shrink-0 shadow-sm ${
+                      viewingStudent.gender === 'ប្រុស' ? 'bg-sky-500' : 'bg-pink-500'
+                    }`}>
+                      <span className="text-xl mb-1">
+                        {viewingStudent.gender === 'ប្រុស' ? 'ប' : 'ស'}
+                      </span>
+                      <span className="text-[10px] opacity-80">
+                        {viewingStudent.gender || 'សិស្ស'}
+                      </span>
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-bold text-slate-800">
+                      {viewingStudent.nameKhmer}
+                    </h4>
+                    <div className="flex flex-col gap-1.5 mt-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-500 font-bold min-w-[75px]">ភេទ៖</span>
+                        <span className={`px-1.5 py-0.5 rounded-sm text-[9px] font-bold ${
+                          viewingStudent.gender === 'ប្រុស' ? 'bg-sky-100 text-sky-800' : 'bg-pink-100 text-pink-800'
+                        }`}>
+                          {viewingStudent.gender}
+                        </span>
+                      </div>
+                      {viewingStudent.studentIdCard && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-slate-500 font-bold min-w-[75px]">អត្តលេខសិស្ស៖</span>
+                          <span className="text-[10px] font-mono font-bold text-teal-600 bg-slate-100 px-1.5 py-0.5 rounded-sm">
+                            {viewingStudent.studentIdCard}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-500 font-bold min-w-[75px]">ថ្នាក់៖</span>
+                        <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded-sm">
+                          {className}
+                        </span>
+                      </div>
+                      {viewingStudent.rollNumber && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-slate-500 font-bold min-w-[75px]">លេខរៀងបញ្ជី៖</span>
+                          <span className="text-[10px] font-bold text-purple-800 bg-purple-50 px-1.5 py-0.5 rounded-sm">
+                            {viewingStudent.rollNumber}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Info Grid - 1 column on mobile, 2 columns on medium screens and up */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
+                  {/* Left Column: Personal info */}
+                  <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100 space-y-1.5">
+                    <h5 className="font-bold text-emerald-800 border-b border-slate-100 pb-1 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      ព័ត៌មានផ្ទាល់ខ្លួន
+                    </h5>
+                    <div className="grid grid-cols-3 gap-y-1.5 text-slate-650">
+                      <span className="col-span-1 font-bold">ថ្ងៃខែឆ្នាំកំណើត:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold">{viewingStudent.dob ? viewingStudent.dob.split('-').reverse().join('-') : '-'}</span>
+                      
+                      <span className="col-span-1 font-bold">អាយុ:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold">
+                        {calculateAge(viewingStudent.dob, schoolInfo.studentAgeLimitDate) ? `${calculateAge(viewingStudent.dob, schoolInfo.studentAgeLimitDate)} ឆ្នាំ` : '-'}
+                      </span>
+                      
+                      <span className="col-span-1 font-bold">ទីកន្លែងកំណើត:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold leading-relaxed">
+                        {viewingStudent.pob || '-'}
+                      </span>
+
+                      <span className="col-span-1 font-bold">ជនជាតិភាគតិច:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold">{viewingStudent.indigenousGroup || 'ទេ'}</span>
+
+                      <span className="col-span-1 font-bold">បញ្ហាផ្សេងៗ:</span>
+                      <span className="col-span-2 text-red-700 font-bold leading-relaxed">{viewingStudent.studentIssue || 'គ្មាន'}</span>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Family / Address info */}
+                  <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100 space-y-1.5">
+                    <h5 className="font-bold text-emerald-800 border-b border-slate-100 pb-1 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      ព័ត៌មានគ្រួសារ និងស្នាក់នៅ
+                    </h5>
+                    <div className="grid grid-cols-3 gap-y-1.5 text-slate-650">
+                      <span className="col-span-1 font-bold">ឈ្មោះឪពុក:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold">{viewingStudent.fatherName || '-'} ({viewingStudent.fatherOccupation || '-'})</span>
+                      
+                      <span className="col-span-1 font-bold">ឈ្មោះម្តាយ:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold">{viewingStudent.motherName || '-'} ({viewingStudent.motherOccupation || '-'})</span>
+                      
+                      <span className="col-span-1 font-bold">លេខទូរស័ព្ទ:</span>
+                      <span className="col-span-2 text-slate-800 font-mono font-semibold">
+                        {viewingStudent.parentPhone || '-'}
+                        {viewingStudent.parentPhone2 ? ` / ${viewingStudent.parentPhone2}` : ''}
+                      </span>
+
+                      <span className="col-span-1 font-bold">អាសយដ្ឋានបច្ចុប្បន្ន:</span>
+                      <span className="col-span-2 text-slate-800 font-semibold leading-relaxed">
+                        {viewingStudent.currentAddress || '-'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons inside footer */}
+                <div className="flex justify-end pt-1.5 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setViewingStudent(null)}
+                    className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold cursor-pointer transition-colors"
+                  >
+                    បិទផ្ទាំង
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
