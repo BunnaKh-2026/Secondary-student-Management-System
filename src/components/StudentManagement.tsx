@@ -1291,21 +1291,21 @@ export default function StudentManagement({
 
     // Construct composite Place of Birth string
     const pobParts = [
-      studentForm.pobVillage ? `ភូមិ${studentForm.pobVillage.replace(/^ភូមិ/, '')}` : '',
-      studentForm.pobCommune ? `ឃុំ/សង្កាត់${studentForm.pobCommune.replace(/^(ឃុំ|សង្កាត់)/, '')}` : '',
-      studentForm.pobDistrict ? `ស្រុក/ក្រុង/ខណ្ឌ${studentForm.pobDistrict.replace(/^(ស្រុក|ក្រុង|ខណ្ឌ)/, '')}` : '',
-      studentForm.pobProvince ? `ខេត្ត/ក្រុង${studentForm.pobProvince.replace(/^(ខេត្ត|ក្រុង|រាជធានី)/, '')}` : '',
+      studentForm.pobVillage,
+      studentForm.pobCommune,
+      studentForm.pobDistrict,
+      studentForm.pobProvince
     ].filter(Boolean);
-    const combinedPob = pobParts.join(', ') || studentForm.pob || '';
+    const combinedPob = pobParts.join(' ') || studentForm.pob || '';
 
     // Construct composite Current Address string
     const currParts = [
-      studentForm.currentAddressVillage ? `ភូមិ${studentForm.currentAddressVillage.replace(/^ភូមិ/, '')}` : '',
-      studentForm.currentAddressCommune ? `ឃុំ/សង្កាត់${studentForm.currentAddressCommune.replace(/^(ឃុំ|សង្កាត់)/, '')}` : '',
-      studentForm.currentAddressDistrict ? `ស្រុក/ក្រុង/ខណ្ឌ${studentForm.currentAddressDistrict.replace(/^(ស្រុក|ក្រុង|ខណ្ឌ)/, '')}` : '',
-      studentForm.currentAddressProvince ? `ខេត្ត/ក្រុង${studentForm.currentAddressProvince.replace(/^(ខេត្ត|ក្រុង|រាជធានី)/, '')}` : '',
+      studentForm.currentAddressVillage,
+      studentForm.currentAddressCommune,
+      studentForm.currentAddressDistrict,
+      studentForm.currentAddressProvince
     ].filter(Boolean);
-    const combinedCurrentAddress = currParts.join(', ') || studentForm.currentAddress || '';
+    const combinedCurrentAddress = currParts.join(' ') || studentForm.currentAddress || '';
 
     const finalFormData = {
       ...studentForm,
@@ -1470,7 +1470,7 @@ export default function StudentManagement({
   const header = getHeaderDetails();
 
   return (
-    <div id="school-students-section" className="space-y-6 w-full max-w-full overflow-hidden">
+    <div id="school-students-section" className={`space-y-6 w-full max-w-full overflow-hidden ${activeSubTab === 'students' ? 'flex-1 flex flex-col h-full min-h-0' : ''}`}>
       {/* Header Panel with White Background "ក្បាលទំព័រ ត្រូវបន្ថែមផ្ទៃសពីខាងក្រោយ" */}
       {activeSubTab !== 'classes_list' && activeSubTab !== 'students' && activeSubTab !== 'coefficients' && activeSubTab !== 'months' && activeSubTab !== 'classes' && (
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-1">
@@ -1736,22 +1736,22 @@ export default function StudentManagement({
             document.body
           )}
 
-          <div className="border border-slate-100 rounded-none overflow-hidden shadow-xs">
+          <div className="border border-slate-100 rounded-xl overflow-hidden shadow-xs">
             <div className="overflow-x-auto">
               <table className="w-full table-auto text-left whitespace-nowrap border-collapse">
                 <thead>
                   <tr className="bg-emerald-700 text-white text-xs font-semibold tracking-wider border-b border-emerald-800" id="classroom-list-th-row">
-                    <th className="py-3 px-4 text-center font-bold">ល.រ</th>
-                    <th className="py-3 px-3 font-bold">កម្រិតថ្នាក់</th>
-                    <th className="py-3 px-3 text-center font-bold">ក្រុមថ្នាក់</th>
-                    <th className="py-3 px-3 font-bold">ប្រភេទថ្នាក់</th>
-                    <th className="py-3 px-4 text-center font-bold">សកម្មភាព</th>
+                    <th className="py-3 px-4 text-center font-bold border-l border-r border-b border-white/30">ល.រ</th>
+                    <th className="py-3 px-3 font-bold border-r border-b border-white/30">កម្រិតថ្នាក់</th>
+                    <th className="py-3 px-3 text-center font-bold border-r border-b border-white/30">ក្រុមថ្នាក់</th>
+                    <th className="py-3 px-3 font-bold border-r border-b border-white/30">ប្រភេទថ្នាក់</th>
+                    <th className="py-3 px-4 text-center font-bold border-b border-white/30">សកម្មភាព</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-emerald-600 text-xs text-slate-755">
+                <tbody className="text-xs text-slate-755">
                   {classrooms.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-8 text-center text-slate-400 font-bold">
+                      <td colSpan={5} className="py-8 text-center text-slate-400 font-bold border border-slate-100">
                         មិនទាន់មានថ្នាក់រៀននៅឡើយទេ។ សូមបង្កើតថ្នាក់ថ្មី!
                       </td>
                     </tr>
@@ -1761,22 +1761,22 @@ export default function StudentManagement({
                       const calculatedGroup = cls.classGroup || (cls.name || '').replace(/[^a-zA-Z]/g, '').trim() || 'A';
                       const calculatedType = cls.classType || ((cls.name || '').includes('(SC)') ? 'វិទ្យាសាស្ត្រ (SC)' : (cls.name || '').includes('(SS)') ? 'សង្គម (SS)' : 'ទូទៅ');
                       return (
-                        <tr key={cls.id} className="border-b border-emerald-600 hover:bg-slate-50/50 transition-colors">
-                          <td className="py-3 px-4 text-center font-bold text-slate-400">{idx + 1}</td>
-                          <td className="py-3 px-3 font-semibold">ថ្នាក់ទី {calculatedGrade}</td>
-                          <td className="py-3 px-3 text-center font-bold text-indigo-650 font-sans">{calculatedGroup}</td>
-                          <td className="py-3 px-3">
-                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                        <tr key={cls.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                          <td className="py-3 px-4 text-center font-bold text-slate-400 border-l border-r border-slate-100">{idx + 1}</td>
+                          <td className="py-3 px-3 font-semibold border-r border-slate-100">ថ្នាក់ទី {calculatedGrade}</td>
+                          <td className="py-3 px-3 text-center font-bold text-indigo-650 font-sans border-r border-slate-100">{calculatedGroup}</td>
+                          <td className="py-3 px-3 text-center border-r border-slate-100">
+                            <span className={`font-bold text-[11px] ${
                               calculatedType.includes('(SC)') || calculatedType.includes('វិទ្យាសាស្ត្រ')
-                                ? 'bg-amber-50 text-amber-700'
+                                ? 'text-amber-700'
                                 : calculatedType.includes('(SS)') || calculatedType.includes('សង្គម')
-                                ? 'bg-cyan-50 text-cyan-700'
-                                : 'bg-slate-100 text-slate-600'
+                                ? 'text-cyan-700'
+                                : 'text-slate-600'
                             }`}>
                               {calculatedType}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-center">
+                          <td className="py-3 px-4 text-center border-r border-slate-100">
                             <button
                               onClick={() => {
                                 setEditingClassroom(cls);
@@ -2147,23 +2147,23 @@ export default function StudentManagement({
                           <span className="font-extrabold text-slate-700">
                             ថ្នាក់អនុវត្ត ({catClassrooms.length})៖
                           </span>
-                          <span className="font-extrabold text-violet-700 bg-violet-100/80 border border-violet-200 px-2 py-0.5 rounded-md shadow-2xs">
+                          <span className="font-extrabold text-violet-700 bg-violet-100/80 px-2 py-0.5 rounded-md">
                             {catClassrooms.map(c => toArabicClassname(c.name || '')).join(', ')}
                           </span>
                         </div>
                       </div>
 
                       {/* Table of Subjects (Single layout / under each other, compact length) */}
-                      <div className="max-h-[460px] overflow-x-auto overflow-y-auto pr-1 border border-slate-100 rounded-lg shadow-2xs">
+                      <div className="max-h-[460px] overflow-x-auto overflow-y-auto pr-1 border border-slate-100 rounded-xl overflow-hidden shadow-2xs">
                         <table className="w-full min-w-[400px] text-left text-xs border-collapse">
                           <thead>
                             <tr className="bg-emerald-700 text-white font-extrabold select-none sticky top-0 z-10 whitespace-nowrap text-center" id="coefficients-list-th-row">
-                              <th className="p-2 text-center w-12 border-r border-emerald-800 whitespace-nowrap">ល.រ</th>
-                              <th className="p-2 text-center w-24 border-r border-emerald-800 whitespace-nowrap">កូដមុខវិជ្ជា</th>
-                              <th className="p-2 text-center w-28 border-r border-emerald-800 whitespace-nowrap">មុខវិជ្ជា</th>
-                              <th className="p-2 text-center w-24 border-r border-emerald-800 whitespace-nowrap">ពិន្ទុអតិបរមា</th>
-                              <th className="p-2 text-center w-16 border-r border-emerald-800 whitespace-nowrap">មេគុណ</th>
-                              <th className="p-2 text-center w-20 text-white whitespace-nowrap">សកម្មភាព</th>
+                              <th className="p-2 text-center w-12 border-l border-r border-b border-white/30 whitespace-nowrap">ល.រ</th>
+                              <th className="p-2 text-center w-24 border-r border-b border-white/30 whitespace-nowrap">កូដមុខវិជ្ជា</th>
+                              <th className="p-2 text-center w-28 border-r border-b border-white/30 whitespace-nowrap">មុខវិជ្ជា</th>
+                              <th className="p-2 text-center w-24 border-r border-b border-white/30 whitespace-nowrap">ពិន្ទុអតិបរមា</th>
+                              <th className="p-2 text-center w-16 border-r border-b border-white/30 whitespace-nowrap">មេគុណ</th>
+                              <th className="p-2 text-center w-20 border-b border-white/30 text-white whitespace-nowrap">សកម្មភាព</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -2196,14 +2196,14 @@ export default function StudentManagement({
                                     }
                                   }}
                                   onDragEnd={handleDragEnd}
-                                  className={`border-b border-emerald-600 transition-all duration-150 group/row whitespace-nowrap
+                                  className={`border-b border-slate-100 transition-all duration-150 group/row whitespace-nowrap
                                     text-slate-800
                                     ${draggingInfo?.catId === cat.id && draggingInfo?.index === idx ? 'opacity-40 bg-violet-50/20' : ''}
                                     ${dragOverInfo?.catId === cat.id && dragOverInfo?.index === idx ? 'bg-violet-50/40 border-y-2 border-violet-200' : 'hover:bg-slate-50/50'}
                                   `}
                                 >
                                   {/* Index column with grip handle */}
-                                  <td className="p-2 text-center font-bold text-slate-500 font-sans select-none whitespace-nowrap">
+                                  <td className="p-2 text-center font-bold text-slate-500 font-sans select-none whitespace-nowrap border-l border-r border-b border-slate-100">
                                     <div className="flex items-center justify-center gap-1">
                                       <GripVertical className="w-3.5 h-3.5 text-slate-400 group-hover/row:text-violet-500 hover:text-violet-600 transition-colors cursor-grab active:cursor-grabbing shrink-0" />
                                       <span>{idx + 1}</span>
@@ -2211,42 +2211,38 @@ export default function StudentManagement({
                                   </td>
 
                                   {/* Subject Code column */}
-                                  <td className="p-2 text-center font-bold font-mono text-[11px] text-slate-600 whitespace-nowrap" title={currentCode}>
-                                    <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded-md font-semibold border border-slate-200/50">
-                                      {currentCode}
-                                    </span>
+                                  <td className="p-2 text-center font-bold font-mono text-[11px] text-slate-700 whitespace-nowrap border-r border-b border-slate-100" title={currentCode}>
+                                    {currentCode}
                                   </td>
 
                                   {/* Subject name column */}
-                                  <td className="p-2 text-left pl-4 font-bold font-sans whitespace-nowrap" title={s.name}>
+                                  <td className="p-2 text-left pl-4 font-bold font-sans whitespace-nowrap border-r border-b border-slate-100" title={s.name}>
                                     <span className="text-slate-800 font-extrabold">
                                       {s.name}
                                     </span>
                                   </td>
 
                                   {/* Max Score Input column */}
-                                  <td className="p-2 text-center whitespace-nowrap">
-                                    <div className="inline-flex items-center justify-center bg-white border border-slate-200 rounded-md px-1 py-0.5">
-                                      <input
-                                        type="number"
-                                        min="0"
-                                        max="500"
-                                        value={mx === 0 ? '' : mx}
-                                        onChange={e => handleCategoryMaxScoreChange(cat.id, s.id, parseFloat(e.target.value) || 0)}
-                                        className="w-10 text-center font-extrabold text-violet-700 outline-none text-[11px] font-sans"
-                                      />
-                                    </div>
+                                  <td className="p-2 text-center whitespace-nowrap border-r border-b border-slate-100">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="500"
+                                      value={mx === 0 ? '' : mx}
+                                      onChange={e => handleCategoryMaxScoreChange(cat.id, s.id, parseFloat(e.target.value) || 0)}
+                                      className="w-14 text-center font-extrabold text-violet-700 bg-transparent outline-none text-[11px] font-sans focus:ring-0 focus:outline-none"
+                                    />
                                   </td>
 
                                   {/* Calculated Coefficient column */}
-                                  <td className="p-2 text-center whitespace-nowrap">
-                                    <span className="text-[10px] font-extrabold bg-violet-50 text-violet-700 border border-violet-100 rounded-md px-1.5 py-0.5 select-none font-sans inline-block whitespace-nowrap">
+                                  <td className="p-2 text-center whitespace-nowrap border-r border-b border-slate-100">
+                                    <span className="text-[11px] font-extrabold text-violet-700 select-none font-sans inline-block whitespace-nowrap">
                                       {`${(mx / 50).toFixed(1).replace(/\.0$/, '')}`}
                                     </span>
                                   </td>
 
                                   {/* Action column with Edit & Delete */}
-                                  <td className="p-2 text-center whitespace-nowrap">
+                                  <td className="p-2 text-center whitespace-nowrap border-b border-slate-100">
                                     <div className="flex items-center justify-center gap-1.5">
                                       <button
                                         type="button"
@@ -2459,7 +2455,7 @@ export default function StudentManagement({
 
       {/* ៤.១. SUBTAB: STUDENT PROFILE CARDS DIRECTORY */}
       {activeSubTab === 'students' && (
-        <div className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs space-y-5 animate-fade-in text-slate-755 w-full max-w-full overflow-hidden">
+        <div className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs space-y-5 animate-fade-in text-slate-755 w-full max-w-full overflow-hidden flex-1 flex flex-col min-h-0">
           {/* Integrated Header Container */}
           <div className="border-b border-slate-100 pb-4 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 w-full">
             {/* Title: On desktop (xl and up), this is on the left. On mobile/tablet, it is on its own top row. */}
@@ -2540,22 +2536,22 @@ export default function StudentManagement({
           </div>
 
           {/* Students Table */}
-          <div className="border border-slate-200 rounded-none overflow-hidden shadow-xs w-full max-w-full">
-            <div className="overflow-x-auto overflow-y-auto max-h-[550px] scrollbar-thin">
+          <div className="border border-slate-200 rounded-xl shadow-xs flex-1 flex flex-col overflow-hidden min-h-0 w-full max-w-full">
+            <div className="flex-1 overflow-y-auto overflow-x-auto min-h-0 scrollbar-thin">
               <table className="w-full text-left border-collapse table-auto whitespace-nowrap">
                 <thead className="sticky top-0 z-20 bg-emerald-700 whitespace-nowrap">
                   <tr className="bg-emerald-700 text-white font-bold text-xs uppercase whitespace-nowrap" id="students-list-th-row">
-                    <th className="px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-l border-r border-b border-white" rowSpan={2}>ល.រ</th>
-                    <th className="px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>អត្តលេខ</th>
+                    <th className="w-[70px] min-w-[70px] max-w-[70px] px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-l border-r border-b border-white/30 sticky left-0 z-30" rowSpan={2}>ល.រ</th>
+                    <th className="w-[110px] min-w-[110px] max-w-[110px] px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-r border-b border-white/30 sticky left-[70px] z-30" rowSpan={2}>អត្តលេខ</th>
                     <th 
                       rowSpan={2}
-                      className={`px-4 py-3 bg-emerald-700 relative select-none whitespace-nowrap border-r border-b border-white ${
-                        activeSortMenu === 'name' ? 'z-30' : 'z-10'
+                      className={`w-[180px] min-w-[180px] max-w-[180px] px-4 py-3 bg-emerald-700 relative select-none whitespace-nowrap border-r border-b border-white/30 sticky left-[180px] ${
+                        activeSortMenu === 'name' ? 'z-40' : 'z-30'
                       }`}
                     >
                       <div 
                         onClick={() => setActiveSortMenu(activeSortMenu === 'name' ? null : 'name')}
-                        className="flex items-center gap-1.5 justify-start cursor-pointer hover:text-emerald-100 transition-colors whitespace-nowrap"
+                        className="flex items-center gap-1.5 justify-center cursor-pointer hover:text-emerald-100 transition-colors whitespace-nowrap"
                         title="ជម្រើសតម្រៀបតាមឈ្មោះ"
                       >
                         <span className="whitespace-nowrap">គោត្តនាម-នាម</span>
@@ -2612,13 +2608,13 @@ export default function StudentManagement({
                         </>
                       )}
                     </th>
-                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>ឈ្មោះឡាតាំង</th>
-                    <th className="px-3 py-3 text-center bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>ភេទ</th>
-                    <th className="px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>ថ្ងៃខែឆ្នាំកំណើត</th>
-                    <th className="px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>អាយុ</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>ឈ្មោះឡាតាំង</th>
+                    <th className="px-3 py-3 text-center bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>ភេទ</th>
+                    <th className="px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>ថ្ងៃខែឆ្នាំកំណើត</th>
+                    <th className="px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>អាយុ</th>
                     <th 
                       rowSpan={2}
-                      className={`px-4 py-3 bg-emerald-700 relative select-none whitespace-nowrap border-r border-b border-white ${
+                      className={`px-4 py-3 bg-emerald-700 relative select-none whitespace-nowrap border-r border-b border-white/30 ${
                         activeSortMenu === 'classroom' ? 'z-30' : 'z-10'
                       }`}
                     >
@@ -2684,64 +2680,64 @@ export default function StudentManagement({
                     {/* ទីកន្លែងកំណើត មាន ៤ ជួរឈរតូច */}
                     <th 
                       colSpan={4} 
-                      className="px-4 py-2 text-center bg-emerald-700 border-r border-b border-white font-bold whitespace-nowrap"
+                      className="px-4 py-2 text-center bg-emerald-700 border-r border-b border-white/30 font-bold whitespace-nowrap"
                       style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}
                     >
                       ទីកន្លែងកំណើត
                     </th>
-                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>បញ្ហារបស់សិស្ស</th>
-                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>ស្ថានភាពសិស្ស</th>
-                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>ប្រភេទសិស្ស</th>
-                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>ជនជាតិដើមភាគតិច</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>បញ្ហារបស់សិស្ស</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>ស្ថានភាពសិស្ស</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>ប្រភេទសិស្ស</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>ជនជាតិដើមភាគតិច</th>
                     
                     {/* បន្ថែមជួរឈរ "ប្រឡងសញ្ញាបត្រមធ្យមសិក្សាបឋមភូមិ" មាន ៤ ជួរឈរតូច */}
                     <th 
                       colSpan={4} 
-                      className="px-4 py-2 text-center bg-emerald-700 border-r border-b border-white font-bold whitespace-nowrap"
+                      className="px-4 py-2 text-center bg-emerald-700 border-r border-b border-white/30 font-bold whitespace-nowrap"
                       style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}
                     >
                       ប្រឡងសញ្ញាបត្រមធ្យមសិក្សាបឋមភូមិ
                     </th>
 
-                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>ឈ្មោះឪពុក</th>
-                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>មុខរបរឪពុក</th>
-                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>ឈ្មោះម្ដាយ</th>
-                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>មុខរបរម្ដាយ</th>
-                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white" rowSpan={2}>លេខទូរស័ព្ទអាណាព្យាបាល</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>ឈ្មោះឪពុក</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>មុខរបរឪពុក</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>ឈ្មោះម្ដាយ</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>មុខរបរម្ដាយ</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>លេខទូរស័ព្ទអាណាព្យាបាល</th>
                     {/* ទីលំនៅបច្ចុប្បន្ន មាន ៤ ជួរឈរតូច */}
                     <th 
                       colSpan={4} 
-                      className="px-4 py-2 text-center bg-emerald-700 border-r border-b border-white font-bold whitespace-nowrap"
+                      className="px-4 py-2 text-center bg-emerald-700 border-r border-b border-white/30 font-bold whitespace-nowrap"
                       style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}
                     >
                       ទីលំនៅបច្ចុប្បន្ន
                     </th>
-                    <th className="px-4 py-3 text-right bg-emerald-700 whitespace-nowrap border-b border-white" rowSpan={2}>សកម្មភាព</th>
+                    <th className="px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-b border-white/30" rowSpan={2}>សកម្មភាព</th>
                   </tr>
-                  <tr className="bg-emerald-700 text-white font-bold text-[10px] uppercase border-b border-emerald-600/30 whitespace-nowrap">
+                  <tr className="bg-emerald-700 text-white font-bold text-[10px] uppercase border-b border-white/30 whitespace-nowrap">
                     {/* ទីកន្លែងកំណើត sub-headers */}
-                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>រាជធានី/ខេត្ត</th>
-                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ស្រុក/ក្រុង/ខណ្ឌ</th>
-                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ឃុំ/សង្កាត់</th>
-                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ភូមិ</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>រាជធានី/ខេត្ត</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ស្រុក/ក្រុង/ខណ្ឌ</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ឃុំ/សង្កាត់</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ភូមិ</th>
 
                     {/* ប្រឡងសញ្ញាបត្រ sub-headers */}
-                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>សម័យប្រឡង</th>
-                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>មណ្ឌលប្រឡង</th>
-                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>លេខបន្ទប់</th>
-                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>លេខតុ</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>សម័យប្រឡង</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>មណ្ឌលប្រឡង</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>លេខបន្ទប់</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>លេខតុ</th>
 
                     {/* ទីលំនៅបច្ចុប្បន្ន sub-headers */}
-                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>រាជធានី/ខេត្ត</th>
-                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ស្រុក/ក្រុង/ខណ្ឌ</th>
-                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ឃុំ/សង្កាត់</th>
-                    <th className="px-3 py-1.5 text-center border-r border-b border-white whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ភូមិ</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>រាជធានី/ខេត្ត</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ស្រុក/ក្រុង/ខណ្ឌ</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ឃុំ/សង្កាត់</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ភូមិ</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredStudents.length === 0 ? (
                     <tr>
-                      <td colSpan={30} className="px-4 py-12 text-center text-slate-400 text-xs font-semibold border-b border-emerald-700">
+                      <td colSpan={30} className="px-4 py-12 text-center text-slate-400 text-xs font-semibold border-b border-slate-200">
                         រកមិនឃើញទិន្នន័យសិស្សានុសិស្សត្រូវបានកំណត់ឡើយ។
                       </td>
                     </tr>
@@ -2756,19 +2752,19 @@ export default function StudentManagement({
                           onDragOver={(e) => handleStudentDragOver(e, s.id)}
                           onDrop={() => handleStudentDropRow(s.id)}
                           onDragEnd={handleStudentDragEnd}
-                          className={`border-b border-emerald-700 transition-colors text-xs text-slate-700 font-medium group/row whitespace-nowrap
+                          className={`bg-white border-b border-slate-200 transition-colors text-xs text-slate-700 font-medium group/row whitespace-nowrap
                             ${draggingStudentId === s.id ? 'opacity-40 bg-emerald-50/20' : ''}
                             ${dragOverStudentId === s.id ? 'bg-emerald-50/40 border-y-2 border-emerald-200' : 'hover:bg-slate-50/50'}
                           `}
                         >
-                          <td className="px-4 py-3 text-center font-bold text-slate-400 whitespace-nowrap select-none border-l border-r border-slate-200 border-b border-emerald-700">
+                          <td className="w-[70px] min-w-[70px] max-w-[70px] px-4 py-3 text-center font-bold text-slate-400 whitespace-nowrap select-none border-l border-r border-slate-200 border-b border-slate-200 sticky left-0 z-10 bg-inherit">
                             <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
                               <GripVertical className="w-3.5 h-3.5 text-slate-400 group-hover/row:text-emerald-600 hover:text-emerald-700 transition-colors cursor-grab active:cursor-grabbing shrink-0" />
                               <span className="whitespace-nowrap">{s.rollNumber}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-center font-mono font-semibold text-teal-600 bg-slate-50/30 whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">{s.studentIdCard}</td>
-                          <td className="px-4 py-3 font-bold text-slate-800 whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
+                          <td className="w-[110px] min-w-[110px] max-w-[110px] px-4 py-3 text-center font-mono font-semibold text-teal-600 whitespace-nowrap border-r border-slate-200 border-b border-slate-200 sticky left-[70px] z-10 bg-inherit">{s.studentIdCard}</td>
+                          <td className="w-[180px] min-w-[180px] max-w-[180px] px-4 py-3 font-bold text-slate-800 whitespace-nowrap border-r border-slate-200 border-b border-slate-200 sticky left-[180px] z-10 bg-inherit">
                             <div className="flex items-center gap-2 whitespace-nowrap">
                               {s.photoUrl ? (
                                 <img 
@@ -2788,44 +2784,44 @@ export default function StudentManagement({
                               <span className="whitespace-nowrap">{s.nameKhmer}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 font-bold text-slate-600 font-mono whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
+                          <td className="px-4 py-3 font-bold text-slate-600 font-mono whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             {s.nameLatin || '-'}
                           </td>
-                          <td className="px-3 py-3 text-center whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
+                          <td className="px-3 py-3 text-center whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             <span className={`text-xs font-bold whitespace-nowrap ${
                               s.gender === 'ប្រុស' ? 'text-sky-600' : 'text-pink-600'
                             }`}>
                               {s.gender || '-'}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center text-slate-700 font-mono whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
+                          <td className="px-4 py-3 text-center text-slate-700 font-mono whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             {s.dob ? s.dob.split('-').reverse().join('-') : '-'}
                           </td>
-                          <td className="px-4 py-3 text-center text-slate-750 font-bold whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
+                          <td className="px-4 py-3 text-center text-slate-750 font-bold whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             {calculateAge(s.dob, schoolInfo.studentAgeLimitDate) ? `${calculateAge(s.dob, schoolInfo.studentAgeLimitDate)} ឆ្នាំ` : '-'}
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
+                          <td className="px-4 py-3 text-center whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             <span className="font-bold text-slate-600 whitespace-nowrap">
                               {cls ? toArabicClassname(cls.name) : '-'}
                             </span>
                           </td>
                           {/* ៤ ជួរឈរទិន្នន័យ ទីកន្លែងកំណើត */}
-                          <td className="px-3 py-3 text-center text-slate-700 font-bold bg-slate-50/5 border-r border-slate-200 border-b border-emerald-700 whitespace-nowrap">
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold border-r border-slate-200 border-b border-slate-200 whitespace-nowrap">
                             {s.pobProvince || '-'}
                           </td>
-                          <td className="px-3 py-3 text-center text-slate-700 font-bold bg-slate-50/5 border-r border-slate-200 border-b border-emerald-700 whitespace-nowrap">
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold border-r border-slate-200 border-b border-slate-200 whitespace-nowrap">
                             {s.pobDistrict || '-'}
                           </td>
-                          <td className="px-3 py-3 text-center text-slate-700 font-bold bg-slate-50/5 border-r border-slate-200 border-b border-emerald-700 whitespace-nowrap">
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold border-r border-slate-200 border-b border-slate-200 whitespace-nowrap">
                             {s.pobCommune || '-'}
                           </td>
-                          <td className="px-3 py-3 text-center text-slate-700 font-bold bg-slate-50/5 border-r border-slate-200 border-b border-emerald-700 whitespace-nowrap">
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold border-r border-slate-200 border-b border-slate-200 whitespace-nowrap">
                             {s.pobVillage || '-'}
                           </td>
-                          <td className="px-4 py-3 text-amber-700 font-bold whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
+                          <td className="px-4 py-3 text-amber-700 font-bold whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             {s.studentIssue || 'គ្មាន'}
                           </td>
-                          <td className="px-4 py-3 text-center whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
+                          <td className="px-4 py-3 text-center whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             <span className={`font-bold whitespace-nowrap ${
                               s.studentStatus === 'ឈប់រៀន' ? 'text-rose-600' :
                               s.studentStatus === 'ផ្ទេរចេញ' ? 'text-amber-600' :
@@ -2835,57 +2831,57 @@ export default function StudentManagement({
                               {s.studentStatus || 'កំពុងរៀន'}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center text-slate-800 font-bold whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
+                          <td className="px-4 py-3 text-center text-slate-800 font-bold whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             {s.studentType || '-'}
                           </td>
-                          <td className="px-4 py-3 text-center font-bold text-slate-600 whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
+                          <td className="px-4 py-3 text-center font-bold text-slate-600 whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             {s.indigenousGroup || 'ទេ'}
                           </td>
                           
                           {/* ៤ ជួរឈរទិន្នន័យ ប្រឡងសញ្ញាបត្រមធ្យមសិក្សាបឋមភូមិ */}
-                          <td className="px-3 py-3 text-center font-mono text-slate-700 bg-emerald-50/5 border-r border-slate-200 border-b border-emerald-700 whitespace-nowrap">
+                          <td className="px-3 py-3 text-center font-mono text-slate-700 border-r border-slate-200 border-b border-slate-200 whitespace-nowrap">
                             {s.diplomaExamSession ? s.diplomaExamSession.split('-').reverse().join('-') : '-'}
                           </td>
-                          <td className="px-3 py-3 text-center text-slate-700 bg-emerald-50/5 border-r border-slate-200 border-b border-emerald-700 font-bold whitespace-nowrap">
+                          <td className="px-3 py-3 text-center text-slate-700 border-r border-slate-200 border-b border-slate-200 font-bold whitespace-nowrap">
                             {s.diplomaExamCenter || '-'}
                           </td>
-                          <td className="px-3 py-3 text-center font-mono text-slate-700 bg-emerald-50/5 border-r border-slate-200 border-b border-emerald-700 font-bold whitespace-nowrap">
+                          <td className="px-3 py-3 text-center font-mono text-slate-700 border-r border-slate-200 border-b border-slate-200 font-bold whitespace-nowrap">
                             {s.diplomaExamRoom || '-'}
                           </td>
-                          <td className="px-3 py-3 text-center font-mono text-slate-700 bg-emerald-50/5 border-r border-slate-200 border-b border-emerald-700 font-bold whitespace-nowrap">
+                          <td className="px-3 py-3 text-center font-mono text-slate-700 border-r border-slate-200 border-b border-slate-200 font-bold whitespace-nowrap">
                             {s.diplomaExamTable || '-'}
                           </td>
 
-                          <td className="px-4 py-3 text-slate-700 font-bold whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
+                          <td className="px-4 py-3 text-slate-700 font-bold whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             {s.fatherName || '-'}
                           </td>
-                          <td className="px-4 py-3 text-slate-600 whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
+                          <td className="px-4 py-3 text-slate-600 whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             {s.fatherOccupation || '-'}
                           </td>
-                          <td className="px-4 py-3 text-slate-700 font-bold whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
+                          <td className="px-4 py-3 text-slate-700 font-bold whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             {s.motherName || '-'}
                           </td>
-                          <td className="px-4 py-3 text-slate-600 whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
+                          <td className="px-4 py-3 text-slate-600 whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             {s.motherOccupation || '-'}
                           </td>
-                          <td className="px-4 py-3 text-center font-mono text-slate-700 font-bold whitespace-nowrap border-r border-slate-200 border-b border-emerald-700">
+                          <td className="px-4 py-3 text-center font-mono text-slate-700 font-bold whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             {s.parentPhone || '-'}
                           </td>
                           {/* ៤ ជួរឈរទិន្នន័យ ទីលំនៅបច្ចុប្បន្ន */}
-                          <td className="px-3 py-3 text-center text-slate-700 font-bold bg-slate-50/5 border-r border-slate-200 border-b border-emerald-700 whitespace-nowrap">
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold border-r border-slate-200 border-b border-slate-200 whitespace-nowrap">
                             {s.currentAddressProvince || '-'}
                           </td>
-                          <td className="px-3 py-3 text-center text-slate-700 font-bold bg-slate-50/5 border-r border-slate-200 border-b border-emerald-700 whitespace-nowrap">
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold border-r border-slate-200 border-b border-slate-200 whitespace-nowrap">
                             {s.currentAddressDistrict || '-'}
                           </td>
-                          <td className="px-3 py-3 text-center text-slate-700 font-bold bg-slate-50/5 border-r border-slate-200 border-b border-emerald-700 whitespace-nowrap">
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold border-r border-slate-200 border-b border-slate-200 whitespace-nowrap">
                             {s.currentAddressCommune || '-'}
                           </td>
-                          <td className="px-3 py-3 text-center text-slate-700 font-bold bg-slate-50/5 border-r border-slate-200 border-b border-emerald-700 whitespace-nowrap">
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold border-r border-slate-200 border-b border-slate-200 whitespace-nowrap">
                             {s.currentAddressVillage || '-'}
                           </td>
-                          <td className="px-4 py-3 border-b border-emerald-700">
-                            <div className="flex items-center justify-end gap-1.5">
+                          <td className="px-4 py-3 text-center border-b border-slate-200">
+                            <div className="flex items-center justify-center gap-1.5">
                               <button
                                 onClick={() => setViewingStudent(s)}
                                 title="មើលព័ត៌មានលម្អិត"
@@ -4395,7 +4391,7 @@ export default function StudentManagement({
                       
                       <span className="col-span-1 font-bold">ទីកន្លែងកំណើត:</span>
                       <span className="col-span-2 text-slate-800 font-semibold leading-relaxed">
-                        {viewingStudent.pob || [viewingStudent.pobVillage, viewingStudent.pobCommune, viewingStudent.pobDistrict, viewingStudent.pobProvince].filter(Boolean).join(', ') || '-'}
+                        {[viewingStudent.pobVillage, viewingStudent.pobCommune, viewingStudent.pobDistrict, viewingStudent.pobProvince].filter(Boolean).join(' ') || viewingStudent.pob || '-'}
                       </span>
 
                       <span className="col-span-1 font-bold">ជនជាតិភាគតិច:</span>
@@ -4438,7 +4434,7 @@ export default function StudentManagement({
 
                       <span className="col-span-1 font-bold">អាសយដ្ឋានបច្ចុប្បន្ន:</span>
                       <span className="col-span-2 text-slate-800 font-semibold leading-relaxed">
-                        {viewingStudent.currentAddress || [viewingStudent.currentAddressVillage, viewingStudent.currentAddressCommune, viewingStudent.currentAddressDistrict, viewingStudent.currentAddressProvince].filter(Boolean).join(', ') || '-'}
+                        {[viewingStudent.currentAddressVillage, viewingStudent.currentAddressCommune, viewingStudent.currentAddressDistrict, viewingStudent.currentAddressProvince].filter(Boolean).join(' ') || viewingStudent.currentAddress || '-'}
                       </span>
                     </div>
                   </div>

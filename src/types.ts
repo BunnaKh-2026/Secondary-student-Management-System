@@ -26,12 +26,18 @@ export interface Teacher {
   role: string; // Position/Role
   responsibilities: string[]; // Specific duties
   photoUrl?: string; // Optional custom avatar
-  salaryRank?: string; // កាំប្រាក់
+  salaryRank?: string; // កាំប្រាក់ / ថ្នាក់និងឋានន្តរស័ក្តិ
+  promotionDate?: string; // ថ្ងៃឡើងថ្នាក់ចុងក្រោយ
+  documentType?: string; // ប្រភេទលិខិត
+  documentNumber?: string; // លិខិតលេខ
+  serialNumber?: string; // លេខរៀង
   framework?: string; // ក្របខ័ណ្ឌ
   teachingSubjects?: string; // មុខវិជ្ជាបង្រៀន
   classCharge?: string; // បន្ទុកថ្នាក់
   ethnicity?: string; // ជនជាតិភាគតិច
   educationLevel?: string; // កម្រិតវប្បធម៌
+  educationDegree?: string; // សញ្ញាបត្រ (កម្រិតវប្បធម៌)
+  educationSpecialty?: string; // ឯកទេស (កម្រិតវប្បធម៌)
   joinDate?: string; // ថ្ងៃចូលបម្រើការងារ
   yearsOfService?: number; // ចំនួនឆ្នាំបម្រើការងារ
 }

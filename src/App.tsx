@@ -219,7 +219,7 @@ export default function App() {
   return (
     <div 
       id="secondary-school-management-root" 
-      className={`${activeTab === 'teachers' ? 'h-screen overflow-hidden' : 'min-h-screen'} bg-slate-50 flex text-slate-800`}
+      className={`${(activeTab === 'teachers' || activeTab === 'students') ? 'h-screen overflow-hidden' : 'min-h-screen'} bg-slate-50 flex text-slate-800`}
     >
       
       {/* Mobile background backdrop overlay to close sidebar easily on tap */}
@@ -507,16 +507,16 @@ export default function App() {
       {/* 2. MAIN APP CONTAINER WRAPPER */}
       <div className={`flex-1 flex flex-col pt-[88px] sm:pt-16 transition-all duration-300 focus:outline-none min-w-0 max-w-full overflow-hidden ${
         isSidebarOpen ? 'md:pl-40' : 'md:pl-0'
-      } ${activeTab === 'teachers' ? 'h-full overflow-hidden' : ''}`}>
+      } ${(activeTab === 'teachers' || activeTab === 'students') ? 'h-full overflow-hidden' : ''}`}>
         
         {/* MAIN BODY CORE CONTENT SECTION */}
         <main className={`flex-1 p-4 md:p-8 outline-none print:p-0 print:m-0 min-w-0 max-w-full ${
-          activeTab === 'teachers' ? 'h-full flex flex-col overflow-hidden min-h-0 pb-4 md:pb-6' : ''
+          (activeTab === 'teachers' || activeTab === 'students') ? 'h-full flex flex-col overflow-hidden min-h-0 pb-4 md:pb-6' : ''
         }`}>
           
           {/* Conditional rendering depending on target views */}
           <div className={`print:hidden w-full min-w-0 max-w-full ${
-            activeTab === 'teachers' ? 'flex-1 flex flex-col overflow-hidden min-h-0' : ''
+            (activeTab === 'teachers' || activeTab === 'students') ? 'flex-1 flex flex-col overflow-hidden min-h-0' : ''
           }`}>
             {/* If selected classroom is active, render ClassroomDetails sheets directly */}
             {selectedClassroomId && activeClassroomFull ? (

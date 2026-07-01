@@ -575,10 +575,10 @@ export default function ClassroomDetails({
   };
 
   return (
-    <div id="classroom-details-roster" className="space-y-6">
+    <div id="classroom-details-roster" className={`space-y-6 ${activeTab === 'register' ? 'flex-1 flex flex-col h-full min-h-0' : ''}`}>
       {/* 2. REGISTER TAB - LIST OF CLASSROOM STUDENTS */}
       {activeTab === 'register' && (
-        <div className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs space-y-5 animate-fade-in text-slate-755 w-full max-w-full overflow-hidden">
+        <div className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs space-y-5 animate-fade-in text-slate-755 w-full max-w-full overflow-hidden flex-1 flex flex-col min-h-0">
           {/* Integrated Header Container */}
           <div className="border-b border-slate-100 pb-4 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 w-full">
             {/* Title */}
@@ -612,37 +612,77 @@ export default function ClassroomDetails({
           </div>
 
           {/* Students Table */}
-          <div className="border border-slate-200 rounded-none overflow-hidden shadow-xs w-full max-w-full">
-            <div className="overflow-x-auto overflow-y-auto max-h-[550px] scrollbar-thin">
+          <div className="border border-slate-200 rounded-xl shadow-xs flex-1 flex flex-col overflow-hidden min-h-0 w-full max-w-full">
+            <div className="flex-1 overflow-y-auto overflow-x-auto min-h-0 scrollbar-thin">
               <table className="w-full text-left border-collapse table-auto whitespace-nowrap">
-                <thead>
-                  <tr className="bg-emerald-700 text-white font-bold text-xs uppercase sticky top-0 z-10" id="students-list-th-row">
-                    <th className="px-4 py-3 text-center bg-emerald-700">ល.រ</th>
-                    <th className="px-4 py-3 text-center bg-emerald-700">អត្តលេខ</th>
-                    <th className="px-4 py-3 bg-emerald-700">គោត្តនាម-នាម</th>
-                    <th className="px-4 py-3 bg-emerald-700">ឈ្មោះឡាតាំង</th>
-                    <th className="px-3 py-3 text-center bg-emerald-700">ភេទ</th>
-                    <th className="px-4 py-3 text-center bg-emerald-700">ថ្ងៃខែឆ្នាំកំណើត</th>
-                    <th className="px-4 py-3 text-center bg-emerald-700">អាយុ</th>
-                    <th className="px-4 py-3 bg-emerald-700">ថ្នាក់</th>
-                    <th className="px-4 py-3 bg-emerald-700">ទីកន្លែងកំណើត</th>
-                    <th className="px-4 py-3 bg-emerald-700">បញ្ហារបស់សិស្ស</th>
-                    <th className="px-4 py-3 bg-emerald-700">ស្ថានភាពសិស្ស</th>
-                    <th className="px-4 py-3 bg-emerald-700">ប្រភេទសិស្ស</th>
-                    <th className="px-4 py-3 bg-emerald-700">ជនជាតិដើមភាគតិច</th>
-                    <th className="px-4 py-3 bg-emerald-700">ឈ្មោះឪពុក</th>
-                    <th className="px-4 py-3 bg-emerald-700">មុខរបរឪពុក</th>
-                    <th className="px-4 py-3 bg-emerald-700">ឈ្មោះម្ដាយ</th>
-                    <th className="px-4 py-3 bg-emerald-700">មុខរបរម្ដាយ</th>
-                    <th className="px-4 py-3 bg-emerald-700">លេខទូរស័ព្ទអាណាព្យាបាល</th>
-                    <th className="px-4 py-3 bg-emerald-700">ទីលំនៅបច្ចុប្បន្ន</th>
-                    <th className="px-4 py-3 text-right bg-emerald-700">សកម្មភាព</th>
+                <thead className="sticky top-0 z-20 bg-emerald-700 whitespace-nowrap text-white">
+                  <tr className="bg-emerald-700 text-white font-bold text-xs uppercase whitespace-nowrap" id="students-list-th-row">
+                    <th className="w-[70px] min-w-[70px] max-w-[70px] px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-l border-r border-b border-white/30 sticky left-0 z-30" rowSpan={2}>ល.រ</th>
+                    <th className="w-[110px] min-w-[110px] max-w-[110px] px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-r border-b border-white/30 sticky left-[70px] z-30" rowSpan={2}>អត្តលេខ</th>
+                    <th className="w-[180px] min-w-[180px] max-w-[180px] px-4 py-3 text-center bg-emerald-700 relative select-none whitespace-nowrap border-r border-b border-white/30 sticky left-[180px] z-30" rowSpan={2}>គោត្តនាម-នាម</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>ឈ្មោះឡាតាំង</th>
+                    <th className="px-3 py-3 text-center bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>ភេទ</th>
+                    <th className="px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>ថ្ងៃខែឆ្នាំកំណើត</th>
+                    <th className="px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>អាយុ</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>ថ្នាក់</th>
+                    <th 
+                      colSpan={4} 
+                      className="px-4 py-2 text-center bg-emerald-700 border-r border-b border-white/30 font-bold whitespace-nowrap"
+                      style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}
+                    >
+                      ទីកន្លែងកំណើត
+                    </th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>បញ្ហារបស់សិស្ស</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>ស្ថានភាពសិស្ស</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>ប្រភេទសិស្ស</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>ជនជាតិដើមភាគតិច</th>
+                    
+                    <th 
+                      colSpan={4} 
+                      className="px-4 py-2 text-center bg-emerald-700 border-r border-b border-white/30 font-bold whitespace-nowrap"
+                      style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}
+                    >
+                      ប្រឡងសញ្ញាបត្រមធ្យមសិក្សាបឋមភូមិ
+                    </th>
+
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>ឈ្មោះឪពុក</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>មុខរបរឪពុក</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>ឈ្មោះម្ដាយ</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>មុខរបរម្ដាយ</th>
+                    <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>លេខទូរស័ព្ទអាណាព្យាបាល</th>
+                    <th 
+                      colSpan={4} 
+                      className="px-4 py-2 text-center bg-emerald-700 border-r border-b border-white/30 font-bold whitespace-nowrap"
+                      style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}
+                    >
+                      ទីលំនៅបច្ចុប្បន្ន
+                    </th>
+                    <th className="px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-b border-white/30" rowSpan={2}>សកម្មភាព</th>
+                  </tr>
+                  <tr className="bg-emerald-700 text-white font-bold text-[10px] uppercase border-b border-white/30 whitespace-nowrap">
+                    {/* ទីកន្លែងកំណើត sub-headers */}
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>រាជធានី/ខេត្ត</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ស្រុក/ក្រុង/ខណ្ឌ</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ឃុំ/សង្កាត់</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ភូមិ</th>
+
+                    {/* ប្រឡងសញ្ញាបត្រ sub-headers */}
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>សម័យប្រឡង</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>មណ្ឌលប្រឡង</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>លេខបន្ទប់</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>លេខតុ</th>
+
+                    {/* ទីលំនៅបច្ចុប្បន្ន sub-headers */}
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>រាជធានី/ខេត្ត</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ស្រុក/ក្រុង/ខណ្ឌ</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ឃុំ/សង្កាត់</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ភូមិ</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredStudents.length === 0 ? (
                     <tr>
-                      <td colSpan={20} className="px-4 py-12 text-center text-slate-400 text-xs font-semibold">
+                      <td colSpan={30} className="px-4 py-12 text-center text-slate-400 text-xs font-semibold">
                         រកមិនឃើញទិន្នន័យសិស្សានុសិស្សត្រូវបានកំណត់ឡើយ។
                       </td>
                     </tr>
@@ -652,14 +692,14 @@ export default function ClassroomDetails({
                       return (
                         <tr 
                           key={s.id} 
-                          className="border-b border-slate-100 transition-colors text-xs text-slate-700 font-medium group/row whitespace-nowrap hover:bg-slate-50/50"
+                          className="border-b border-slate-200 transition-colors text-xs text-slate-700 font-medium group/row whitespace-nowrap hover:bg-slate-50/50"
                         >
-                          <td className="px-4 py-3 text-center font-bold text-slate-400 whitespace-nowrap select-none">
+                          <td className="w-[70px] min-w-[70px] max-w-[70px] px-4 py-3 text-center font-bold text-slate-400 whitespace-nowrap select-none border-l border-r border-slate-200 border-b border-slate-200 sticky left-0 z-10 bg-white">
                             {s.rollNumber}
                           </td>
-                          <td className="px-4 py-3 text-center font-mono font-semibold text-teal-600 bg-slate-50/30">{s.studentIdCard}</td>
-                          <td className="px-4 py-3 font-bold text-slate-800">
-                            <div className="flex items-center gap-2">
+                          <td className="w-[110px] min-w-[110px] max-w-[110px] px-4 py-3 text-center font-mono font-semibold text-teal-600 whitespace-nowrap border-r border-slate-200 border-b border-slate-200 sticky left-[70px] z-10 bg-white">{s.studentIdCard}</td>
+                          <td className="w-[180px] min-w-[180px] max-w-[180px] px-4 py-3 font-bold text-slate-800 whitespace-nowrap border-r border-slate-200 border-b border-slate-200 sticky left-[180px] z-10 bg-white">
+                            <div className="flex items-center gap-2 whitespace-nowrap">
                               {s.photoUrl ? (
                                 <img 
                                   src={s.photoUrl} 
@@ -668,44 +708,54 @@ export default function ClassroomDetails({
                                   referrerPolicy="no-referrer"
                                 />
                               ) : (
-                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] text-white font-bold shrink-0 shadow-xs ${
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] text-white font-bold shrink-0 shadow-xs whitespace-nowrap ${
                                   s.gender === 'ប្រុស' ? 'bg-sky-500' : 'bg-pink-500'
                                 }`}>
                                   {s.gender === 'ប្រុស' ? 'ប្រ' : 'ស្រ'}
                                 </div>
                               )}
-                              <span>{s.nameKhmer}</span>
+                              <span className="whitespace-nowrap">{s.nameKhmer}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 font-bold text-slate-600 font-mono">
+                          <td className="px-4 py-3 font-bold text-slate-600 font-mono whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             {s.nameLatin || '-'}
                           </td>
-                          <td className="px-3 py-3 text-center">
-                            <span className={`text-xs font-bold ${
+                          <td className="px-3 py-3 text-center whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
+                            <span className={`text-xs font-bold whitespace-nowrap ${
                               s.gender === 'ប្រុស' ? 'text-sky-600' : 'text-pink-600'
                             }`}>
                               {s.gender || '-'}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center text-slate-700 font-mono">
+                          <td className="px-4 py-3 text-center text-slate-700 font-mono whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             {s.dob ? s.dob.split('-').reverse().join('-') : '-'}
                           </td>
-                          <td className="px-4 py-3 text-center text-slate-755 font-bold">
+                          <td className="px-4 py-3 text-center text-slate-750 font-bold whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             {calculateAge(s.dob, schoolInfo.studentAgeLimitDate) ? `${calculateAge(s.dob, schoolInfo.studentAgeLimitDate)} ឆ្នាំ` : '-'}
                           </td>
-                          <td className="px-4 py-3">
-                            <span className="font-bold text-slate-600">
+                          <td className="px-4 py-3 text-center whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
+                            <span className="font-bold text-slate-600 whitespace-nowrap">
                               {cls ? toArabicClassname(cls.name) : '-'}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-slate-600 max-w-xs truncate" title={s.pob}>
-                            {s.pob || '-'}
+                          {/* ៤ ជួរឈរទិន្នន័យ ទីកន្លែងកំណើត */}
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold border-r border-slate-200 border-b border-slate-200 whitespace-nowrap">
+                            {s.pobProvince || '-'}
                           </td>
-                          <td className="px-4 py-3 text-amber-700 font-bold">
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold border-r border-slate-200 border-b border-slate-200 whitespace-nowrap">
+                            {s.pobDistrict || '-'}
+                          </td>
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold border-r border-slate-200 border-b border-slate-200 whitespace-nowrap">
+                            {s.pobCommune || '-'}
+                          </td>
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold border-r border-slate-200 border-b border-slate-200 whitespace-nowrap">
+                            {s.pobVillage || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-amber-700 font-bold whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             {s.studentIssue || 'គ្មាន'}
                           </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className={`font-bold ${
+                          <td className="px-4 py-3 text-center whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
+                            <span className={`font-bold whitespace-nowrap ${
                               s.studentStatus === 'ឈប់រៀន' ? 'text-rose-600' :
                               s.studentStatus === 'ផ្ទេរចេញ' ? 'text-amber-600' :
                               s.studentStatus === 'ព្យួរការសិក្សា' ? 'text-indigo-600' :
@@ -714,32 +764,57 @@ export default function ClassroomDetails({
                               {s.studentStatus || 'កំពុងរៀន'}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center text-slate-800 font-bold">
+                          <td className="px-4 py-3 text-center text-slate-800 font-bold whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             {s.studentType || '-'}
                           </td>
-                          <td className="px-4 py-3 text-center font-bold text-slate-600">
+                          <td className="px-4 py-3 text-center font-bold text-slate-600 whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             {s.indigenousGroup || 'ទេ'}
                           </td>
-                          <td className="px-4 py-3 text-slate-700 font-bold">
+                          
+                          {/* ៤ ជួរឈរទិន្នន័យ ប្រឡងសញ្ញាបត្រមធ្យមសិក្សាបឋមភូមិ */}
+                          <td className="px-3 py-3 text-center font-mono text-slate-700 border-r border-slate-200 border-b border-slate-200 whitespace-nowrap">
+                            {s.diplomaExamSession ? s.diplomaExamSession.split('-').reverse().join('-') : '-'}
+                          </td>
+                          <td className="px-3 py-3 text-center text-slate-700 border-r border-slate-200 border-b border-slate-200 font-bold whitespace-nowrap">
+                            {s.diplomaExamCenter || '-'}
+                          </td>
+                          <td className="px-3 py-3 text-center font-mono text-slate-700 border-r border-slate-200 border-b border-slate-200 font-bold whitespace-nowrap">
+                            {s.diplomaExamRoom || '-'}
+                          </td>
+                          <td className="px-3 py-3 text-center font-mono text-slate-700 border-r border-slate-200 border-b border-slate-200 font-bold whitespace-nowrap">
+                            {s.diplomaExamTable || '-'}
+                          </td>
+
+                          <td className="px-4 py-3 text-slate-700 font-bold whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             {s.fatherName || '-'}
                           </td>
-                          <td className="px-4 py-3 text-slate-600">
+                          <td className="px-4 py-3 text-slate-600 whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             {s.fatherOccupation || '-'}
                           </td>
-                          <td className="px-4 py-3 text-slate-700 font-bold">
+                          <td className="px-4 py-3 text-slate-700 font-bold whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             {s.motherName || '-'}
                           </td>
-                          <td className="px-4 py-3 text-slate-600">
+                          <td className="px-4 py-3 text-slate-600 whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             {s.motherOccupation || '-'}
                           </td>
-                          <td className="px-4 py-3 text-center font-mono text-slate-700 font-bold">
+                          <td className="px-4 py-3 text-center font-mono text-slate-700 font-bold whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                             {s.parentPhone || '-'}
                           </td>
-                          <td className="px-4 py-3 text-slate-600 max-w-xs truncate" title={s.currentAddress}>
-                            {s.currentAddress || '-'}
+                          {/* ៤ ជួរឈរទិន្នន័យ ទីលំនៅបច្ចុប្បន្ន */}
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold border-r border-slate-200 border-b border-slate-200 whitespace-nowrap">
+                            {s.currentAddressProvince || '-'}
                           </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center justify-end gap-1.5">
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold border-r border-slate-200 border-b border-slate-200 whitespace-nowrap">
+                            {s.currentAddressDistrict || '-'}
+                          </td>
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold border-r border-slate-200 border-b border-slate-200 whitespace-nowrap">
+                            {s.currentAddressCommune || '-'}
+                          </td>
+                          <td className="px-3 py-3 text-center text-slate-700 font-bold border-r border-slate-200 border-b border-slate-200 whitespace-nowrap">
+                            {s.currentAddressVillage || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-center border-b border-slate-200">
+                            <div className="flex items-center justify-center gap-1.5">
                               <button
                                 onClick={() => setViewingStudent(s)}
                                 title="មើលព័ត៌មានលម្អិត"
@@ -1490,7 +1565,7 @@ export default function ClassroomDetails({
                       
                       <span className="col-span-1 font-bold">ទីកន្លែងកំណើត:</span>
                       <span className="col-span-2 text-slate-800 font-semibold leading-relaxed">
-                        {viewingStudent.pob || '-'}
+                        {[viewingStudent.pobVillage, viewingStudent.pobCommune, viewingStudent.pobDistrict, viewingStudent.pobProvince].filter(Boolean).join(' ') || viewingStudent.pob || '-'}
                       </span>
 
                       <span className="col-span-1 font-bold">ជនជាតិភាគតិច:</span>
@@ -1522,7 +1597,7 @@ export default function ClassroomDetails({
 
                       <span className="col-span-1 font-bold">អាសយដ្ឋានបច្ចុប្បន្ន:</span>
                       <span className="col-span-2 text-slate-800 font-semibold leading-relaxed">
-                        {viewingStudent.currentAddress || '-'}
+                        {[viewingStudent.currentAddressVillage, viewingStudent.currentAddressCommune, viewingStudent.currentAddressDistrict, viewingStudent.currentAddressProvince].filter(Boolean).join(' ') || viewingStudent.currentAddress || '-'}
                       </span>
                     </div>
                   </div>

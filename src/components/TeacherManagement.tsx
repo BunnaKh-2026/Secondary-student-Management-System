@@ -885,6 +885,10 @@ export default function TeacherManagement({
     role: '',
     responsibilities: [],
     salaryRank: '',
+    promotionDate: '',
+    documentType: '',
+    documentNumber: '',
+    serialNumber: '',
     framework: '',
     teachingSubjects: '',
     classCharge: '',
@@ -1163,11 +1167,17 @@ export default function TeacherManagement({
       role: '',
       responsibilities: [],
       salaryRank: '',
+      promotionDate: '',
+      documentType: '',
+      documentNumber: '',
+      serialNumber: '',
       framework: '',
       teachingSubjects: '',
       classCharge: '',
       ethnicity: 'ទេ',
       educationLevel: '',
+      educationDegree: '',
+      educationSpecialty: '',
       joinDate: '',
       yearsOfService: 0,
       photoUrl: '',
@@ -1179,6 +1189,26 @@ export default function TeacherManagement({
   const handleOpenEdit = (t: Teacher) => {
     setEditingTeacher(t);
     setHasManuallyEditedLatin(!!t.nameLatin);
+
+    let degree = t.educationDegree || '';
+    let specialty = t.educationSpecialty || '';
+    if (!degree && !specialty && t.educationLevel) {
+      const parts = t.educationLevel.split(' - ');
+      if (parts.length > 1) {
+        degree = parts[0].trim();
+        specialty = parts.slice(1).join(' - ').trim();
+      } else {
+        const commonDegrees = ["បណ្ឌិត", "បរិញ្ញាបត្រជាន់ខ្ពស់", "បរិញ្ញាបត្រ", "ទុតិយភូមិ"];
+        const foundDegree = commonDegrees.find(d => t.educationLevel?.startsWith(d));
+        if (foundDegree) {
+          degree = foundDegree;
+          specialty = t.educationLevel.slice(foundDegree.length).replace(/^[\s\-_៖]+/, '').trim();
+        } else {
+          degree = t.educationLevel;
+        }
+      }
+    }
+
     setFormData({
       idNumber: t.idNumber || '',
       name: t.name || '',
@@ -1190,11 +1220,17 @@ export default function TeacherManagement({
       role: t.role || '',
       responsibilities: t.responsibilities || [],
       salaryRank: t.salaryRank || '',
+      promotionDate: t.promotionDate || '',
+      documentType: t.documentType || '',
+      documentNumber: t.documentNumber || '',
+      serialNumber: t.serialNumber || '',
       framework: t.framework || '',
       teachingSubjects: t.teachingSubjects || '',
       classCharge: t.classCharge || '',
       ethnicity: t.ethnicity || 'ទេ',
       educationLevel: t.educationLevel || '',
+      educationDegree: degree,
+      educationSpecialty: specialty,
       joinDate: t.joinDate || '',
       yearsOfService: t.yearsOfService !== undefined ? t.yearsOfService : (t.joinDate ? calculateYearsOfService(t.joinDate) : 0),
       photoUrl: t.photoUrl || '',
@@ -1223,8 +1259,13 @@ export default function TeacherManagement({
       return;
     }
 
+    const finalDegree = formData.educationDegree || '';
+    const finalSpecialty = formData.educationSpecialty || '';
+    const finalEducationLevel = finalDegree && finalSpecialty ? `${finalDegree} - ${finalSpecialty}` : (finalDegree || finalSpecialty || '');
+
     const finalData = {
       ...formData,
+      educationLevel: finalEducationLevel,
       idNumber: finalIdNumber
     };
 
@@ -1524,11 +1565,11 @@ export default function TeacherManagement({
           <div className="border border-slate-100 rounded-xl shadow-xs flex-1 flex flex-col overflow-hidden min-h-0">
             <div className="flex-1 overflow-y-auto overflow-x-auto min-h-0">
               <table className="w-full text-left border-collapse table-auto whitespace-nowrap relative">
-                <thead className="sticky top-0 z-10 bg-emerald-700 text-white shadow-xs">
+                <thead className="sticky top-0 z-20 bg-emerald-700 text-white shadow-xs">
                   <tr className="bg-emerald-700 text-white font-bold text-xs uppercase whitespace-nowrap" id="teachers-list-th-row">
-                    <th className="px-3 py-3 text-center w-12 whitespace-nowrap">ល.រ</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap">អត្តលេខមន្ត្រី</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap select-none">
+                    <th className="w-[70px] min-w-[70px] max-w-[70px] px-3 py-3 text-center bg-emerald-700 whitespace-nowrap border-l border-r border-b border-white/30 sticky left-0 top-0 z-30">ល.រ</th>
+                    <th className="w-[110px] min-w-[110px] max-w-[110px] px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-r border-b border-white/30 sticky left-[70px] top-0 z-30">អត្តលេខមន្ត្រី</th>
+                    <th className="w-[180px] min-w-[180px] max-w-[180px] px-4 py-3 text-center bg-emerald-700 whitespace-nowrap select-none border-r border-b border-white/30 sticky left-[180px] top-0 z-30">
                       <div className="flex items-center justify-center gap-2">
                         <span>គោត្តនាម-នាម</span>
                         <div className="relative inline-block" ref={sortDropdownRef}>
@@ -1579,27 +1620,28 @@ export default function TeacherManagement({
                         </div>
                       </div>
                     </th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap">ឈ្មោះឡាតាំង</th>
-                    <th className="px-3 py-3 text-center whitespace-nowrap">ភេទ</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap">ថ្ងៃខែឆ្នាំកំណើត</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap">អាយុ</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap">តួនាទី</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap">ក្របខ័ណ្ឌ</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap">កាំប្រាក់</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap">ឯកទេស</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap">មុខវិជ្ជាបង្រៀន</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap">បន្ទុកថ្នាក់</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap">ជន.ភាគតិច</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap">កម្រិតវប្បធម៌</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap">ថ្ងៃចូលធ្វើការ</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap">លេខទូរស័ព្ទ</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap">សកម្មភាព</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">ឈ្មោះឡាតាំង</th>
+                    <th className="px-3 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">ភេទ</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">ថ្ងៃខែឆ្នាំកំណើត</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">អាយុ</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">តួនាទី</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">ក្របខ័ណ្ឌ</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">ថ្នាក់និងឋានន្តរស័ក្តិ</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">មុខវិជ្ជាឯកទេស</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">មុខវិជ្ជាបង្រៀន</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">បន្ទុកថ្នាក់</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">ជន.ភាគតិច</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">កម្រិតវប្បធម៌</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">ថ្ងៃចូលបម្រើការងារ</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">ចំនួនឆ្នាំបម្រើការងារ</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">លេខទូរស័ព្ទ</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap border-b border-white/30 sticky top-0 z-20 bg-emerald-700">សកម្មភាព</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredTeachers.length === 0 ? (
                     <tr>
-                      <td colSpan={18} className="px-4 py-12 text-center text-slate-400 text-xs font-medium whitespace-nowrap">
+                      <td colSpan={19} className="px-4 py-12 text-center text-slate-400 text-xs font-medium whitespace-nowrap">
                         គ្មានសំណុំទិន្នន័យគ្រូបង្រៀនត្រូវបានរកឃើញទេ។
                       </td>
                     </tr>
@@ -1612,21 +1654,21 @@ export default function TeacherManagement({
                         onDragOver={(e) => handleTeacherDragOver(e, t.id)}
                         onDrop={() => handleTeacherDropRow(t.id)}
                         onDragEnd={handleTeacherDragEnd}
-                        className={`border-b border-emerald-600 transition-colors text-xs text-slate-700 font-medium group/row whitespace-nowrap
+                        className={`bg-white border-b border-slate-200 transition-colors text-xs text-slate-700 font-medium group/row whitespace-nowrap
                           ${draggingTeacherId === t.id ? 'opacity-40 bg-emerald-50/20' : ''}
                           ${dragOverTeacherId === t.id ? 'bg-emerald-50/40 border-y-2 border-emerald-200' : 'hover:bg-slate-50/50'}
                         `}
                       >
-                        <td className="px-3 py-3 text-center font-bold text-slate-400 whitespace-nowrap select-none">
+                        <td className="w-[70px] min-w-[70px] max-w-[70px] px-3 py-3 text-center font-bold text-slate-400 whitespace-nowrap select-none border-l border-r border-slate-200 border-b border-slate-200 sticky left-0 z-10 bg-inherit">
                           <div className="flex items-center justify-center gap-1.5">
                             <GripVertical className="w-3.5 h-3.5 text-slate-400 group-hover/row:text-emerald-600 hover:text-emerald-700 transition-colors cursor-grab active:cursor-grabbing shrink-0" />
                             <span>{idx + 1}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 font-mono font-semibold text-teal-600 text-center bg-slate-50/30 whitespace-nowrap">
+                        <td className="w-[110px] min-w-[110px] max-w-[110px] px-4 py-3 font-mono font-semibold text-teal-600 text-center whitespace-nowrap border-r border-slate-200 border-b border-slate-200 sticky left-[70px] z-10 bg-inherit">
                           {t.idNumber}
                         </td>
-                        <td className="px-4 py-3 font-bold text-slate-800 whitespace-nowrap">
+                        <td className="w-[180px] min-w-[180px] max-w-[180px] px-4 py-3 font-bold text-slate-800 whitespace-nowrap border-r border-slate-200 border-b border-slate-200 sticky left-[180px] z-10 bg-inherit">
                           <div className="flex items-center gap-2">
                             {t.photoUrl ? (
                               <img 
@@ -1645,57 +1687,60 @@ export default function TeacherManagement({
                             <span>{t.name}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 font-bold text-slate-600 font-mono text-center uppercase whitespace-nowrap">
+                        <td className="px-4 py-3 font-bold text-slate-600 font-mono text-center uppercase whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                           {t.nameLatin || '-'}
                         </td>
-                        <td className="px-3 py-3 text-center whitespace-nowrap">
+                        <td className="px-3 py-3 text-center whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                           <span className={t.gender === 'ប្រុស' ? 'text-sky-600 font-bold' : 'text-pink-600 font-bold'}>
                             {t.gender}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-center font-mono whitespace-nowrap">
+                        <td className="px-4 py-3 text-center font-mono whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                           {formatToDDMMYYYY(t.dob)}
                         </td>
-                        <td className="px-4 py-3 text-center text-slate-750 font-bold whitespace-nowrap">
+                        <td className="px-4 py-3 text-center text-slate-750 font-bold whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                           {calculateTeacherAge(t.dob) ? `${calculateTeacherAge(t.dob)} ឆ្នាំ` : '-'}
                         </td>
-                        <td className="px-4 py-3 text-center text-slate-600 font-semibold whitespace-nowrap">
+                        <td className="px-4 py-3 text-center text-slate-600 font-semibold whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                           {t.role || 'គ្រូបង្រៀន'}
                         </td>
-                        <td className="px-4 py-3 text-center text-slate-600 font-semibold whitespace-nowrap">
+                        <td className="px-4 py-3 text-center text-slate-600 font-semibold whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                           {t.framework || '-'}
                         </td>
-                        <td className="px-4 py-3 text-center font-sans font-medium whitespace-nowrap">
+                        <td className="px-4 py-3 text-center font-sans font-medium whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                           {t.salaryRank || '-'}
                         </td>
-                        <td className="px-4 py-3 text-slate-600 font-semibold whitespace-nowrap">
+                        <td className="px-4 py-3 text-slate-600 font-semibold whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                           {t.subject}
                         </td>
-                        <td className="px-4 py-3 text-slate-600 font-medium whitespace-nowrap">
+                        <td className="px-4 py-3 text-slate-600 font-medium whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                           {t.teachingSubjects || '-'}
                         </td>
-                        <td className="px-4 py-3 text-center whitespace-nowrap">
+                        <td className="px-4 py-3 text-center whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                           {t.classCharge ? (
                             <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-amber-50 text-amber-800">
                               {t.classCharge}
                             </span>
                           ) : '-'}
                         </td>
-                        <td className={`px-4 py-3 text-center whitespace-nowrap ${
+                        <td className={`px-4 py-3 text-center whitespace-nowrap border-r border-slate-200 border-b border-slate-200 ${
                           t.ethnicity === 'បាទ/ចាស' ? 'text-amber-700 font-bold' : 'text-slate-500 font-medium'
                         }`}>
                           {t.ethnicity || 'ទេ'}
                         </td>
-                        <td className="px-4 py-3 text-center font-semibold text-slate-600 whitespace-nowrap">
+                        <td className="px-4 py-3 text-center font-semibold text-slate-600 whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                           {t.educationLevel || '-'}
                         </td>
-                        <td className="px-4 py-3 text-center font-mono whitespace-nowrap">
+                        <td className="px-4 py-3 text-center font-mono whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                           {formatToDDMMYYYY(t.joinDate)}
                         </td>
-                        <td className="px-4 py-3 text-slate-500 text-center font-mono whitespace-nowrap">
+                        <td className="px-4 py-3 text-center font-bold text-teal-600 whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
+                          {t.joinDate ? `${calculateYearsOfService(t.joinDate)} ឆ្នាំ` : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-slate-500 text-center font-mono whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                           {t.phone || '-'}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
+                        <td className="px-4 py-3 whitespace-nowrap border-b border-slate-200">
                           <div className="flex items-center justify-end gap-1.5">
                             <button
                               onClick={() => setViewingTeacher(t)}
@@ -2091,8 +2136,8 @@ export default function TeacherManagement({
                 </div>
               </div>
 
-              {/* Added: តួនាទី, ក្របខ័ណ្ឌ, កាំប្រាក់ */}
-              <div className="grid grid-cols-3 gap-4">
+              {/* Added: តួនាទី, ក្របខ័ណ្ឌ */}
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label htmlFor="teacher-role-select" className="text-xs font-bold text-slate-600">តួនាទី</label>
                   <select
@@ -2129,47 +2174,108 @@ export default function TeacherManagement({
                     <option value="ផ្សេងៗ" className="text-slate-800 font-semibold">ផ្សេងៗ</option>
                   </select>
                 </div>
+              </div>
 
-                <div className="space-y-1.5">
-                  <label htmlFor="teacher-salaryRank-input" className="text-xs font-bold text-slate-600">កាំប្រាក់</label>
-                  <input
-                    id="teacher-salaryRank-input"
-                    type="text"
-                    value={formData.salaryRank || ''}
-                    onChange={e => setFormData({ ...formData, salaryRank: e.target.value })}
-                    placeholder="ឧ. គ.២"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white text-slate-800 font-semibold placeholder:font-normal placeholder:text-slate-400"
-                  />
+              {/* Added: ថ្នាក់និងឋានន្តរស័ក្តិ with 2 rows */}
+              <div className="p-3 bg-slate-50/50 rounded-xl border border-slate-200/60 space-y-3">
+                <span className="text-xs font-bold text-slate-700 block">ថ្នាក់និងឋានន្តរស័ក្តិ</span>
+                <div className="space-y-2.5">
+                  {/* Row 1: កាំប្រាក់, ថ្ងៃឡើងថ្នាក់ចុងក្រោយ, ប្រភេទលិខិត as select */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-slate-400 font-bold block">កាំប្រាក់</span>
+                      <input
+                        id="teacher-salaryRank-input"
+                        type="text"
+                        value={formData.salaryRank || ''}
+                        onChange={e => setFormData({ ...formData, salaryRank: e.target.value })}
+                        placeholder="ឧ. គ.២"
+                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:bg-white text-slate-800 font-semibold placeholder:font-normal placeholder:text-slate-400"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-slate-400 font-bold block">ថ្ងៃឡើងថ្នាក់ចុងក្រោយ</span>
+                      <input
+                        id="teacher-promotionDate-input"
+                        type="date"
+                        value={formData.promotionDate || ''}
+                        onChange={e => setFormData({ ...formData, promotionDate: e.target.value })}
+                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:bg-white text-slate-800 font-semibold cursor-pointer"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-slate-400 font-bold block">ប្រភេទលិខិត</span>
+                      <select
+                        id="teacher-documentType-select"
+                        value={formData.documentType || ''}
+                        onChange={e => setFormData({ ...formData, documentType: e.target.value })}
+                        className={`w-full px-2 py-1.5 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:bg-white appearance-none cursor-pointer ${formData.documentType ? 'text-slate-800 font-semibold' : 'text-slate-400/80 font-normal'}`}
+                      >
+                        <option value="" className="text-slate-400/60">ជ្រើសរើស</option>
+                        <option value="ប្រកាស" className="text-slate-800 font-semibold">ប្រកាស</option>
+                        <option value="អនុក្រឹត្យ" className="text-slate-800 font-semibold">អនុក្រឹត្យ</option>
+                        <option value="ព្រះរាជក្រឹត្យ" className="text-slate-800 font-semibold">ព្រះរាជក្រឹត្យ</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Row 2: លិខិតលេខ, លេខរៀង (placed under កាំប្រាក់, i.e. 3-column grid, third col empty) */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-slate-400 font-bold block">លិខិតលេខ</span>
+                      <input
+                        id="teacher-documentNumber-input"
+                        type="text"
+                        value={formData.documentNumber || ''}
+                        onChange={e => setFormData({ ...formData, documentNumber: e.target.value })}
+                        placeholder="ឧ. ១២៣"
+                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:bg-white text-slate-800 font-semibold placeholder:font-normal placeholder:text-slate-400"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-slate-400 font-bold block">លេខរៀង</span>
+                      <input
+                        id="teacher-serialNumber-input"
+                        type="text"
+                        value={formData.serialNumber || ''}
+                        onChange={e => setFormData({ ...formData, serialNumber: e.target.value })}
+                        placeholder="ឧ. ០៥"
+                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:bg-white text-slate-800 font-semibold placeholder:font-normal placeholder:text-slate-400"
+                      />
+                    </div>
+                    <div></div> {/* Spacer */}
+                  </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label htmlFor="teacher-phone-input" className="text-xs font-bold text-slate-600">លេខទូរស័ព្ទ</label>
-                  <input
-                    id="teacher-phone-input"
-                    type="text"
-                    value={formData.phone}
-                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="012 345 678"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label htmlFor="teacher-subject-input" className="text-xs font-bold text-slate-600">ឯកទេស</label>
+                  <label htmlFor="teacher-subject-input" className="text-xs font-bold text-slate-600">មុខវិជ្ជាឯកទេស</label>
                   <input
                     id="teacher-subject-input"
                     type="text"
                     value={formData.subject}
                     onChange={e => setFormData({ ...formData, subject: e.target.value })}
                     placeholder="គណិតវិទ្យា"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white text-slate-800 font-semibold"
                   />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="teacher-ethnicity-select" className="text-xs font-bold text-slate-600">ជនជាតិភាគតិច</label>
+                  <select
+                    id="teacher-ethnicity-select"
+                    value={formData.ethnicity || ''}
+                    onChange={e => setFormData({ ...formData, ethnicity: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white appearance-none cursor-pointer text-slate-800"
+                  >
+                    <option value="ទេ">ទេ</option>
+                    <option value="បាទ/ចាស">បាទ/ចាស</option>
+                  </select>
                 </div>
               </div>
 
-              {/* Added: មុខវិជ្ជាបង្រៀន, បន្ទុកថ្នាក់, ជនជាតិភាគតិច, កម្រិតវប្បធម៌ */}
+              {/* Added: មុខវិជ្ជាបង្រៀន, បន្ទុកថ្នាក់ */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label htmlFor="teacher-teachingSubjects-input" className="text-xs font-bold text-slate-600">មុខវិជ្ជាបង្រៀន</label>
@@ -2216,35 +2322,38 @@ export default function TeacherManagement({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="teacher-ethnicity-select" className="text-xs font-bold text-slate-600">ជនជាតិភាគតិច</label>
-                  <select
-                    id="teacher-ethnicity-select"
-                    value={formData.ethnicity || ''}
-                    onChange={e => setFormData({ ...formData, ethnicity: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white appearance-none cursor-pointer text-slate-800"
-                  >
-                    <option value="ទេ">ទេ</option>
-                    <option value="បាទ/ចាស">បាទ/ចាស</option>
-                  </select>
-                </div>
+              {/* Added: កម្រិតវប្បធម៌ with សញ្ញាបត្រ and ឯកទេស inside background panel */}
+              <div className="p-3 bg-slate-50/50 rounded-xl border border-slate-200/60 space-y-2">
+                <span className="text-xs font-bold text-slate-700 block">កម្រិតវប្បធម៌</span>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400 font-bold block">សញ្ញាបត្រ</span>
+                    <select
+                      id="teacher-educationDegree-select"
+                      value={formData.educationDegree || ''}
+                      onChange={e => setFormData({ ...formData, educationDegree: e.target.value })}
+                      className={`w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:bg-white appearance-none cursor-pointer ${formData.educationDegree ? 'text-slate-800 font-semibold' : 'text-slate-400/90 font-normal'}`}
+                    >
+                      <option value="" className="text-slate-400">ជ្រើសរើស</option>
+                      <option value="បណ្ឌិត" className="text-slate-800 font-semibold">បណ្ឌិត</option>
+                      <option value="បរិញ្ញាបត្រជាន់ខ្ពស់" className="text-slate-800 font-semibold">បរិញ្ញាបត្រជាន់ខ្ពស់</option>
+                      <option value="បរិញ្ញាបត្រ" className="text-slate-800 font-semibold">បរិញ្ញាបត្រ</option>
+                      <option value="ទុតិយភូមិ" className="text-slate-800 font-semibold">ទុតិយភូមិ</option>
+                      <option value="ផ្សេងៗ" className="text-slate-800 font-semibold">ផ្សេងៗ</option>
+                    </select>
+                  </div>
 
-                <div className="space-y-1.5">
-                  <label htmlFor="teacher-educationLevel-select" className="text-xs font-bold text-slate-600">កម្រិតវប្បធម៌</label>
-                  <select
-                    id="teacher-educationLevel-select"
-                    value={formData.educationLevel || ''}
-                    onChange={e => setFormData({ ...formData, educationLevel: e.target.value })}
-                    className={`w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white appearance-none cursor-pointer ${formData.educationLevel ? 'text-slate-800 font-semibold' : 'text-slate-400/90 font-normal'}`}
-                  >
-                    <option value="" className="text-slate-400">ជ្រើសរើស</option>
-                    <option value="បណ្ឌិត" className="text-slate-800 font-semibold">បណ្ឌិត</option>
-                    <option value="បរិញ្ញាបត្រជាន់ខ្ពស់" className="text-slate-800 font-semibold">បរិញ្ញាបត្រជាន់ខ្ពស់</option>
-                    <option value="បរិញ្ញាបត្រ" className="text-slate-800 font-semibold">បរិញ្ញាបត្រ</option>
-                    <option value="ទុតិយភូមិ" className="text-slate-800 font-semibold">ទុតិយភូមិ</option>
-                    <option value="ផ្សេងៗ" className="text-slate-800 font-semibold">ផ្សេងៗ</option>
-                  </select>
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-400 font-bold block">ឯកទេស</span>
+                    <input
+                      id="teacher-educationSpecialty-input"
+                      type="text"
+                      value={formData.educationSpecialty || ''}
+                      onChange={e => setFormData({ ...formData, educationSpecialty: e.target.value })}
+                      placeholder="ឧ. រូបវិទ្យា"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:bg-white text-slate-800 font-semibold placeholder:font-normal placeholder:text-slate-400"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -2268,6 +2377,20 @@ export default function TeacherManagement({
                     readOnly
                     value={formData.yearsOfService !== undefined ? `${formData.yearsOfService} ឆ្នាំ` : '0 ឆ្នាំ'}
                     className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs outline-none cursor-not-allowed font-semibold text-slate-600"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="teacher-phone-input" className="text-xs font-bold text-slate-600">លេខទូរស័ព្ទ</label>
+                  <input
+                    id="teacher-phone-input"
+                    type="text"
+                    value={formData.phone}
+                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="012 345 678"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white text-slate-800 font-semibold"
                   />
                 </div>
               </div>
@@ -2874,7 +2997,7 @@ export default function TeacherManagement({
                     ព័ត៌មានបម្រើការងារ
                   </h5>
                   <div className="grid grid-cols-3 gap-y-1.5 text-slate-650">
-                    <span className="col-span-1 font-bold">ឯកទេស:</span>
+                    <span className="col-span-1 font-bold">មុខវិជ្ជាឯកទេស:</span>
                     <span className="col-span-2 text-slate-800 font-semibold">{viewingTeacher.subject}</span>
                     
                     <span className="col-span-1 font-bold">មុខវិជ្ជាបង្រៀន:</span>
@@ -2888,8 +3011,18 @@ export default function TeacherManagement({
                     <span className="col-span-1 font-bold">ក្របខ័ណ្ឌ:</span>
                     <span className="col-span-2 text-slate-800 font-semibold">{viewingTeacher.framework || '-'}</span>
 
-                    <span className="col-span-1 font-bold">កាំប្រាក់:</span>
-                    <span className="col-span-2 text-slate-800 font-sans font-semibold">{viewingTeacher.salaryRank || '-'}</span>
+                    <span className="col-span-1 font-bold">ថ្នាក់និងឋានន្តរស័ក្តិ:</span>
+                    <span className="col-span-2 text-slate-800 font-semibold text-xs leading-relaxed">
+                      {viewingTeacher.salaryRank ? (
+                        <div className="bg-slate-100/80 p-1.5 rounded-lg border border-slate-200/50 text-[10px] space-y-0.5 mt-0.5">
+                          <div><span className="font-bold text-slate-500">កាំប្រាក់:</span> <span className="text-slate-800 font-bold">{viewingTeacher.salaryRank}</span></div>
+                          {viewingTeacher.promotionDate && <div><span className="font-bold text-slate-500">ថ្ងៃឡើងថ្នាក់:</span> <span className="text-slate-800 font-bold">{formatToDDMMYYYY(viewingTeacher.promotionDate)}</span></div>}
+                          {viewingTeacher.documentType && <div><span className="font-bold text-slate-500">ប្រភេទលិខិត:</span> <span className="text-slate-800 font-bold">{viewingTeacher.documentType}</span></div>}
+                          {viewingTeacher.documentNumber && <div><span className="font-bold text-slate-500">លិខិតលេខ:</span> <span className="text-slate-800 font-bold">{viewingTeacher.documentNumber}</span></div>}
+                          {viewingTeacher.serialNumber && <div><span className="font-bold text-slate-500">លេខរៀង:</span> <span className="text-slate-800 font-bold">{viewingTeacher.serialNumber}</span></div>}
+                        </div>
+                      ) : '-'}
+                    </span>
 
                     <span className="col-span-1 font-bold">ថ្ងៃចូលធ្វើការ:</span>
                     <span className="col-span-2 text-slate-800 font-semibold">{formatToDDMMYYYY(viewingTeacher.joinDate)}</span>
