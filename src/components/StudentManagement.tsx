@@ -4,8 +4,10 @@ import {
   GraduationCap, UserPlus, School, Search, Trash2, Edit2, Pencil,
   Printer, Plus, X, ArrowRight, Table, Phone, MapPin, Calendar, CheckCircle,
   AlertTriangle, IdCard, Save, GripVertical, RotateCcw, XCircle, User, Camera,
-  ArrowUpDown, Eye
+  ArrowUpDown, Eye, FileSpreadsheet, FileDown, FileUp
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import JSZip from 'jszip';
 import { Student, Classroom, SchoolInfo } from '../types';
 import { 
   getProvincesList, 
@@ -19,7 +21,9 @@ import {
   getDefaultSubjectsForClass, 
   getStandardSubjectsForCategory, 
   getClassroomsForCategory,
-  SubjectLayoutItem
+  SubjectLayoutItem,
+  isSubjectExcludedForCategory,
+  isSubjectExcludedForGrade
 } from '../data/subjectLayouts';
 
 export const DEFAULT_SUBJECTS = [
@@ -419,12 +423,685 @@ export default function StudentManagement({
     };
   }, []);
 
+  // Student Import/Export dropdown state and refs
+  const [showImportExportDropdown, setShowImportExportDropdown] = useState(false);
+  const importExportDropdownRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Click outside listener for student import/export dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (importExportDropdownRef.current && !importExportDropdownRef.current.contains(event.target as Node)) {
+        setShowImportExportDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const getKhmerDateTimeString = () => {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    return `${day}-${month}-${year}_${hours}:${minutes}:${seconds}`;
+  };
+
+  const formatToDDMMYYYY = (dateStr: string): string => {
+    if (!dateStr) return '-';
+    const clean = dateStr.trim();
+    
+    const matchIso = clean.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (matchIso) {
+      return `${matchIso[3]}-${matchIso[2]}-${matchIso[1]}`;
+    }
+    
+    const matchDmy = clean.match(/^(\d{2})[-/](\d{2})[-/](\d{4})$/);
+    if (matchDmy) {
+      return `${matchDmy[1]}-${matchDmy[2]}-${matchDmy[3]}`;
+    }
+    
+    const d = new Date(clean);
+    if (!isNaN(d.getTime())) {
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}-${month}-${year}`;
+    }
+    
+    return dateStr;
+  };
+
+  const parseImportDate = (val: any): string => {
+    if (!val) return '';
+    if (val instanceof Date) {
+      const year = val.getFullYear();
+      const month = String(val.getMonth() + 1).padStart(2, '0');
+      const day = String(val.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    let str = String(val).trim();
+    if (!str) return '';
+
+    if (str.includes('T')) {
+      const parts = str.split('T')[0];
+      if (/^\d{4}-\d{2}-\d{2}$/.test(parts)) {
+        return parts;
+      }
+    }
+
+    if (/^\d{5}(\.\d+)?$/.test(str)) {
+      try {
+        const dateObj = XLSX.SSF.parse_date_code(Number(str));
+        const year = dateObj.y;
+        const month = String(dateObj.m).padStart(2, '0');
+        const day = String(dateObj.d).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      } catch (e) {
+        // fallback
+      }
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+      return str;
+    }
+
+    const dmyMatch = str.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
+    if (dmyMatch) {
+      const day = dmyMatch[1].padStart(2, '0');
+      const month = dmyMatch[2].padStart(2, '0');
+      const year = dmyMatch[3];
+      return `${year}-${month}-${day}`;
+    }
+
+    const ymdMatch = str.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{4})$/);
+    if (ymdMatch) {
+      const year = ymdMatch[1];
+      const month = ymdMatch[2].padStart(2, '0');
+      const day = ymdMatch[3].padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    const parsedTimestamp = Date.parse(str);
+    if (!isNaN(parsedTimestamp)) {
+      const d = new Date(parsedTimestamp);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    return str;
+  };
+
+  const formatImportPhone = (val: any): string => {
+    if (!val) return '';
+    let str = String(val).trim();
+    if (!str) return '';
+    
+    str = str.replace(/[\s\-\(\)]/g, '');
+    
+    if (/^\d+$/.test(str)) {
+      if (str.startsWith('855')) {
+        str = '0' + str.slice(3);
+      } else if (!str.startsWith('0') && (str.length === 8 || str.length === 9)) {
+        str = '0' + str;
+      }
+    }
+    return str;
+  };
+
+  const getStudentPhotoFilename = (s: Student): string => {
+    if (!s) return '';
+    const identifier = (s.studentIdCard || s.nameKhmer || '').trim().replace(/[\s\/\\]/g, '_');
+    return `${identifier}.png`;
+  };
+
+  const findClassroomIdByName = (className: string): string => {
+    if (!className) return '';
+    const cleanImport = toArabicClassname(className).toLowerCase().replace(/\s/g, '');
+    const found = classrooms.find(c => {
+      const cleanClass = toArabicClassname(c.name).toLowerCase().replace(/\s/g, '');
+      return cleanClass === cleanImport || c.name.toLowerCase().replace(/\s/g, '') === cleanImport;
+    });
+    return found ? found.id : '';
+  };
+
+  const handleDownloadTemplate = () => {
+    const headers = [
+      "ល.រ",
+      "អត្តលេខ",
+      "គោត្តនាម-នាម",
+      "ឈ្មោះឡាតាំង",
+      "ភេទ",
+      "ថ្ងៃខែឆ្នាំកំណើត",
+      "ថ្នាក់",
+      "ទីកន្លែងកំណើត-ខេត្ត",
+      "ទីកន្លែងកំណើត-ស្រុក",
+      "ទីកន្លែងកំណើត-ឃុំ",
+      "ទីកន្លែងកំណើត-ភូមិ",
+      "បញ្ហារបស់សិស្ស",
+      "ស្ថានភាពសិស្ស",
+      "ប្រភេទសិស្ស",
+      "ជនជាតិដើមភាគតិច",
+      "សម័យប្រឡង",
+      "មណ្ឌលប្រឡង",
+      "លេខបន្ទប់",
+      "លេខតុ",
+      "ឈ្មោះឪពុក",
+      "មុខរបរឪពុក",
+      "ឈ្មោះម្ដាយ",
+      "មុខរបរម្ដាយ",
+      "លេខទូរស័ព្ទអាណាព្យាបាល",
+      "ទីលំនៅបច្ចុប្បន្ន-ខេត្ត",
+      "ទីលំនៅបច្ចុប្បន្ន-ស្រុក",
+      "ទីលំនៅបច្ចុប្បន្ន-ឃុំ",
+      "ទីលំនៅបច្ចុប្បន្ន-ភូមិ",
+      "ឈ្មោះឯកសាររូបភាព"
+    ];
+    
+    const defaultClassName = classrooms.length > 0 ? toArabicClassname(classrooms[0].name) : "7A";
+
+    const sampleData = [
+      {
+        "ល.រ": 1,
+        "អត្តលេខ": "0001",
+        "គោត្តនាម-នាម": "ស៊ឹម សុភា",
+        "ឈ្មោះឡាតាំង": "SIM SOPHEA",
+        "ភេទ": "ប្រុស",
+        "ថ្ងៃខែឆ្នាំកំណើត": "12-05-2011",
+        "ថ្នាក់": defaultClassName,
+        "ទីកន្លែងកំណើត-ខេត្ត": "កំពង់ចាម",
+        "ទីកន្លែងកំណើត-ស្រុក": "កំពង់សៀម",
+        "ទីកន្លែងកំណើត-ឃុំ": "គគីរ",
+        "ទីកន្លែងកំណើត-ភូមិ": "ភូមិទី១",
+        "បញ្ហារបស់សិស្ស": "គ្មាន",
+        "ស្ថានភាពសិស្ស": "កំពុងរៀន",
+        "ប្រភេទសិស្ស": "សិស្សទូទៅ",
+        "ជនជាតិដើមភាគតិច": "ទេ",
+        "សម័យប្រឡង": "03-07-2026",
+        "មណ្ឌលប្រឡង": "មណ្ឌលវិទ្យាល័យកំពង់ចាម",
+        "លេខបន្ទប់": "05",
+        "លេខតុ": "12",
+        "ឈ្មោះឪពុក": "សុខ សាន",
+        "មុខរបរឪពុក": "កសិករ",
+        "ឈ្មោះម្ដាយ": "ចាន់ ធី",
+        "មុខរបរម្ដាយ": "មេផ្ទះ",
+        "លេខទូរស័ព្ទអាណាព្យាបាល": "092123456",
+        "ទីលំនៅបច្ចុប្បន្ន-ខេត្ត": "កំពង់ចាម",
+        "ទីលំនៅបច្ចុប្បន្ន-ស្រុក": "កំពង់សៀម",
+        "ទីលំនៅបច្ចុប្បន្ន-ឃុំ": "គគីរ",
+        "ទីលំនៅបច្ចុប្បន្ន-ភូមិ": "ភូមិទី១",
+        "ឈ្មោះឯកសាររូបភាព": "0001.png"
+      }
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(sampleData, { header: headers });
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "គំរូឯកសារសិស្ស");
+
+    const dtStr = getKhmerDateTimeString();
+    XLSX.writeFile(workbook, `គំរូឯកសារសិស្ស_${dtStr}.xlsx`);
+    showToast("បានទាញយកគំរូឯកសារជោគជ័យ!", "success");
+  };
+
+  const handleExportStudents = () => {
+    if (students.length === 0) {
+      showToast("មិនមានទិន្នន័យសិស្សសម្រាប់នាំចេញទេ!", "error");
+      return;
+    }
+
+    const exportData = students.map((s, idx) => {
+      const cls = classrooms.find(c => c.id === s.classroomId);
+      const className = cls ? toArabicClassname(cls.name) : "";
+      return {
+        "ល.រ": idx + 1,
+        "អត្តលេខ": s.studentIdCard || "",
+        "គោត្តនាម-នាម": s.nameKhmer || "",
+        "ឈ្មោះឡាតាំង": s.nameLatin || "",
+        "ភេទ": s.gender || "",
+        "ថ្ងៃខែឆ្នាំកំណើត": formatToDDMMYYYY(s.dob || ""),
+        "ថ្នាក់": className,
+        "ទីកន្លែងកំណើត-ខេត្ត": s.pobProvince || "",
+        "ទីកន្លែងកំណើត-ស្រុក": s.pobDistrict || "",
+        "ទីកន្លែងកំណើត-ឃុំ": s.pobCommune || "",
+        "ទីកន្លែងកំណើត-ភូមិ": s.pobVillage || "",
+        "បញ្ហារបស់សិស្ស": s.studentIssue || "",
+        "ស្ថានភាពសិស្ស": s.studentStatus || "",
+        "ប្រភេទសិស្ស": s.studentType || "",
+        "ជនជាតិដើមភាគតិច": s.indigenousGroup || "ទេ",
+        "សម័យប្រឡង": formatToDDMMYYYY(s.diplomaExamSession || ""),
+        "មណ្ឌលប្រឡង": s.diplomaExamCenter || "",
+        "លេខបន្ទប់": s.diplomaExamRoom || "",
+        "លេខតុ": s.diplomaExamTable || "",
+        "ឈ្មោះឪពុក": s.fatherName || "",
+        "មុខរបរឪពុក": s.fatherOccupation || "",
+        "ឈ្មោះម្ដាយ": s.motherName || "",
+        "មុខរបរម្ដាយ": s.motherOccupation || "",
+        "លេខទូរស័ព្ទអាណាព្យាបាល": s.parentPhone || "",
+        "ទីលំនៅបច្ចុប្បន្ន-ខេត្ត": s.currentAddressProvince || "",
+        "ទីលំនៅបច្ចុប្បន្ន-ស្រុក": s.currentAddressDistrict || "",
+        "ទីលំនៅបច្ចុប្បន្ន-ឃុំ": s.currentAddressCommune || "",
+        "ទីលំនៅបច្ចុប្បន្ន-ភូមិ": s.currentAddressVillage || "",
+        "ឈ្មោះឯកសាររូបភាព": s.photoUrl ? getStudentPhotoFilename(s) : ""
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "បញ្ជីឈ្មោះសិស្ស");
+
+    const dtStr = getKhmerDateTimeString();
+    XLSX.writeFile(workbook, `បញ្ជីឈ្មោះសិស្ស_${dtStr}.xlsx`);
+    showToast("បាននាំចេញទិន្នន័យសិស្សជោគជ័យ!", "success");
+  };
+
+  const handleExportStudentsZip = async () => {
+    if (students.length === 0) {
+      showToast("មិនមានទិន្នន័យសិស្សសម្រាប់នាំចេញទេ!", "error");
+      return;
+    }
+
+    const exportData = students.map((s, idx) => {
+      const cls = classrooms.find(c => c.id === s.classroomId);
+      const className = cls ? toArabicClassname(cls.name) : "";
+      return {
+        "ល.រ": idx + 1,
+        "អត្តលេខ": s.studentIdCard || "",
+        "គោត្តនាម-នាម": s.nameKhmer || "",
+        "ឈ្មោះឡាតាំង": s.nameLatin || "",
+        "ភេទ": s.gender || "",
+        "ថ្ងៃខែឆ្នាំកំណើត": formatToDDMMYYYY(s.dob || ""),
+        "ថ្នាក់": className,
+        "ទីកន្លែងកំណើត-ខេត្ត": s.pobProvince || "",
+        "ទីកន្លែងកំណើត-ស្រុក": s.pobDistrict || "",
+        "ទីកន្លែងកំណើត-ឃុំ": s.pobCommune || "",
+        "ទីកន្លែងកំណើត-ភូមិ": s.pobVillage || "",
+        "បញ្ហារបស់សិស្ស": s.studentIssue || "",
+        "ស្ថានភាពសិស្ស": s.studentStatus || "",
+        "ប្រភេទសិស្ស": s.studentType || "",
+        "ជនជាតិដើមភាគតិច": s.indigenousGroup || "ទេ",
+        "សម័យប្រឡង": formatToDDMMYYYY(s.diplomaExamSession || ""),
+        "មណ្ឌលប្រឡង": s.diplomaExamCenter || "",
+        "លេខបន្ទប់": s.diplomaExamRoom || "",
+        "លេខតុ": s.diplomaExamTable || "",
+        "ឈ្មោះឪពុក": s.fatherName || "",
+        "មុខរបរឪពុក": s.fatherOccupation || "",
+        "ឈ្មោះម្ដាយ": s.motherName || "",
+        "មុខរបរម្ដាយ": s.motherOccupation || "",
+        "លេខទូរស័ព្ទអាណាព្យាបាល": s.parentPhone || "",
+        "ទីលំនៅបច្ចុប្បន្ន-ខេត្ត": s.currentAddressProvince || "",
+        "ទីលំនៅបច្ចុប្បន្ន-ស្រុក": s.currentAddressDistrict || "",
+        "ទីលំនៅបច្ចុប្បន្ន-ឃុំ": s.currentAddressCommune || "",
+        "ទីលំនៅបច្ចុប្បន្ន-ភូមិ": s.currentAddressVillage || "",
+        "ឈ្មោះឯកសាររូបភាព": s.photoUrl ? getStudentPhotoFilename(s) : ""
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "បញ្ជីឈ្មោះសិស្ស");
+
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+
+    const zip = new JSZip();
+    const dtStr = getKhmerDateTimeString();
+    zip.file(`បញ្ជីឈ្មោះសិស្ស_${dtStr}.xlsx`, excelBuffer);
+
+    const photosFolder = zip.folder("photos");
+    let photoCount = 0;
+
+    students.forEach(s => {
+      if (s.photoUrl && s.photoUrl.startsWith('data:image/')) {
+        const parts = s.photoUrl.split(',');
+        if (parts.length > 1) {
+          const base64Data = parts[1];
+          const filename = getStudentPhotoFilename(s);
+          if (photosFolder) {
+            photosFolder.file(filename, base64Data, { base64: true });
+            photoCount++;
+          }
+        }
+      }
+    });
+
+    try {
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(zipBlob);
+      link.download = `បញ្ជីឈ្មោះសិស្ស_រួមរូបថត_${dtStr}.zip`;
+      link.click();
+      if (photoCount > 0) {
+        showToast(`បាននាំចេញទិន្នន័យសិស្ស រួមទាំងរូបថតចំនួន ${photoCount} សន្លឹកជាឯកសារ ZIP ជោគជ័យ!`, "success");
+      } else {
+        showToast("បាននាំចេញទិន្នន័យសិស្សជាឯកសារ ZIP ជោគជ័យ! (មិនមានរូបថត)", "success");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("មានបញ្ហាក្នុងការបង្កើតឯកសារ ZIP!", "error");
+    }
+  };
+
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+
+    // 1. ZIP File Import
+    if (file.name.toLowerCase().endsWith('.zip')) {
+      try {
+        const zip = await JSZip.loadAsync(file);
+        const excelKey = Object.keys(zip.files).find(key => key.toLowerCase().endsWith('.xlsx') && !key.startsWith('__MACOSX'));
+        if (!excelKey) {
+          showToast("មិនមានឯកសារ Excel (.xlsx) នៅក្នុងឯកសារ ZIP ទេ!", "error");
+          e.target.value = '';
+          return;
+        }
+
+        const excelFile = zip.files[excelKey];
+        const arrayBuffer = await excelFile.async("arraybuffer");
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const rawData = XLSX.utils.sheet_to_json<any>(worksheet);
+
+        if (rawData.length === 0) {
+          showToast("ឯកសារ Excel ក្នុង ZIP មិនមានទិន្នន័យទេ!", "error");
+          e.target.value = '';
+          return;
+        }
+
+        const importedStudents: Student[] = [];
+        let errorCount = 0;
+
+        for (let index = 0; index < rawData.length; index++) {
+          const row = rawData[index];
+          const nameKhmer = String(row["គោត្តនាម-នាម"] || row["ឈ្មោះ"] || row["NAME_KHMER"] || row["nameKhmer"] || "").trim();
+          
+          if (!nameKhmer) {
+            errorCount++;
+            continue;
+          }
+
+          const studentIdCardRaw = row["អត្តលេខ"] || row["STUDENT_ID"] || row["studentIdCard"];
+          const studentIdCard = studentIdCardRaw ? String(studentIdCardRaw).trim() : `STD-IMP-${Date.now()}-${index}`;
+          const nameLatin = String(row["ឈ្មោះឡាតាំង"] || row["NAME_LATIN"] || row["nameLatin"] || "").trim() || transliterateKhmerToLatin(nameKhmer);
+          
+          let genderRaw = String(row["ភេទ"] || row["GENDER"] || row["gender"] || "").trim();
+          let gender: 'ប្រុស' | 'ស្រី' = 'ប្រុស';
+          if (genderRaw) {
+            const trimmedL = genderRaw.toLowerCase();
+            if (trimmedL === 'ស្រី' || trimmedL === 'ស' || trimmedL === 'female' || trimmedL === 'f') {
+              gender = 'ស្រី';
+            }
+          }
+
+          const dobRaw = row["ថ្ងៃខែឆ្នាំកំណើត"] || row["DOB"] || row["dob"];
+          const dob = parseImportDate(dobRaw);
+
+          const className = String(row["ថ្នាក់"] || row["CLASSROOM"] || row["classroom"] || "").trim();
+          const classroomId = findClassroomIdByName(className) || (classrooms.length > 0 ? classrooms[0].id : "");
+
+          const pobProvince = String(row["ទីកន្លែងកំណើត-ខេត្ត"] || row["POB_PROVINCE"] || row["pobProvince"] || "").trim();
+          const pobDistrict = String(row["ទីកន្លែងកំណើត-ស្រុក"] || row["POB_DISTRICT"] || row["pobDistrict"] || "").trim();
+          const pobCommune = String(row["ទីកន្លែងកំណើត-ឃុំ"] || row["POB_COMMUNE"] || row["pobCommune"] || "").trim();
+          const pobVillage = String(row["ទីកន្លែងកំណើត-ភូមិ"] || row["POB_VILLAGE"] || row["pobVillage"] || "").trim();
+          const pobParts = [pobVillage, pobCommune, pobDistrict, pobProvince].filter(Boolean);
+          const pob = pobParts.join(' ') || String(row["ទីកន្លែងកំណើត"] || "").trim();
+
+          const studentIssue = String(row["បញ្ហារបស់សិស្ស"] || row["STUDENT_ISSUE"] || row["studentIssue"] || "").trim();
+          const studentStatus = String(row["ស្ថានភាពសិស្ស"] || row["STUDENT_STATUS"] || row["studentStatus"] || "កំពុងរៀន").trim();
+          const studentType = String(row["ប្រភេទសិស្ស"] || row["STUDENT_TYPE"] || row["studentType"] || "សិស្សទូទៅ").trim();
+          const indigenousGroup = String(row["ជនជាតិដើមភាគតិច"] || row["INDIGENOUS_GROUP"] || row["indigenousGroup"] || "ទេ").trim();
+
+          const diplomaExamSessionRaw = row["សម័យប្រឡង"] || row["DIPLOMA_EXAM_SESSION"] || row["diplomaExamSession"];
+          const diplomaExamSession = diplomaExamSessionRaw ? parseImportDate(diplomaExamSessionRaw) : "";
+          const diplomaExamCenter = String(row["មណ្ឌលប្រឡង"] || row["DIPLOMA_EXAM_CENTER"] || row["diplomaExamCenter"] || "").trim();
+          const diplomaExamRoom = String(row["លេខបន្ទប់"] || row["DIPLOMA_EXAM_ROOM"] || row["diplomaExamRoom"] || "").trim();
+          const diplomaExamTable = String(row["លេខតុ"] || row["DIPLOMA_EXAM_TABLE"] || row["diplomaExamTable"] || "").trim();
+
+          const fatherName = String(row["ឈ្មោះឪពុក"] || row["FATHER_NAME"] || row["fatherName"] || "").trim();
+          const fatherOccupation = String(row["មុខរបរឪពុក"] || row["FATHER_OCCUPATION"] || row["fatherOccupation"] || "").trim();
+          const motherName = String(row["ឈ្មោះម្ដាយ"] || row["MOTHER_NAME"] || row["motherName"] || "").trim();
+          const motherOccupation = String(row["មុខរបរម្ដាយ"] || row["MOTHER_OCCUPATION"] || row["motherOccupation"] || "").trim();
+          
+          const parentPhoneRaw = row["លេខទូរស័ព្ទអាណាព្យាបាល"] || row["PARENT_PHONE"] || row["parentPhone"];
+          const parentPhone = formatImportPhone(parentPhoneRaw);
+
+          const currentAddressProvince = String(row["ទីលំនៅបច្ចុប្បន្ន-ខេត្ត"] || row["CURRENT_ADDRESS_PROVINCE"] || row["currentAddressProvince"] || "").trim();
+          const currentAddressDistrict = String(row["ទីលំនៅបច្ចុប្បន្ន-ស្រុក"] || row["CURRENT_ADDRESS_DISTRICT"] || row["currentAddressDistrict"] || "").trim();
+          const currentAddressCommune = String(row["ទីលំនៅបច្ចុប្បន្ន-ឃុំ"] || row["CURRENT_ADDRESS_COMMUNE"] || row["currentAddressCommune"] || "").trim();
+          const currentAddressVillage = String(row["ទីលំនៅបច្ចុប្បន្ន-ភូមិ"] || row["CURRENT_ADDRESS_VILLAGE"] || row["currentAddressVillage"] || "").trim();
+          const currentAddressParts = [currentAddressVillage, currentAddressCommune, currentAddressDistrict, currentAddressProvince].filter(Boolean);
+          const currentAddress = currentAddressParts.join(' ') || String(row["ទីលំនៅបច្ចុប្បន្ន"] || "").trim();
+
+          // Find photo in ZIP if specified
+          const photoFilename = String(row["ឈ្មោះឯកសាររូបភាព"] || row["IMAGE_FILENAME"] || row["imageFilename"] || "").trim();
+          let photoUrl = '';
+
+          if (photoFilename) {
+            const zipPhotoKey = Object.keys(zip.files).find(key => 
+              key.toLowerCase() === photoFilename.toLowerCase() || 
+              key.toLowerCase().endsWith('/' + photoFilename.toLowerCase())
+            );
+            if (zipPhotoKey) {
+              const base64Data = await zip.files[zipPhotoKey].async("base64");
+              let mimeType = 'image/png';
+              if (zipPhotoKey.toLowerCase().endsWith('.jpg') || zipPhotoKey.toLowerCase().endsWith('.jpeg')) {
+                mimeType = 'image/jpeg';
+              } else if (zipPhotoKey.toLowerCase().endsWith('.webp')) {
+                mimeType = 'image/webp';
+              }
+              photoUrl = `data:${mimeType};base64,${base64Data}`;
+            }
+          }
+
+          importedStudents.push({
+            id: `STD-IMPORT-${Date.now()}-${index}-${Math.floor(Math.random() * 1000)}`,
+            studentIdCard,
+            rollNumber: "",
+            nameKhmer,
+            nameLatin,
+            gender,
+            dob,
+            pobProvince,
+            pobDistrict,
+            pobCommune,
+            pobVillage,
+            pob,
+            studentIssue,
+            studentStatus,
+            studentType,
+            indigenousGroup,
+            diplomaExamSession,
+            diplomaExamCenter,
+            diplomaExamRoom,
+            diplomaExamTable,
+            fatherName,
+            fatherOccupation,
+            motherName,
+            motherOccupation,
+            parentPhone,
+            currentAddressProvince,
+            currentAddressDistrict,
+            currentAddressCommune,
+            currentAddressVillage,
+            currentAddress,
+            photoUrl,
+            classroomId
+          });
+        }
+
+        if (importedStudents.length > 0) {
+          const combined = [...students, ...importedStudents];
+          const sortedAndNumbered = sortAndAssignRollNumbers(combined);
+          onUpdateStudents(sortedAndNumbered);
+          
+          if (errorCount > 0) {
+            showToast(`បាននាំចូលសិស្សចំនួន ${importedStudents.length} នាក់ជោគជ័យ! (រំលងចំនួន ${errorCount} នាក់ដោយសារខ្វះឈ្មោះ)`, "info");
+          } else {
+            showToast(`បាននាំចូលសិស្សចំនួន ${importedStudents.length} នាក់ជោគជ័យ!`, "success");
+          }
+        } else {
+          showToast("មិនមានទិន្នន័យសិស្សត្រូវបាននាំចូលទេ!", "error");
+        }
+      } catch (err) {
+        console.error(err);
+        showToast("មានបញ្ហាក្នុងការអានឯកសារ ZIP!", "error");
+      }
+      e.target.value = '';
+      return;
+    }
+
+    // 2. Regular XLSX / XLS File Import
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const workbook = XLSX.read(bstr, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const rawData = XLSX.utils.sheet_to_json<any>(worksheet);
+
+        if (rawData.length === 0) {
+          showToast("ឯកសារដែលបានជ្រើសរើសមិនមានទិន្នន័យទេ!", "error");
+          return;
+        }
+
+        const importedStudents: Student[] = [];
+        let errorCount = 0;
+
+        rawData.forEach((row: any, index: number) => {
+          const nameKhmer = String(row["គោត្តនាម-នាម"] || row["ឈ្មោះ"] || row["NAME_KHMER"] || row["nameKhmer"] || "").trim();
+          
+          if (!nameKhmer) {
+            errorCount++;
+            return;
+          }
+
+          const studentIdCardRaw = row["អត្តលេខ"] || row["STUDENT_ID"] || row["studentIdCard"];
+          const studentIdCard = studentIdCardRaw ? String(studentIdCardRaw).trim() : `STD-IMP-${Date.now()}-${index}`;
+          const nameLatin = String(row["ឈ្មោះឡាតាំង"] || row["NAME_LATIN"] || row["nameLatin"] || "").trim() || transliterateKhmerToLatin(nameKhmer);
+          
+          let genderRaw = String(row["ភេទ"] || row["GENDER"] || row["gender"] || "").trim();
+          let gender: 'ប្រុស' | 'ស្រី' = 'ប្រុស';
+          if (genderRaw) {
+            const trimmedL = genderRaw.toLowerCase();
+            if (trimmedL === 'ស្រី' || trimmedL === 'ស' || trimmedL === 'female' || trimmedL === 'f') {
+              gender = 'ស្រី';
+            }
+          }
+
+          const dobRaw = row["ថ្ងៃខែឆ្នាំកំណើត"] || row["DOB"] || row["dob"];
+          const dob = parseImportDate(dobRaw);
+
+          const className = String(row["ថ្នាក់"] || row["CLASSROOM"] || row["classroom"] || "").trim();
+          const classroomId = findClassroomIdByName(className) || (classrooms.length > 0 ? classrooms[0].id : "");
+
+          const pobProvince = String(row["ទីកន្លែងកំណើត-ខេត្ត"] || row["POB_PROVINCE"] || row["pobProvince"] || "").trim();
+          const pobDistrict = String(row["ទីកន្លែងកំណើត-ស្រុក"] || row["POB_DISTRICT"] || row["pobDistrict"] || "").trim();
+          const pobCommune = String(row["ទីកន្លែងកំណើត-ឃុំ"] || row["POB_COMMUNE"] || row["pobCommune"] || "").trim();
+          const pobVillage = String(row["ទីកន្លែងកំណើត-ភូមិ"] || row["POB_VILLAGE"] || row["pobVillage"] || "").trim();
+          const pobParts = [pobVillage, pobCommune, pobDistrict, pobProvince].filter(Boolean);
+          const pob = pobParts.join(' ') || String(row["ទីកន្លែងកំណើត"] || "").trim();
+
+          const studentIssue = String(row["បញ្ហារបស់សិស្ស"] || row["STUDENT_ISSUE"] || row["studentIssue"] || "").trim();
+          const studentStatus = String(row["ស្ថានភាពសិស្ស"] || row["STUDENT_STATUS"] || row["studentStatus"] || "កំពុងរៀន").trim();
+          const studentType = String(row["ប្រភេទសិស្ស"] || row["STUDENT_TYPE"] || row["studentType"] || "សិស្សទូទៅ").trim();
+          const indigenousGroup = String(row["ជនជាតិដើមភាគតិច"] || row["INDIGENOUS_GROUP"] || row["indigenousGroup"] || "ទេ").trim();
+
+          const diplomaExamSessionRaw = row["សម័យប្រឡង"] || row["DIPLOMA_EXAM_SESSION"] || row["diplomaExamSession"];
+          const diplomaExamSession = diplomaExamSessionRaw ? parseImportDate(diplomaExamSessionRaw) : "";
+          const diplomaExamCenter = String(row["មណ្ឌលប្រឡង"] || row["DIPLOMA_EXAM_CENTER"] || row["diplomaExamCenter"] || "").trim();
+          const diplomaExamRoom = String(row["លេខបន្ទប់"] || row["DIPLOMA_EXAM_ROOM"] || row["diplomaExamRoom"] || "").trim();
+          const diplomaExamTable = String(row["លេខតុ"] || row["DIPLOMA_EXAM_TABLE"] || row["diplomaExamTable"] || "").trim();
+
+          const fatherName = String(row["ឈ្មោះឪពុក"] || row["FATHER_NAME"] || row["fatherName"] || "").trim();
+          const fatherOccupation = String(row["មុខរបរឪពុក"] || row["FATHER_OCCUPATION"] || row["fatherOccupation"] || "").trim();
+          const motherName = String(row["ឈ្មោះម្ដាយ"] || row["MOTHER_NAME"] || row["motherName"] || "").trim();
+          const motherOccupation = String(row["មុខរបរម្ដាយ"] || row["MOTHER_OCCUPATION"] || row["motherOccupation"] || "").trim();
+          
+          const parentPhoneRaw = row["លេខទូរស័ព្ទអាណាព្យាបាល"] || row["PARENT_PHONE"] || row["parentPhone"];
+          const parentPhone = formatImportPhone(parentPhoneRaw);
+
+          const currentAddressProvince = String(row["ទីលំនៅបច្ចុប្បន្ន-ខេត្ត"] || row["CURRENT_ADDRESS_PROVINCE"] || row["currentAddressProvince"] || "").trim();
+          const currentAddressDistrict = String(row["ទីលំនៅបច្ចុប្បន្ន-ស្រុក"] || row["CURRENT_ADDRESS_DISTRICT"] || row["currentAddressDistrict"] || "").trim();
+          const currentAddressCommune = String(row["ទីលំនៅបច្ចុប្បន្ន-ឃុំ"] || row["CURRENT_ADDRESS_COMMUNE"] || row["currentAddressCommune"] || "").trim();
+          const currentAddressVillage = String(row["ទីលំនៅបច្ចុប្បន្ន-ភូមិ"] || row["CURRENT_ADDRESS_VILLAGE"] || row["currentAddressVillage"] || "").trim();
+          const currentAddressParts = [currentAddressVillage, currentAddressCommune, currentAddressDistrict, currentAddressProvince].filter(Boolean);
+          const currentAddress = currentAddressParts.join(' ') || String(row["ទីលំនៅបច្ចុប្បន្ន"] || "").trim();
+
+          importedStudents.push({
+            id: `STD-IMPORT-${Date.now()}-${index}-${Math.floor(Math.random() * 1000)}`,
+            studentIdCard,
+            rollNumber: "",
+            nameKhmer,
+            nameLatin,
+            gender,
+            dob,
+            pobProvince,
+            pobDistrict,
+            pobCommune,
+            pobVillage,
+            pob,
+            studentIssue,
+            studentStatus,
+            studentType,
+            indigenousGroup,
+            diplomaExamSession,
+            diplomaExamCenter,
+            diplomaExamRoom,
+            diplomaExamTable,
+            fatherName,
+            fatherOccupation,
+            motherName,
+            motherOccupation,
+            parentPhone,
+            currentAddressProvince,
+            currentAddressDistrict,
+            currentAddressCommune,
+            currentAddressVillage,
+            currentAddress,
+            photoUrl: "",
+            classroomId
+          });
+        });
+
+        if (importedStudents.length > 0) {
+          const combined = [...students, ...importedStudents];
+          const sortedAndNumbered = sortAndAssignRollNumbers(combined);
+          onUpdateStudents(sortedAndNumbered);
+          
+          if (errorCount > 0) {
+            showToast(`បាននាំចូលសិស្សចំនួន ${importedStudents.length} នាក់ជោគជ័យ! (រំលងចំនួន ${errorCount} នាក់ដោយសារខ្វះឈ្មោះ)`, "info");
+          } else {
+            showToast(`បាននាំចូលសិស្សចំនួន ${importedStudents.length} នាក់ជោគជ័យ!`, "success");
+          }
+        } else {
+          showToast("មិនមានទិន្នន័យសិស្សត្រូវបាននាំចូលទេ!", "error");
+        }
+      } catch (err) {
+        console.error(err);
+        showToast("មានបញ្ហាក្នុងការអានឯកសារ Excel!", "error");
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = '';
+  };
+
   useEffect(() => {
     const subs: { [key: string]: any[] } = {};
     const mons: { [key: string]: string[] } = {};
     
     classrooms.forEach(c => {
-      subs[c.id] = c.preStartConfig?.subjects || DEFAULT_SUBJECTS;
+      const rawSubs = c.preStartConfig?.subjects || DEFAULT_SUBJECTS;
+      subs[c.id] = rawSubs.filter(sub => !isSubjectExcludedForGrade(c.grade, sub.name, sub.id));
       mons[c.id] = c.preStartConfig?.activeMonthsForAverage || ['វិច្ឆិកា', 'ធ្នូ', 'មករា', 'កុម្ភៈ', 'មីនា'];
     });
     
@@ -452,7 +1129,8 @@ export default function StudentManagement({
       // Find any classroom that has subjects configured
       const customizedClass = clsInCat.find(c => c.preStartConfig?.subjects && c.preStartConfig.subjects.length > 0);
       const defaultLayout = getStandardSubjectsForCategory(cat.id);
-      const existingSubjects = customizedClass?.preStartConfig?.subjects || [];
+      const rawExistingSubjects = customizedClass?.preStartConfig?.subjects || [];
+      const existingSubjects = rawExistingSubjects.filter(ex => !isSubjectExcludedForCategory(cat.id, ex.name, ex.id));
 
       // Merge layouts
       const merged = defaultLayout.map(def => {
@@ -1470,7 +2148,14 @@ export default function StudentManagement({
   const header = getHeaderDetails();
 
   return (
-    <div id="school-students-section" className={`space-y-6 w-full max-w-full overflow-hidden ${activeSubTab === 'students' ? 'flex-1 flex flex-col h-full min-h-0' : ''}`}>
+    <div 
+      id="school-students-section" 
+      className={`space-y-6 w-full max-w-full ${
+        activeSubTab === 'students' 
+          ? 'flex-1 flex flex-col h-full min-h-0 overflow-hidden' 
+          : 'flex-1 overflow-y-auto min-h-0 pr-1 pb-6'
+      }`}
+    >
       {/* Header Panel with White Background "ក្បាលទំព័រ ត្រូវបន្ថែមផ្ទៃសពីខាងក្រោយ" */}
       {activeSubTab !== 'classes_list' && activeSubTab !== 'students' && activeSubTab !== 'coefficients' && activeSubTab !== 'months' && activeSubTab !== 'classes' && (
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-1">
@@ -2506,6 +3191,74 @@ export default function StudentManagement({
                   - On mobile portrait (< sm): they are side-by-side (flex-row) below Left Group, and each fits 50% of the screen.
                   - On larger screens: they sit side-by-side next to the Left Group. */}
               <div className="flex flex-row gap-2 w-full sm:w-auto shrink-0">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImportExcel}
+                  accept=".xlsx, .xls, .zip"
+                  className="hidden"
+                />
+
+                <div className="relative animate-none flex-1 sm:flex-initial" ref={importExportDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setShowImportExportDropdown(!showImportExportDropdown)}
+                    className="w-full px-4 py-2 bg-white border border-emerald-600 hover:bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
+                    នាំទិន្នន័យ
+                  </button>
+
+                  {showImportExportDropdown && (
+                    <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-150 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleDownloadTemplate();
+                          setShowImportExportDropdown(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors"
+                      >
+                        <FileDown className="w-4 h-4 text-slate-500 shrink-0" />
+                        គំរូឯកសារ
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          fileInputRef.current?.click();
+                          setShowImportExportDropdown(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors"
+                      >
+                        <FileUp className="w-4 h-4 text-slate-500 shrink-0" />
+                        នាំទិន្នន័យចូល (Excel/ZIP)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleExportStudents();
+                          setShowImportExportDropdown(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors"
+                      >
+                        <FileSpreadsheet className="w-4 h-4 text-slate-500 shrink-0" />
+                        នាំចេញជា Excel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleExportStudentsZip();
+                          setShowImportExportDropdown(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors"
+                      >
+                        <FileSpreadsheet className="w-4 h-4 text-slate-500 shrink-0" />
+                        នាំចេញជា ZIP (រួមរូបថត)
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 <button
                   type="button"
                   onClick={handleOpenAddStudent}

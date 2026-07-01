@@ -9,7 +9,7 @@ import {
   HomeTeacherTask, PreStartConfig, SubjectConfig, SchoolInfo,
   Teacher
 } from '../types';
-import { getDefaultSubjectsForClass } from '../data/subjectLayouts';
+import { getDefaultSubjectsForClass, isSubjectExcludedForGrade } from '../data/subjectLayouts';
 
 const toArabicClassname = (name: string): string => {
   if (!name) return '';
@@ -172,7 +172,7 @@ export default function ClassroomDetails({
 
   // Load / Initialize PreStartConfig
   const config: PreStartConfig = useMemo(() => {
-    return classroom.preStartConfig || {
+    const baseConfig = classroom.preStartConfig || {
       classroomId: classroom.id,
       homeTeacherName: 'មិនទាន់កំណត់',
       academicYear: '២០២៥-២០២៦',
@@ -180,6 +180,10 @@ export default function ClassroomDetails({
       semester2Months: ['មេសា', 'ឧសភា', 'មិថុនា', 'កក្កដា', 'សីហា'],
       activeMonthsForAverage: ['វិច្ឆិកា', 'ធ្នូ'],
       subjects: getDefaultSubjectsForClass(classroom.grade, classroom.classType),
+    };
+    return {
+      ...baseConfig,
+      subjects: baseConfig.subjects.filter(sub => !isSubjectExcludedForGrade(classroom.grade, sub.name, sub.id)),
     };
   }, [classroom]);
 

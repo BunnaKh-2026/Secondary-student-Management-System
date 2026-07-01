@@ -382,20 +382,78 @@ export function getSubjectCategoryKey(grade: string, classType?: string): string
   return 'G7';
 }
 
+export function isSubjectExcludedForCategory(catId: string, subjectName: string, subjectId: string): boolean {
+  const name = subjectName || '';
+  const id = subjectId || '';
+  const cleanName = name.replace(/\s/g, '');
+
+  if (catId === 'G7' || catId === 'G8' || catId === 'G9' || catId === 'G10') {
+    // Exclude: អក្សរសាស្ត្រខ្មែរ, សេដ្ឋកិច្ចវិទ្យា, ល្បឿនអំណាន, អប់រំបំណិនជីវិត
+    if (id === 's5' || id === 's15' || id === 's3' || id === 's24') return true;
+    if (cleanName === 'អក្សរសាស្ត្រខ្មែរ' || cleanName === 'សេដ្ឋកិច្ចវិទ្យា' || cleanName === 'ល្បឿនអំណាន' || cleanName === 'អប់រំបំណិនជីវិត') return true;
+  }
+
+  if (catId === 'G11_SC' || catId === 'G11_SS' || catId === 'G12_SC' || catId === 'G12_SS') {
+    // Exclude: សរសេរតាមអាន, តែងសេចក្ដី/តែងសេចក្តី, ល្បឿនអំណាន, ភាសាខ្មែរ, គេហវិទ្យា, អប់រំបំណិនជីវិត
+    if (id === 's1' || id === 's2' || id === 's3' || id === 's4' || id === 's14' || id === 's24') return true;
+    if (
+      cleanName === 'សរសេរតាមអាន' || 
+      cleanName === 'តែងសេចក្តី' || 
+      cleanName === 'តែងសេចក្ដី' || 
+      cleanName === 'ល្បឿនអំណាន' || 
+      cleanName === 'ភាសាខ្មែរ' || 
+      cleanName === 'គេហវិទ្យា' || 
+      cleanName === 'អប់រំបំណិនជីវិត'
+    ) return true;
+  }
+
+  return false;
+}
+
+export function isSubjectExcludedForGrade(grade: string, subjectName: string, subjectId: string): boolean {
+  const g = grade || '';
+  const name = subjectName || '';
+  const id = subjectId || '';
+  const cleanName = name.replace(/\s/g, '');
+
+  if (g === '៧' || g === '៨' || g === '៩' || g === '១០') {
+    // Exclude: អក្សរសាស្ត្រខ្មែរ, សេដ្ឋកិច្ចវិទ្យា, ល្បឿនអំណាន, អប់រំបំណិនជីវិត
+    if (id === 's5' || id === 's15' || id === 's3' || id === 's24') return true;
+    if (cleanName === 'អក្សរសាស្ត្រខ្មែរ' || cleanName === 'សេដ្ឋកិច្ចវិទ្យា' || cleanName === 'ល្បឿនអំណាន' || cleanName === 'អប់រំបំណិនជីវិត') return true;
+  }
+
+  if (g === '១១' || g === '១២') {
+    // Exclude: សរសេរតាមអាន, តែងសេចក្ដី/តែងសេចក្តី, ល្បឿនអំណាន, ភាសាខ្មែរ, គេហវិទ្យា, អប់រំបំណិនជីវិត
+    if (id === 's1' || id === 's2' || id === 's3' || id === 's4' || id === 's14' || id === 's24') return true;
+    if (
+      cleanName === 'សរសេរតាមអាន' || 
+      cleanName === 'តែងសេចក្តី' || 
+      cleanName === 'តែងសេចក្ដី' || 
+      cleanName === 'ល្បឿនអំណាន' || 
+      cleanName === 'ភាសាខ្មែរ' || 
+      cleanName === 'គេហវិទ្យា' || 
+      cleanName === 'អប់រំបំណិនជីវិត'
+    ) return true;
+  }
+
+  return false;
+}
+
 export function getDefaultSubjectsForClass(grade: string, classType?: string): any[] {
   const catKey = getSubjectCategoryKey(grade, classType);
-  return STANDARD_SUBJECTS_LAYOUT.map(subLayout => {
-    // If standards define G7, etc.
-    const std = subLayout.standards[catKey] || { isActive: false, maxScore: 50 };
-    const coeff = std.maxScore > 0 ? std.maxScore / 50 : 1;
-    return {
-      id: subLayout.id,
-      name: subLayout.name,
-      isActive: std.isActive,
-      maxScore: std.maxScore > 0 ? std.maxScore : 50,
-      coefficient: std.maxScore > 0 ? std.maxScore / 50 : 1,
-    };
-  });
+  return STANDARD_SUBJECTS_LAYOUT
+    .filter(subLayout => !isSubjectExcludedForGrade(grade, subLayout.name, subLayout.id))
+    .map(subLayout => {
+      // If standards define G7, etc.
+      const std = subLayout.standards[catKey] || { isActive: false, maxScore: 50 };
+      return {
+        id: subLayout.id,
+        name: subLayout.name,
+        isActive: std.isActive,
+        maxScore: std.maxScore > 0 ? std.maxScore : 50,
+        coefficient: std.maxScore > 0 ? std.maxScore / 50 : 1,
+      };
+    });
 }
 
 export function getClassroomsForCategory(catId: string, classrooms: any[]): any[] {
@@ -445,15 +503,17 @@ const SUBJECT_CODES_MAP: { [id: string]: string } = {
 };
 
 export function getStandardSubjectsForCategory(catId: string): any[] {
-  return STANDARD_SUBJECTS_LAYOUT.map(subLayout => {
-    const std = subLayout.standards[catId] || { isActive: false, maxScore: 50 };
-    return {
-      id: subLayout.id,
-      name: subLayout.name,
-      isActive: std.isActive,
-      maxScore: std.maxScore > 0 ? std.maxScore : 50,
-      coefficient: std.maxScore > 0 ? std.maxScore / 50 : 1,
-      code: SUBJECT_CODES_MAP[subLayout.id] || subLayout.id.toUpperCase(),
-    };
-  });
+  return STANDARD_SUBJECTS_LAYOUT
+    .filter(subLayout => !isSubjectExcludedForCategory(catId, subLayout.name, subLayout.id))
+    .map(subLayout => {
+      const std = subLayout.standards[catId] || { isActive: false, maxScore: 50 };
+      return {
+        id: subLayout.id,
+        name: subLayout.name,
+        isActive: std.isActive,
+        maxScore: std.maxScore > 0 ? std.maxScore : 50,
+        coefficient: std.maxScore > 0 ? std.maxScore / 50 : 1,
+        code: SUBJECT_CODES_MAP[subLayout.id] || subLayout.id.toUpperCase(),
+      };
+    });
 }
