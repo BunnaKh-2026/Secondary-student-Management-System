@@ -28,6 +28,7 @@ export interface Teacher {
   photoUrl?: string; // Optional custom avatar
   salaryRank?: string; // កាំប្រាក់ / ថ្នាក់និងឋានន្តរស័ក្តិ
   promotionDate?: string; // ថ្ងៃឡើងថ្នាក់ចុងក្រោយ
+  signatureDate?: string; // ថ្ងៃចុះហត្ថលេខា
   documentType?: string; // ប្រភេទលិខិត
   documentNumber?: string; // លិខិតលេខ
   serialNumber?: string; // លេខរៀង

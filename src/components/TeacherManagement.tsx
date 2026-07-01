@@ -96,6 +96,28 @@ const formatToDDMMYYYY = (dateStr: string): string => {
   return dateStr;
 };
 
+const getTeacherEducation = (t: Teacher): { degree: string; specialty: string } => {
+  let degree = t.educationDegree || '';
+  let specialty = t.educationSpecialty || '';
+  if (!degree && !specialty && t.educationLevel) {
+    const parts = t.educationLevel.split(' - ');
+    if (parts.length > 1) {
+      degree = parts[0].trim();
+      specialty = parts.slice(1).join(' - ').trim();
+    } else {
+      const commonDegrees = ["បណ្ឌិត", "បរិញ្ញាបត្រជាន់ខ្ពស់", "បរិញ្ញាបត្រ", "ទុតិយភូមិ"];
+      const foundDegree = commonDegrees.find(d => t.educationLevel?.startsWith(d));
+      if (foundDegree) {
+        degree = foundDegree;
+        specialty = t.educationLevel.slice(foundDegree.length).replace(/^[\s\-_៖]+/, '').trim();
+      } else {
+        degree = t.educationLevel;
+      }
+    }
+  }
+  return { degree, specialty };
+};
+
 const SUBJECT_TO_CODE: { [name: string]: string } = {
   'សរសេរតាមអាន': 'Di',
   'តែងសេចក្តី': 'Wr',
@@ -415,15 +437,21 @@ export default function TeacherManagement({
       "ភេទ",
       "ថ្ងៃខែឆ្នាំកំណើត",
       "តួនាទី",
-      "ក្របខណ្ឌ",
+      "ក្របខ័ណ្ឌ",
       "កាំប្រាក់",
-      "ឯកទេស",
+      "ថ្ងៃឡើងកាំប្រាក់",
+      "ថ្ងៃចុះហត្ថលេខា",
+      "ប្រភេទលិខិត",
+      "លេខលិខិត",
+      "លេខរៀង",
+      "មុខវិជ្ជាឯកទេស",
       "មុខវិជ្ជាបង្រៀន",
       "បន្ទុកថ្នាក់",
-      "ជនជាតិភាគតិច",
-      "កម្រិតវប្បធម៌",
-      "ថ្ងៃចូលបង្រើការងារ",
-      "លេខទូរសព្ទ",
+      "ជន.ភាគតិច",
+      "សញ្ញាបត្រ",
+      "ឯកទេស",
+      "ថ្ងៃចូលបម្រើការងារ",
+      "លេខទូរស័ព្ទ",
       "ឈ្មោះឯកសាររូបភាព"
     ];
     
@@ -435,16 +463,22 @@ export default function TeacherManagement({
         "ឈ្មោះឡាតាំង": "PHAI BUNNA",
         "ភេទ": "ប្រុស",
         "ថ្ងៃខែឆ្នាំកំណើត": "05-04-1990",
-        "តួនាទី": "គ្រូបង្រៀន",
-        "ក្របខណ្ឌ": "ម.ទុតិយភូមិ",
+        "តួនាទី": "បង្រៀន",
+        "ក្របខ័ណ្ឌ": "ម.ទុតិយភូមិ",
         "កាំប្រាក់": "ក.២.៣",
-        "ឯកទេស": "គណិតវិទ្យា",
+        "ថ្ងៃឡើងកាំប្រាក់": "01-05-2023",
+        "ថ្ងៃចុះហត្ថលេខា": "10-05-2023",
+        "ប្រភេទលិខិត": "អនុក្រឹត្យ",
+        "លេខលិខិត": "៤៨៩ អនក្រ.តត",
+        "លេខរៀង": "៤១៦២",
+        "មុខវិជ្ជាឯកទេស": "គណិតវិទ្យា",
         "មុខវិជ្ជាបង្រៀន": "គណិតវិទ្យា, រូបវិទ្យា",
         "បន្ទុកថ្នាក់": "7A",
-        "ជនជាតិភាគតិច": "ទេ",
-        "កម្រិតវប្បធម៌": "បរិញ្ញាបត្រជាន់ខ្ពស់",
-        "ថ្ងៃចូលបង្រើការងារ": "01-10-2012",
-        "លេខទូរសព្ទ": 95539373,
+        "ជន.ភាគតិច": "ទេ",
+        "សញ្ញាបត្រ": "បរិញ្ញាបត្រជាន់ខ្ពស់",
+        "ឯកទេស": "គណិតវិទ្យា",
+        "ថ្ងៃចូលបម្រើការងារ": "01-10-2012",
+        "លេខទូរស័ព្ទ": "095539373",
         "ឈ្មោះឯកសាររូបភាព": "1900100036.png"
       }
     ];
@@ -469,6 +503,7 @@ export default function TeacherManagement({
       if (/^\d+$/.test(idNum)) {
         idNum = idNum.padStart(10, '0');
       }
+      const { degree, specialty } = getTeacherEducation(t);
       return {
         "ល.រ": idx + 1,
         "អត្តលេខមន្ត្រី": idNum,
@@ -476,16 +511,22 @@ export default function TeacherManagement({
         "ឈ្មោះឡាតាំង": t.nameLatin || "",
         "ភេទ": t.gender,
         "ថ្ងៃខែឆ្នាំកំណើត": formatToDDMMYYYY(t.dob),
-        "តួនាទី": t.role || "គ្រូបង្រៀន",
-        "ក្របខណ្ឌ": t.framework || "",
+        "តួនាទី": t.role || "បង្រៀន",
+        "ក្របខ័ណ្ឌ": t.framework || "",
         "កាំប្រាក់": t.salaryRank || "",
-        "ឯកទេស": t.subject,
+        "ថ្ងៃឡើងកាំប្រាក់": formatToDDMMYYYY(t.promotionDate || ""),
+        "ថ្ងៃចុះហត្ថលេខា": formatToDDMMYYYY(t.signatureDate || ""),
+        "ប្រភេទលិខិត": t.documentType || "",
+        "លេខលិខិត": t.documentNumber || "",
+        "លេខរៀង": t.serialNumber || "",
+        "មុខវិជ្ជាឯកទេស": t.subject || "",
         "មុខវិជ្ជាបង្រៀន": t.teachingSubjects || "",
         "បន្ទុកថ្នាក់": cleanClassroomValue(t.classCharge),
-        "ជនជាតិភាគតិច": t.ethnicity || "ទេ",
-        "កម្រិតវប្បធម៌": t.educationLevel || "",
-        "ថ្ងៃចូលបង្រើការងារ": formatToDDMMYYYY(t.joinDate),
-        "លេខទូរសព្ទ": t.phone || "",
+        "ជន.ភាគតិច": t.ethnicity || "ទេ",
+        "សញ្ញាបត្រ": degree || "",
+        "ឯកទេស": specialty || "",
+        "ថ្ងៃចូលបម្រើការងារ": formatToDDMMYYYY(t.joinDate || ""),
+        "លេខទូរស័ព្ទ": t.phone || "",
         "ឈ្មោះឯកសាររូបភាព": t.photoUrl ? getTeacherPhotoFilename(t) : ""
       };
     });
@@ -510,6 +551,7 @@ export default function TeacherManagement({
       if (/^\d+$/.test(idNum)) {
         idNum = idNum.padStart(10, '0');
       }
+      const { degree, specialty } = getTeacherEducation(t);
       return {
         "ល.រ": idx + 1,
         "អត្តលេខមន្ត្រី": idNum,
@@ -517,16 +559,22 @@ export default function TeacherManagement({
         "ឈ្មោះឡាតាំង": t.nameLatin || "",
         "ភេទ": t.gender,
         "ថ្ងៃខែឆ្នាំកំណើត": formatToDDMMYYYY(t.dob),
-        "តួនាទី": t.role || "គ្រូបង្រៀន",
-        "ក្របខណ្ឌ": t.framework || "",
+        "តួនាទី": t.role || "បង្រៀន",
+        "ក្របខ័ណ្ឌ": t.framework || "",
         "កាំប្រាក់": t.salaryRank || "",
-        "ឯកទេស": t.subject,
+        "ថ្ងៃឡើងកាំប្រាក់": formatToDDMMYYYY(t.promotionDate || ""),
+        "ថ្ងៃចុះហត្ថលេខា": formatToDDMMYYYY(t.signatureDate || ""),
+        "ប្រភេទលិខិត": t.documentType || "",
+        "លេខលិខិត": t.documentNumber || "",
+        "លេខរៀង": t.serialNumber || "",
+        "មុខវិជ្ជាឯកទេស": t.subject || "",
         "មុខវិជ្ជាបង្រៀន": t.teachingSubjects || "",
         "បន្ទុកថ្នាក់": cleanClassroomValue(t.classCharge),
-        "ជនជាតិភាគតិច": t.ethnicity || "ទេ",
-        "កម្រិតវប្បធម៌": t.educationLevel || "",
-        "ថ្ងៃចូលបង្រើការងារ": formatToDDMMYYYY(t.joinDate),
-        "លេខទូរសព្ទ": t.phone || "",
+        "ជន.ភាគតិច": t.ethnicity || "ទេ",
+        "សញ្ញាបត្រ": degree || "",
+        "ឯកទេស": specialty || "",
+        "ថ្ងៃចូលបម្រើការងារ": formatToDDMMYYYY(t.joinDate || ""),
+        "លេខទូរស័ព្ទ": t.phone || "",
         "ឈ្មោះឯកសាររូបភាព": t.photoUrl ? getTeacherPhotoFilename(t) : ""
       };
     });
@@ -634,26 +682,65 @@ export default function TeacherManagement({
           const dobRaw = row["ថ្ងៃខែឆ្នាំកំណើត"] || row["ថ្ងៃខែឆ្នាំកំណើត (YYYY-MM-DD)"] || row["DOB"] || row["dob"];
           const dob = parseImportDate(dobRaw);
 
-          const phoneRaw = row["លេខទូរសព្ទ"] || row["លេខទូរស័ព្ទ"] || row["PHONE"] || row["phone"];
+          const phoneRaw = row["លេខទូរស័ព្ទ"] || row["លេខទូរសព្ទ"] || row["PHONE"] || row["phone"];
           const phone = formatImportPhone(phoneRaw);
-          const subject = String(row["ឯកទេស"] || row["ឯកទេស / មុខវិជ្ជាចម្បង"] || row["SUBJECT"] || row["subject"] || "").trim();
-          const role = String(row["តួនាទី"] || row["ROLE"] || row["role"] || "គ្រូបង្រៀន").trim();
+          
+          const hasNewSpecialtyHeader = "មុខវិជ្ជាឯកទេស" in row;
+          const subject = String(row["មុខវិជ្ជាឯកទេស"] || (!hasNewSpecialtyHeader ? row["ឯកទេស"] : "") || row["ឯកទេស / មុខវិជ្ជាចម្បង"] || row["SUBJECT"] || row["subject"] || "").trim();
+          
+          let role = String(row["តួនាទី"] || row["ROLE"] || row["role"] || "បង្រៀន").trim();
+          if (role === "គ្រូបង្រៀន") {
+            role = "បង្រៀន";
+          }
 
           const responsibilities: string[] = [];
 
           const salaryRank = String(row["កាំប្រាក់"] || row["SALARY_RANK"] || row["salaryRank"] || "").trim();
-          const framework = String(row["ក្របខណ្ឌ"] || row["ក្របខ័ណ្ឌ"] || row["FRAMEWORK"] || row["framework"] || "").trim();
+          const promotionDateRaw = row["ថ្ងៃឡើងកាំប្រាក់"] || row["ថ្ងៃឡើងថ្នាក់"] || row["PROMOTION_DATE"] || row["promotionDate"];
+          const promotionDate = promotionDateRaw ? parseImportDate(promotionDateRaw) : "";
+          const signatureDateRaw = row["ថ្ងៃចុះហត្ថលេខា"] || row["SIGNATURE_DATE"] || row["signatureDate"];
+          const signatureDate = signatureDateRaw ? parseImportDate(signatureDateRaw) : "";
+          const documentType = String(row["ប្រភេទលិខិត"] || row["DOCUMENT_TYPE"] || row["documentType"] || "").trim();
+          const documentNumber = String(row["លេខលិខិត"] || row["លិខិតលេខ"] || row["DOCUMENT_NUMBER"] || row["documentNumber"] || "").trim();
+          const serialNumber = String(row["លេខរៀង"] || row["SERIAL_NUMBER"] || row["serialNumber"] || "").trim();
+
+          const framework = String(row["ក្របខ័ណ្ឌ"] || row["ក្របខណ្ឌ"] || row["FRAMEWORK"] || row["framework"] || "").trim();
           const teachingSubjects = String(row["មុខវិជ្ជាបង្រៀន"] || row["TEACHING_SUBJECTS"] || row["teachingSubjects"] || "").trim();
           
           const classChargeRaw = String(row["បន្ទុកថ្នាក់"] || row["CLASS_CHARGE"] || row["classCharge"] || "").trim();
           const classCharge = cleanClassroomValue(classChargeRaw);
           
-          let ethnicity = String(row["ជនជាតិភាគតិច"] || row["ជន.ភាគតិច"] || row["ETHNICITY"] || row["ethnicity"] || "").trim();
+          let ethnicity = String(row["ជន.ភាគតិច"] || row["ជនជាតិភាគតិច"] || row["ETHNICITY"] || row["ethnicity"] || "").trim();
           if (!ethnicity) ethnicity = "ទេ";
 
-          const educationLevel = String(row["កម្រិតវប្បធម៌"] || row["EDUCATION_LEVEL"] || row["educationLevel"] || "").trim();
+          const educationDegree = String(row["សញ្ញាបត្រ"] || row["DEGREE"] || row["educationDegree"] || "").trim();
+          const educationSpecialty = String(row["ឯកទេស (កម្រិតវប្បធម៌)"] || (hasNewSpecialtyHeader ? row["ឯកទេស"] : "") || row["EDUCATION_SPECIALTY"] || row["educationSpecialty"] || "").trim();
+
+          const educationLevelRaw = String(row["កម្រិតវប្បធម៌"] || row["EDUCATION_LEVEL"] || row["educationLevel"] || "").trim();
+          let educationLevel = educationLevelRaw;
+          let finalDegree = educationDegree;
+          let finalSpecialty = educationSpecialty;
+
+          if (finalDegree || finalSpecialty) {
+            educationLevel = finalDegree && finalSpecialty ? `${finalDegree} - ${finalSpecialty}` : (finalDegree || finalSpecialty || "");
+          } else if (educationLevelRaw) {
+            const parts = educationLevelRaw.split(' - ');
+            if (parts.length > 1) {
+              finalDegree = parts[0].trim();
+              finalSpecialty = parts.slice(1).join(' - ').trim();
+            } else {
+              const commonDegrees = ["បណ្ឌិត", "បរិញ្ញាបត្រជាន់ខ្ពស់", "បរិញ្ញាបត្រ", "ទុតិយភូមិ"];
+              const foundDegree = commonDegrees.find(d => educationLevelRaw.startsWith(d));
+              if (foundDegree) {
+                finalDegree = foundDegree;
+                finalSpecialty = educationLevelRaw.slice(foundDegree.length).replace(/^[\s\-_៖]+/, '').trim();
+              } else {
+                finalDegree = educationLevelRaw;
+              }
+            }
+          }
           
-          const joinDateRaw = row["ថ្ងៃចូលបង្រើការងារ"] || row["ថ្ងៃចូលធ្វើការ"] || row["ថ្ងៃចូលបម្រើការងារ"] || row["JOIN_DATE"] || row["joinDate"];
+          const joinDateRaw = row["ថ្ងៃចូលបម្រើការងារ"] || row["ថ្ងៃចូលបង្រើការងារ"] || row["ថ្ងៃចូលធ្វើការ"] || row["JOIN_DATE"] || row["joinDate"];
           const joinDate = parseImportDate(joinDateRaw);
 
           // Find photo in ZIP if specified
@@ -685,15 +772,22 @@ export default function TeacherManagement({
             gender: gender as 'ប្រុស' | 'ស្រី',
             dob,
             phone,
-            subject: subject || "គ្រូបង្រៀន",
-            role: role || "គ្រូបង្រៀន",
+            subject: subject || "បង្រៀន",
+            role: role || "បង្រៀន",
             responsibilities,
             salaryRank,
+            promotionDate,
+            signatureDate,
+            documentType,
+            documentNumber,
+            serialNumber,
             framework,
             teachingSubjects,
             classCharge,
             ethnicity,
             educationLevel,
+            educationDegree: finalDegree,
+            educationSpecialty: finalSpecialty,
             joinDate,
             photoUrl
           };
@@ -782,26 +876,65 @@ export default function TeacherManagement({
           const dobRaw = row["ថ្ងៃខែឆ្នាំកំណើត"] || row["ថ្ងៃខែឆ្នាំកំណើត (YYYY-MM-DD)"] || row["DOB"] || row["dob"];
           const dob = parseImportDate(dobRaw);
 
-          const phoneRaw = row["លេខទូរសព្ទ"] || row["លេខទូរស័ព្ទ"] || row["PHONE"] || row["phone"];
+          const phoneRaw = row["លេខទូរស័ព្ទ"] || row["លេខទូរសព្ទ"] || row["PHONE"] || row["phone"];
           const phone = formatImportPhone(phoneRaw);
-          const subject = String(row["ឯកទេស"] || row["ឯកទេស / មុខវិជ្ជាចម្បង"] || row["SUBJECT"] || row["subject"] || "").trim();
-          const role = String(row["តួនាទី"] || row["ROLE"] || row["role"] || "គ្រូបង្រៀន").trim();
+          
+          const hasNewSpecialtyHeader = "មុខវិជ្ជាឯកទេស" in row;
+          const subject = String(row["មុខវិជ្ជាឯកទេស"] || (!hasNewSpecialtyHeader ? row["ឯកទេស"] : "") || row["ឯកទេស / មុខវិជ្ជាចម្បង"] || row["SUBJECT"] || row["subject"] || "").trim();
+          
+          let role = String(row["តួនាទី"] || row["ROLE"] || row["role"] || "បង្រៀន").trim();
+          if (role === "គ្រូបង្រៀន") {
+            role = "បង្រៀន";
+          }
 
           const responsibilities: string[] = [];
 
           const salaryRank = String(row["កាំប្រាក់"] || row["SALARY_RANK"] || row["salaryRank"] || "").trim();
-          const framework = String(row["ក្របខណ្ឌ"] || row["ក្របខ័ណ្ឌ"] || row["FRAMEWORK"] || row["framework"] || "").trim();
+          const promotionDateRaw = row["ថ្ងៃឡើងកាំប្រាក់"] || row["ថ្ងៃឡើងថ្នាក់"] || row["PROMOTION_DATE"] || row["promotionDate"];
+          const promotionDate = promotionDateRaw ? parseImportDate(promotionDateRaw) : "";
+          const signatureDateRaw = row["ថ្ងៃចុះហត្ថលេខា"] || row["SIGNATURE_DATE"] || row["signatureDate"];
+          const signatureDate = signatureDateRaw ? parseImportDate(signatureDateRaw) : "";
+          const documentType = String(row["ប្រភេទលិខិត"] || row["DOCUMENT_TYPE"] || row["documentType"] || "").trim();
+          const documentNumber = String(row["លេខលិខិត"] || row["លិខិតលេខ"] || row["DOCUMENT_NUMBER"] || row["documentNumber"] || "").trim();
+          const serialNumber = String(row["លេខរៀង"] || row["SERIAL_NUMBER"] || row["serialNumber"] || "").trim();
+
+          const framework = String(row["ក្របខ័ណ្ឌ"] || row["ក្របខណ្ឌ"] || row["FRAMEWORK"] || row["framework"] || "").trim();
           const teachingSubjects = String(row["មុខវិជ្ជាបង្រៀន"] || row["TEACHING_SUBJECTS"] || row["teachingSubjects"] || "").trim();
           
           const classChargeRaw = String(row["បន្ទុកថ្នាក់"] || row["CLASS_CHARGE"] || row["classCharge"] || "").trim();
           const classCharge = cleanClassroomValue(classChargeRaw);
           
-          let ethnicity = String(row["ជនជាតិភាគតិច"] || row["ជន.ភាគតិច"] || row["ETHNICITY"] || row["ethnicity"] || "").trim();
+          let ethnicity = String(row["ជន.ភាគតិច"] || row["ជនជាតិភាគតិច"] || row["ETHNICITY"] || row["ethnicity"] || "").trim();
           if (!ethnicity) ethnicity = "ទេ";
 
-          const educationLevel = String(row["កម្រិតវប្បធម៌"] || row["EDUCATION_LEVEL"] || row["educationLevel"] || "").trim();
+          const educationDegree = String(row["សញ្ញាបត្រ"] || row["DEGREE"] || row["educationDegree"] || "").trim();
+          const educationSpecialty = String(row["ឯកទេស (កម្រិតវប្បធម៌)"] || (hasNewSpecialtyHeader ? row["ឯកទេស"] : "") || row["EDUCATION_SPECIALTY"] || row["educationSpecialty"] || "").trim();
+
+          const educationLevelRaw = String(row["កម្រិតវប្បធម៌"] || row["EDUCATION_LEVEL"] || row["educationLevel"] || "").trim();
+          let educationLevel = educationLevelRaw;
+          let finalDegree = educationDegree;
+          let finalSpecialty = educationSpecialty;
+
+          if (finalDegree || finalSpecialty) {
+            educationLevel = finalDegree && finalSpecialty ? `${finalDegree} - ${finalSpecialty}` : (finalDegree || finalSpecialty || "");
+          } else if (educationLevelRaw) {
+            const parts = educationLevelRaw.split(' - ');
+            if (parts.length > 1) {
+              finalDegree = parts[0].trim();
+              finalSpecialty = parts.slice(1).join(' - ').trim();
+            } else {
+              const commonDegrees = ["បណ្ឌិត", "បរិញ្ញាបត្រជាន់ខ្ពស់", "បរិញ្ញាបត្រ", "ទុតិយភូមិ"];
+              const foundDegree = commonDegrees.find(d => educationLevelRaw.startsWith(d));
+              if (foundDegree) {
+                finalDegree = foundDegree;
+                finalSpecialty = educationLevelRaw.slice(foundDegree.length).replace(/^[\s\-_៖]+/, '').trim();
+              } else {
+                finalDegree = educationLevelRaw;
+              }
+            }
+          }
           
-          const joinDateRaw = row["ថ្ងៃចូលបង្រើការងារ"] || row["ថ្ងៃចូលធ្វើការ"] || row["ថ្ងៃចូលបម្រើការងារ"] || row["JOIN_DATE"] || row["joinDate"];
+          const joinDateRaw = row["ថ្ងៃចូលបម្រើការងារ"] || row["ថ្ងៃចូលបង្រើការងារ"] || row["ថ្ងៃចូលធ្វើការ"] || row["JOIN_DATE"] || row["joinDate"];
           const joinDate = parseImportDate(joinDateRaw);
 
           const newTeacher: Teacher = {
@@ -812,15 +945,22 @@ export default function TeacherManagement({
             gender: gender as 'ប្រុស' | 'ស្រី',
             dob,
             phone,
-            subject: subject || "គ្រូបង្រៀន",
-            role: role || "គ្រូបង្រៀន",
+            subject: subject || "បង្រៀន",
+            role: role || "បង្រៀន",
             responsibilities,
             salaryRank,
+            promotionDate,
+            signatureDate,
+            documentType,
+            documentNumber,
+            serialNumber,
             framework,
             teachingSubjects,
             classCharge,
             ethnicity,
             educationLevel,
+            educationDegree: finalDegree,
+            educationSpecialty: finalSpecialty,
             joinDate,
             photoUrl: ""
           };
@@ -886,6 +1026,7 @@ export default function TeacherManagement({
     responsibilities: [],
     salaryRank: '',
     promotionDate: '',
+    signatureDate: '',
     documentType: '',
     documentNumber: '',
     serialNumber: '',
@@ -1168,6 +1309,7 @@ export default function TeacherManagement({
       responsibilities: [],
       salaryRank: '',
       promotionDate: '',
+      signatureDate: '',
       documentType: '',
       documentNumber: '',
       serialNumber: '',
@@ -1190,24 +1332,7 @@ export default function TeacherManagement({
     setEditingTeacher(t);
     setHasManuallyEditedLatin(!!t.nameLatin);
 
-    let degree = t.educationDegree || '';
-    let specialty = t.educationSpecialty || '';
-    if (!degree && !specialty && t.educationLevel) {
-      const parts = t.educationLevel.split(' - ');
-      if (parts.length > 1) {
-        degree = parts[0].trim();
-        specialty = parts.slice(1).join(' - ').trim();
-      } else {
-        const commonDegrees = ["បណ្ឌិត", "បរិញ្ញាបត្រជាន់ខ្ពស់", "បរិញ្ញាបត្រ", "ទុតិយភូមិ"];
-        const foundDegree = commonDegrees.find(d => t.educationLevel?.startsWith(d));
-        if (foundDegree) {
-          degree = foundDegree;
-          specialty = t.educationLevel.slice(foundDegree.length).replace(/^[\s\-_៖]+/, '').trim();
-        } else {
-          degree = t.educationLevel;
-        }
-      }
-    }
+    const { degree, specialty } = getTeacherEducation(t);
 
     setFormData({
       idNumber: t.idNumber || '',
@@ -1221,6 +1346,7 @@ export default function TeacherManagement({
       responsibilities: t.responsibilities || [],
       salaryRank: t.salaryRank || '',
       promotionDate: t.promotionDate || '',
+      signatureDate: t.signatureDate || '',
       documentType: t.documentType || '',
       documentNumber: t.documentNumber || '',
       serialNumber: t.serialNumber || '',
@@ -1567,9 +1693,9 @@ export default function TeacherManagement({
               <table className="w-full text-left border-collapse table-auto whitespace-nowrap relative">
                 <thead className="sticky top-0 z-20 bg-emerald-700 text-white shadow-xs">
                   <tr className="bg-emerald-700 text-white font-bold text-xs uppercase whitespace-nowrap" id="teachers-list-th-row">
-                    <th className="w-[70px] min-w-[70px] max-w-[70px] px-3 py-3 text-center bg-emerald-700 whitespace-nowrap border-l border-r border-b border-white/30 sticky left-0 top-0 z-30">ល.រ</th>
-                    <th className="w-[110px] min-w-[110px] max-w-[110px] px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-r border-b border-white/30 sticky left-[70px] top-0 z-30">អត្តលេខមន្ត្រី</th>
-                    <th className="w-[180px] min-w-[180px] max-w-[180px] px-4 py-3 text-center bg-emerald-700 whitespace-nowrap select-none border-r border-b border-white/30 sticky left-[180px] top-0 z-30">
+                    <th rowSpan={2} className="w-[70px] min-w-[70px] max-w-[70px] px-3 py-3 text-center bg-emerald-700 whitespace-nowrap border-l border-r border-b border-white/30 sticky left-auto sm:left-0 top-0 z-20 sm:z-30">ល.រ</th>
+                    <th rowSpan={2} className="w-[110px] min-w-[110px] max-w-[110px] px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-r border-b border-white/30 sticky left-auto sm:left-[70px] top-0 z-20 sm:z-30">អត្តលេខមន្ត្រី</th>
+                    <th rowSpan={2} className="w-[180px] min-w-[180px] max-w-[180px] px-4 py-3 text-center bg-emerald-700 whitespace-nowrap select-none border-r border-b border-white/30 sticky left-auto sm:left-[180px] top-0 z-20 sm:z-30">
                       <div className="flex items-center justify-center gap-2">
                         <span>គោត្តនាម-នាម</span>
                         <div className="relative inline-block" ref={sortDropdownRef}>
@@ -1620,28 +1746,38 @@ export default function TeacherManagement({
                         </div>
                       </div>
                     </th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">ឈ្មោះឡាតាំង</th>
-                    <th className="px-3 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">ភេទ</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">ថ្ងៃខែឆ្នាំកំណើត</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">អាយុ</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">តួនាទី</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">ក្របខ័ណ្ឌ</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">ថ្នាក់និងឋានន្តរស័ក្តិ</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">មុខវិជ្ជាឯកទេស</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">មុខវិជ្ជាបង្រៀន</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">បន្ទុកថ្នាក់</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">ជន.ភាគតិច</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">កម្រិតវប្បធម៌</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">ថ្ងៃចូលបម្រើការងារ</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">ចំនួនឆ្នាំបម្រើការងារ</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">លេខទូរស័ព្ទ</th>
-                    <th className="px-4 py-3 text-center whitespace-nowrap border-b border-white/30 sticky top-0 z-20 bg-emerald-700">សកម្មភាព</th>
+                    <th rowSpan={2} className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">ឈ្មោះឡាតាំង</th>
+                    <th rowSpan={2} className="px-3 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">ភេទ</th>
+                    <th rowSpan={2} className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">ថ្ងៃខែឆ្នាំកំណើត</th>
+                    <th rowSpan={2} className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">អាយុ</th>
+                    <th rowSpan={2} className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">តួនាទី</th>
+                    <th rowSpan={2} className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">ក្របខ័ណ្ឌ</th>
+                    <th colSpan={6} className="px-4 py-2.5 text-center whitespace-nowrap border-r border-b border-white/30 bg-emerald-700">ថ្នាក់និងឋានន្តរស័ក្តិ</th>
+                    <th rowSpan={2} className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">មុខវិជ្ជាឯកទេស</th>
+                    <th rowSpan={2} className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">មុខវិជ្ជាបង្រៀន</th>
+                    <th rowSpan={2} className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">បន្ទុកថ្នាក់</th>
+                    <th rowSpan={2} className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">ជន.ភាគតិច</th>
+                    <th colSpan={2} className="px-4 py-2.5 text-center whitespace-nowrap border-r border-b border-white/30 bg-emerald-700">កម្រិតវប្បធម៌</th>
+                    <th rowSpan={2} className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">ថ្ងៃចូលបម្រើការងារ</th>
+                    <th rowSpan={2} className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">ចំនួនឆ្នាំបម្រើការងារ</th>
+                    <th rowSpan={2} className="px-4 py-3 text-center whitespace-nowrap border-r border-b border-white/30 sticky top-0 z-20 bg-emerald-700">លេខទូរស័ព្ទ</th>
+                    <th rowSpan={2} className="px-4 py-3 text-center whitespace-nowrap border-b border-white/30 sticky top-0 z-20 bg-emerald-700">សកម្មភាព</th>
+                  </tr>
+                  <tr className="bg-emerald-700 text-white font-bold text-[10px] uppercase whitespace-nowrap">
+                    <th className="px-3 py-2 text-center whitespace-nowrap border-r border-b border-white/30 bg-emerald-700">កាំប្រាក់</th>
+                    <th className="px-3 py-2 text-center whitespace-nowrap border-r border-b border-white/30 bg-emerald-700">ថ្ងៃឡើងកាំប្រាក់</th>
+                    <th className="px-3 py-2 text-center whitespace-nowrap border-r border-b border-white/30 bg-emerald-700">ថ្ងៃចុះហត្ថលេខា</th>
+                    <th className="px-3 py-2 text-center whitespace-nowrap border-r border-b border-white/30 bg-emerald-700">ប្រភេទលិខិត</th>
+                    <th className="px-3 py-2 text-center whitespace-nowrap border-r border-b border-white/30 bg-emerald-700">លេខលិខិត</th>
+                    <th className="px-3 py-2 text-center whitespace-nowrap border-r border-b border-white/30 bg-emerald-700">លេខរៀង</th>
+                    <th className="px-3 py-2 text-center whitespace-nowrap border-r border-b border-white/30 bg-emerald-700">សញ្ញាបត្រ</th>
+                    <th className="px-3 py-2 text-center whitespace-nowrap border-r border-b border-white/30 bg-emerald-700">ឯកទេស</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredTeachers.length === 0 ? (
                     <tr>
-                      <td colSpan={19} className="px-4 py-12 text-center text-slate-400 text-xs font-medium whitespace-nowrap">
+                      <td colSpan={25} className="px-4 py-12 text-center text-slate-400 text-xs font-medium whitespace-nowrap">
                         គ្មានសំណុំទិន្នន័យគ្រូបង្រៀនត្រូវបានរកឃើញទេ។
                       </td>
                     </tr>
@@ -1659,16 +1795,16 @@ export default function TeacherManagement({
                           ${dragOverTeacherId === t.id ? 'bg-emerald-50/40 border-y-2 border-emerald-200' : 'hover:bg-slate-50/50'}
                         `}
                       >
-                        <td className="w-[70px] min-w-[70px] max-w-[70px] px-3 py-3 text-center font-bold text-slate-400 whitespace-nowrap select-none border-l border-r border-slate-200 border-b border-slate-200 sticky left-0 z-10 bg-inherit">
+                        <td className="w-[70px] min-w-[70px] max-w-[70px] px-3 py-3 text-center font-bold text-slate-400 whitespace-nowrap select-none border-l border-r border-slate-200 border-b border-slate-200 relative sm:sticky left-auto sm:left-0 z-0 sm:z-10 bg-inherit">
                           <div className="flex items-center justify-center gap-1.5">
                             <GripVertical className="w-3.5 h-3.5 text-slate-400 group-hover/row:text-emerald-600 hover:text-emerald-700 transition-colors cursor-grab active:cursor-grabbing shrink-0" />
                             <span>{idx + 1}</span>
                           </div>
                         </td>
-                        <td className="w-[110px] min-w-[110px] max-w-[110px] px-4 py-3 font-mono font-semibold text-teal-600 text-center whitespace-nowrap border-r border-slate-200 border-b border-slate-200 sticky left-[70px] z-10 bg-inherit">
+                        <td className="w-[110px] min-w-[110px] max-w-[110px] px-4 py-3 font-mono font-semibold text-teal-600 text-center whitespace-nowrap border-r border-slate-200 border-b border-slate-200 relative sm:sticky left-auto sm:left-[70px] z-0 sm:z-10 bg-inherit">
                           {t.idNumber}
                         </td>
-                        <td className="w-[180px] min-w-[180px] max-w-[180px] px-4 py-3 font-bold text-slate-800 whitespace-nowrap border-r border-slate-200 border-b border-slate-200 sticky left-[180px] z-10 bg-inherit">
+                        <td className="w-[180px] min-w-[180px] max-w-[180px] px-4 py-3 font-bold text-slate-800 whitespace-nowrap border-r border-slate-200 border-b border-slate-200 relative sm:sticky left-auto sm:left-[180px] z-0 sm:z-10 bg-inherit">
                           <div className="flex items-center gap-2">
                             {t.photoUrl ? (
                               <img 
@@ -1687,7 +1823,7 @@ export default function TeacherManagement({
                             <span>{t.name}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 font-bold text-slate-600 font-mono text-center uppercase whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
+                        <td className="px-4 py-3 font-bold text-slate-600 font-mono text-left uppercase whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                           {t.nameLatin || '-'}
                         </td>
                         <td className="px-3 py-3 text-center whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
@@ -1710,6 +1846,21 @@ export default function TeacherManagement({
                         <td className="px-4 py-3 text-center font-sans font-medium whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                           {t.salaryRank || '-'}
                         </td>
+                        <td className="px-4 py-3 text-center font-mono text-slate-600 whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
+                          {formatToDDMMYYYY(t.promotionDate)}
+                        </td>
+                        <td className="px-4 py-3 text-center font-mono text-slate-600 whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
+                          {formatToDDMMYYYY(t.signatureDate)}
+                        </td>
+                        <td className="px-4 py-3 text-center text-slate-600 font-medium whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
+                          {t.documentType || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-center font-sans text-slate-600 whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
+                          {t.documentNumber || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-center font-sans text-slate-600 whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
+                          {t.serialNumber || '-'}
+                        </td>
                         <td className="px-4 py-3 text-slate-600 font-semibold whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                           {t.subject}
                         </td>
@@ -1729,7 +1880,10 @@ export default function TeacherManagement({
                           {t.ethnicity || 'ទេ'}
                         </td>
                         <td className="px-4 py-3 text-center font-semibold text-slate-600 whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
-                          {t.educationLevel || '-'}
+                          {getTeacherEducation(t).degree || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-center text-slate-600 font-medium whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
+                          {getTeacherEducation(t).specialty || '-'}
                         </td>
                         <td className="px-4 py-3 text-center font-mono whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                           {formatToDDMMYYYY(t.joinDate)}
@@ -1986,7 +2140,7 @@ export default function TeacherManagement({
                     </div>
 
                     <div className="space-y-1.5">
-                      <label htmlFor="teacher-name-input" className="text-xs font-bold text-slate-700 block">គោត្តនាម និងនាមខ្លួន <span className="text-rose-500 ml-1">*</span></label>
+                      <label htmlFor="teacher-name-input" className="text-xs font-bold text-slate-700 block">គោត្តនាម-នាម <span className="text-rose-500 ml-1">*</span></label>
                       <input
                         id="teacher-name-input"
                         type="text"
@@ -2098,7 +2252,7 @@ export default function TeacherManagement({
                   </div>
                 </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label htmlFor="teacher-gender-select" className="text-xs font-bold text-slate-600">ភេទ <span className="text-rose-500 ml-1">*</span></label>
                   <select
@@ -2123,21 +2277,20 @@ export default function TeacherManagement({
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white"
                   />
                 </div>
+              </div>
 
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-600 block">អាយុ (គណនាស្វ័យប្រវត្តិ)</label>
+                  <label className="text-xs font-bold text-slate-600 block">អាយុ</label>
                   <input
                     type="text"
                     readOnly
                     disabled
-                    value={calculateTeacherAge(formData.dob) ? `${calculateTeacherAge(formData.dob)} ឆ្នាំ` : '---'}
+                    value={calculateTeacherAge(formData.dob) ? `${calculateTeacherAge(formData.dob)} ឆ្នាំ` : '-'}
                     className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs outline-none text-slate-500 font-bold"
                   />
                 </div>
-              </div>
 
-              {/* Added: តួនាទី, ក្របខ័ណ្ឌ */}
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label htmlFor="teacher-role-select" className="text-xs font-bold text-slate-600">តួនាទី</label>
                   <select
@@ -2154,11 +2307,13 @@ export default function TeacherManagement({
                     <option value="លេខា" className="text-slate-800 font-semibold">លេខា</option>
                     <option value="គណនេយ្យ" className="text-slate-800 font-semibold">គណនេយ្យ</option>
                     <option value="បណ្ណារក្ស" className="text-slate-800 font-semibold">បណ្ណារក្ស</option>
-                    <option value="គ្រូបង្រៀន" className="text-slate-800 font-semibold">គ្រូបង្រៀន</option>
+                    <option value="បង្រៀន" className="text-slate-800 font-semibold">បង្រៀន</option>
                     <option value="ផ្សេងៗ" className="text-slate-800 font-semibold">ផ្សេងៗ</option>
                   </select>
                 </div>
+              </div>
 
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label htmlFor="teacher-framework-select" className="text-xs font-bold text-slate-600">ក្របខ័ណ្ឌ</label>
                   <select
@@ -2174,13 +2329,25 @@ export default function TeacherManagement({
                     <option value="ផ្សេងៗ" className="text-slate-800 font-semibold">ផ្សេងៗ</option>
                   </select>
                 </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="teacher-subject-input" className="text-xs font-bold text-slate-600">មុខវិជ្ជាឯកទេស</label>
+                  <input
+                    id="teacher-subject-input"
+                    type="text"
+                    value={formData.subject}
+                    onChange={e => setFormData({ ...formData, subject: e.target.value })}
+                    placeholder="គណិតវិទ្យា"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white text-slate-800 font-semibold"
+                  />
+                </div>
               </div>
 
               {/* Added: ថ្នាក់និងឋានន្តរស័ក្តិ with 2 rows */}
-              <div className="p-3 bg-slate-50/50 rounded-xl border border-slate-200/60 space-y-3">
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
                 <span className="text-xs font-bold text-slate-700 block">ថ្នាក់និងឋានន្តរស័ក្តិ</span>
                 <div className="space-y-2.5">
-                  {/* Row 1: កាំប្រាក់, ថ្ងៃឡើងថ្នាក់ចុងក្រោយ, ប្រភេទលិខិត as select */}
+                  {/* Row 1: កាំប្រាក់, ថ្ងៃឡើងថ្នាក់ចុងក្រោយ, ថ្ងៃចុះហត្ថលេខា */}
                   <div className="grid grid-cols-3 gap-2">
                     <div className="space-y-1">
                       <span className="text-[10px] text-slate-400 font-bold block">កាំប្រាក់</span>
@@ -2189,7 +2356,7 @@ export default function TeacherManagement({
                         type="text"
                         value={formData.salaryRank || ''}
                         onChange={e => setFormData({ ...formData, salaryRank: e.target.value })}
-                        placeholder="ឧ. គ.២"
+                        placeholder="ឧ. ក.២.៣"
                         className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:bg-white text-slate-800 font-semibold placeholder:font-normal placeholder:text-slate-400"
                       />
                     </div>
@@ -2204,12 +2371,26 @@ export default function TeacherManagement({
                       />
                     </div>
                     <div className="space-y-1">
+                      <span className="text-[10px] text-slate-400 font-bold block">ថ្ងៃចុះហត្ថលេខា</span>
+                      <input
+                        id="teacher-signatureDate-input"
+                        type="date"
+                        value={formData.signatureDate || ''}
+                        onChange={e => setFormData({ ...formData, signatureDate: e.target.value })}
+                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:bg-white text-slate-800 font-semibold cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 2: ប្រភេទលិខិត, លេខលិខិត, លេខរៀង */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1">
                       <span className="text-[10px] text-slate-400 font-bold block">ប្រភេទលិខិត</span>
                       <select
                         id="teacher-documentType-select"
                         value={formData.documentType || ''}
                         onChange={e => setFormData({ ...formData, documentType: e.target.value })}
-                        className={`w-full px-2 py-1.5 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:bg-white appearance-none cursor-pointer ${formData.documentType ? 'text-slate-800 font-semibold' : 'text-slate-400/80 font-normal'}`}
+                        className={`w-full px-2 py-1.5 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:bg-white appearance-none cursor-pointer pr-2 ${formData.documentType ? 'text-slate-800 font-semibold' : 'text-slate-400/80 font-normal'}`}
                       >
                         <option value="" className="text-slate-400/60">ជ្រើសរើស</option>
                         <option value="ប្រកាស" className="text-slate-800 font-semibold">ប្រកាស</option>
@@ -2217,18 +2398,14 @@ export default function TeacherManagement({
                         <option value="ព្រះរាជក្រឹត្យ" className="text-slate-800 font-semibold">ព្រះរាជក្រឹត្យ</option>
                       </select>
                     </div>
-                  </div>
-
-                  {/* Row 2: លិខិតលេខ, លេខរៀង (placed under កាំប្រាក់, i.e. 3-column grid, third col empty) */}
-                  <div className="grid grid-cols-3 gap-2">
                     <div className="space-y-1">
-                      <span className="text-[10px] text-slate-400 font-bold block">លិខិតលេខ</span>
+                      <span className="text-[10px] text-slate-400 font-bold block">លេខលិខិត</span>
                       <input
                         id="teacher-documentNumber-input"
                         type="text"
                         value={formData.documentNumber || ''}
                         onChange={e => setFormData({ ...formData, documentNumber: e.target.value })}
-                        placeholder="ឧ. ១២៣"
+                        placeholder="ឧ. ៤៨៩ អនក្រ.តត"
                         className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:bg-white text-slate-800 font-semibold placeholder:font-normal placeholder:text-slate-400"
                       />
                     </div>
@@ -2239,39 +2416,11 @@ export default function TeacherManagement({
                         type="text"
                         value={formData.serialNumber || ''}
                         onChange={e => setFormData({ ...formData, serialNumber: e.target.value })}
-                        placeholder="ឧ. ០៥"
+                        placeholder="ឧ. ៤១៦២"
                         className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:bg-white text-slate-800 font-semibold placeholder:font-normal placeholder:text-slate-400"
                       />
                     </div>
-                    <div></div> {/* Spacer */}
                   </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="teacher-subject-input" className="text-xs font-bold text-slate-600">មុខវិជ្ជាឯកទេស</label>
-                  <input
-                    id="teacher-subject-input"
-                    type="text"
-                    value={formData.subject}
-                    onChange={e => setFormData({ ...formData, subject: e.target.value })}
-                    placeholder="គណិតវិទ្យា"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white text-slate-800 font-semibold"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label htmlFor="teacher-ethnicity-select" className="text-xs font-bold text-slate-600">ជនជាតិភាគតិច</label>
-                  <select
-                    id="teacher-ethnicity-select"
-                    value={formData.ethnicity || ''}
-                    onChange={e => setFormData({ ...formData, ethnicity: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white appearance-none cursor-pointer text-slate-800"
-                  >
-                    <option value="ទេ">ទេ</option>
-                    <option value="បាទ/ចាស">បាទ/ចាស</option>
-                  </select>
                 </div>
               </div>
 
@@ -2323,7 +2472,7 @@ export default function TeacherManagement({
               </div>
 
               {/* Added: កម្រិតវប្បធម៌ with សញ្ញាបត្រ and ឯកទេស inside background panel */}
-              <div className="p-3 bg-slate-50/50 rounded-xl border border-slate-200/60 space-y-2">
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
                 <span className="text-xs font-bold text-slate-700 block">កម្រិតវប្បធម៌</span>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
@@ -2392,6 +2541,19 @@ export default function TeacherManagement({
                     placeholder="012 345 678"
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white text-slate-800 font-semibold"
                   />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="teacher-ethnicity-select" className="text-xs font-bold text-slate-600">ជនជាតិភាគតិច</label>
+                  <select
+                    id="teacher-ethnicity-select"
+                    value={formData.ethnicity || ''}
+                    onChange={e => setFormData({ ...formData, ethnicity: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white appearance-none cursor-pointer text-slate-800"
+                  >
+                    <option value="ទេ">ទេ</option>
+                    <option value="បាទ/ចាស">បាទ/ចាស</option>
+                  </select>
                 </div>
               </div>
 
@@ -3017,6 +3179,7 @@ export default function TeacherManagement({
                         <div className="bg-slate-100/80 p-1.5 rounded-lg border border-slate-200/50 text-[10px] space-y-0.5 mt-0.5">
                           <div><span className="font-bold text-slate-500">កាំប្រាក់:</span> <span className="text-slate-800 font-bold">{viewingTeacher.salaryRank}</span></div>
                           {viewingTeacher.promotionDate && <div><span className="font-bold text-slate-500">ថ្ងៃឡើងថ្នាក់:</span> <span className="text-slate-800 font-bold">{formatToDDMMYYYY(viewingTeacher.promotionDate)}</span></div>}
+                          {viewingTeacher.signatureDate && <div><span className="font-bold text-slate-500">ថ្ងៃចុះហត្ថលេខា:</span> <span className="text-slate-800 font-bold">{formatToDDMMYYYY(viewingTeacher.signatureDate)}</span></div>}
                           {viewingTeacher.documentType && <div><span className="font-bold text-slate-500">ប្រភេទលិខិត:</span> <span className="text-slate-800 font-bold">{viewingTeacher.documentType}</span></div>}
                           {viewingTeacher.documentNumber && <div><span className="font-bold text-slate-500">លិខិតលេខ:</span> <span className="text-slate-800 font-bold">{viewingTeacher.documentNumber}</span></div>}
                           {viewingTeacher.serialNumber && <div><span className="font-bold text-slate-500">លេខរៀង:</span> <span className="text-slate-800 font-bold">{viewingTeacher.serialNumber}</span></div>}

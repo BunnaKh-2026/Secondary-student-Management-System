@@ -2541,12 +2541,12 @@ export default function StudentManagement({
               <table className="w-full text-left border-collapse table-auto whitespace-nowrap">
                 <thead className="sticky top-0 z-20 bg-emerald-700 whitespace-nowrap">
                   <tr className="bg-emerald-700 text-white font-bold text-xs uppercase whitespace-nowrap" id="students-list-th-row">
-                    <th className="w-[70px] min-w-[70px] max-w-[70px] px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-l border-r border-b border-white/30 sticky left-0 z-30" rowSpan={2}>ល.រ</th>
-                    <th className="w-[110px] min-w-[110px] max-w-[110px] px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-r border-b border-white/30 sticky left-[70px] z-30" rowSpan={2}>អត្តលេខ</th>
+                    <th className="w-[70px] min-w-[70px] max-w-[70px] px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-l border-r border-b border-white/30 sticky left-auto sm:left-0 z-20 sm:z-30" rowSpan={2}>ល.រ</th>
+                    <th className="w-[110px] min-w-[110px] max-w-[110px] px-4 py-3 text-center bg-emerald-700 whitespace-nowrap border-r border-b border-white/30 sticky left-auto sm:left-[70px] z-20 sm:z-30" rowSpan={2}>អត្តលេខ</th>
                     <th 
                       rowSpan={2}
-                      className={`w-[180px] min-w-[180px] max-w-[180px] px-4 py-3 bg-emerald-700 relative select-none whitespace-nowrap border-r border-b border-white/30 sticky left-[180px] ${
-                        activeSortMenu === 'name' ? 'z-40' : 'z-30'
+                      className={`w-[180px] min-w-[180px] max-w-[180px] px-4 py-3 bg-emerald-700 relative select-none whitespace-nowrap border-r border-b border-white/30 sticky left-auto sm:left-[180px] ${
+                        activeSortMenu === 'name' ? 'z-20 sm:z-40' : 'z-20 sm:z-30'
                       }`}
                     >
                       <div 
@@ -2757,14 +2757,14 @@ export default function StudentManagement({
                             ${dragOverStudentId === s.id ? 'bg-emerald-50/40 border-y-2 border-emerald-200' : 'hover:bg-slate-50/50'}
                           `}
                         >
-                          <td className="w-[70px] min-w-[70px] max-w-[70px] px-4 py-3 text-center font-bold text-slate-400 whitespace-nowrap select-none border-l border-r border-slate-200 border-b border-slate-200 sticky left-0 z-10 bg-inherit">
+                          <td className="w-[70px] min-w-[70px] max-w-[70px] px-4 py-3 text-center font-bold text-slate-400 whitespace-nowrap select-none border-l border-r border-slate-200 border-b border-slate-200 relative sm:sticky left-auto sm:left-0 z-0 sm:z-10 bg-inherit">
                             <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
                               <GripVertical className="w-3.5 h-3.5 text-slate-400 group-hover/row:text-emerald-600 hover:text-emerald-700 transition-colors cursor-grab active:cursor-grabbing shrink-0" />
                               <span className="whitespace-nowrap">{s.rollNumber}</span>
                             </div>
                           </td>
-                          <td className="w-[110px] min-w-[110px] max-w-[110px] px-4 py-3 text-center font-mono font-semibold text-teal-600 whitespace-nowrap border-r border-slate-200 border-b border-slate-200 sticky left-[70px] z-10 bg-inherit">{s.studentIdCard}</td>
-                          <td className="w-[180px] min-w-[180px] max-w-[180px] px-4 py-3 font-bold text-slate-800 whitespace-nowrap border-r border-slate-200 border-b border-slate-200 sticky left-[180px] z-10 bg-inherit">
+                          <td className="w-[110px] min-w-[110px] max-w-[110px] px-4 py-3 text-center font-mono font-semibold text-teal-600 whitespace-nowrap border-r border-slate-200 border-b border-slate-200 relative sm:sticky left-auto sm:left-[70px] z-0 sm:z-10 bg-inherit">{s.studentIdCard}</td>
+                          <td className="w-[180px] min-w-[180px] max-w-[180px] px-4 py-3 font-bold text-slate-800 whitespace-nowrap border-r border-slate-200 border-b border-slate-200 relative sm:sticky left-auto sm:left-[180px] z-0 sm:z-10 bg-inherit">
                             <div className="flex items-center gap-2 whitespace-nowrap">
                               {s.photoUrl ? (
                                 <img 
