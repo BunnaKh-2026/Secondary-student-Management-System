@@ -649,6 +649,15 @@ export default function ClassroomDetails({
                       ប្រឡងសញ្ញាបត្រមធ្យមសិក្សាបឋមភូមិ
                     </th>
 
+                    {/* បន្ថែមជួរឈរ "អតីតសិស្ស" មាន ២ ជួរឈរតូច */}
+                    <th 
+                      colSpan={2} 
+                      className="px-4 py-2 text-center bg-emerald-700 border-r border-b border-white/30 font-bold whitespace-nowrap"
+                      style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}
+                    >
+                      អតីតសិស្ស
+                    </th>
+
                     <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>ឈ្មោះឪពុក</th>
                     <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>មុខរបរឪពុក</th>
                     <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>ឈ្មោះម្ដាយ</th>
@@ -676,6 +685,10 @@ export default function ClassroomDetails({
                     <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>លេខបន្ទប់</th>
                     <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>លេខតុ</th>
 
+                    {/* អតីតសិស្ស sub-headers */}
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>សាលារៀន</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ថ្នាក់ទី</th>
+
                     {/* ទីលំនៅបច្ចុប្បន្ន sub-headers */}
                     <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>រាជធានី/ខេត្ត</th>
                     <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ស្រុក/ក្រុង/ខណ្ឌ</th>
@@ -686,7 +699,7 @@ export default function ClassroomDetails({
                 <tbody>
                   {filteredStudents.length === 0 ? (
                     <tr>
-                      <td colSpan={30} className="px-4 py-12 text-center text-slate-400 text-xs font-semibold">
+                      <td colSpan={35} className="px-4 py-12 text-center text-slate-400 text-xs font-semibold">
                         រកមិនឃើញទិន្នន័យសិស្សានុសិស្សត្រូវបានកំណត់ឡើយ។
                       </td>
                     </tr>
@@ -787,6 +800,14 @@ export default function ClassroomDetails({
                           </td>
                           <td className="px-3 py-3 text-center font-mono text-slate-700 border-r border-slate-200 border-b border-slate-200 font-bold whitespace-nowrap">
                             {s.diplomaExamTable || '-'}
+                          </td>
+
+                          {/* ២ ជួរឈរទិន្នន័យ អតីតសិស្ស */}
+                          <td className="px-3 py-3 text-center text-slate-700 border-r border-slate-200 border-b border-slate-200 font-bold whitespace-nowrap">
+                            {s.formerSchool || '-'}
+                          </td>
+                          <td className="px-3 py-3 text-center text-slate-700 border-r border-slate-200 border-b border-slate-200 font-bold whitespace-nowrap">
+                            {s.formerGrade || '-'}
                           </td>
 
                           <td className="px-4 py-3 text-slate-700 font-bold whitespace-nowrap border-r border-slate-200 border-b border-slate-200">

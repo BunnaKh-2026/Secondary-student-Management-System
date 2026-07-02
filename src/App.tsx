@@ -13,6 +13,7 @@ import SchoolSettings from './components/SchoolSettings';
 import TeacherManagement from './components/TeacherManagement';
 import StudentManagement from './components/StudentManagement';
 import ClassroomDetails from './components/ClassroomDetails';
+import GradingSettings from './components/GradingSettings';
 
 // Academic years generation helper
 function toKhmerDigits(num: number | string): string {
@@ -342,6 +343,19 @@ export default function App() {
                   ព័ត៌មានសាលា
                 </button>
 
+                {/* កំណត់និទ្ទេស (Grading Scale) */}
+                <button
+                  onClick={() => handleNavigate('grading')}
+                  className={`w-full flex items-center gap-2 px-2 py-1.75 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    activeTab === 'grading'
+                      ? 'bg-teal-600 text-white shadow-xs font-extrabold'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  <Award className="w-4 h-4 shrink-0" />
+                  កំណត់និទ្ទេស
+                </button>
+
                 {/* ៣. បញ្ជីថ្នាក់រៀន (Class list) */}
                 <button
                   onClick={() => {
@@ -559,6 +573,10 @@ export default function App() {
                     schoolInfo={state.schoolInfo}
                     onSave={handleUpdateSchoolInfo}
                   />
+                )}
+
+                {activeTab === 'grading' && (
+                  <GradingSettings />
                 )}
 
                 {activeTab === 'teachers' && (

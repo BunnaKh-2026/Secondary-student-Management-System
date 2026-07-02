@@ -593,6 +593,8 @@ export default function StudentManagement({
       "មណ្ឌលប្រឡង",
       "លេខបន្ទប់",
       "លេខតុ",
+      "សាលាអតីត",
+      "ថ្នាក់ទីអតីត",
       "ឈ្មោះឪពុក",
       "មុខរបរឪពុក",
       "ឈ្មោះម្ដាយ",
@@ -628,6 +630,8 @@ export default function StudentManagement({
         "មណ្ឌលប្រឡង": "មណ្ឌលវិទ្យាល័យកំពង់ចាម",
         "លេខបន្ទប់": "05",
         "លេខតុ": "12",
+        "សាលាអតីត": "អនុវិទ្យាល័យ វត្តភ្នំ",
+        "ថ្នាក់ទីអតីត": "9A",
         "ឈ្មោះឪពុក": "សុខ សាន",
         "មុខរបរឪពុក": "កសិករ",
         "ឈ្មោះម្ដាយ": "ចាន់ ធី",
@@ -679,6 +683,8 @@ export default function StudentManagement({
         "មណ្ឌលប្រឡង": s.diplomaExamCenter || "",
         "លេខបន្ទប់": s.diplomaExamRoom || "",
         "លេខតុ": s.diplomaExamTable || "",
+        "សាលាអតីត": s.formerSchool || "",
+        "ថ្នាក់ទីអតីត": s.formerGrade || "",
         "ឈ្មោះឪពុក": s.fatherName || "",
         "មុខរបរឪពុក": s.fatherOccupation || "",
         "ឈ្មោះម្ដាយ": s.motherName || "",
@@ -730,6 +736,8 @@ export default function StudentManagement({
         "មណ្ឌលប្រឡង": s.diplomaExamCenter || "",
         "លេខបន្ទប់": s.diplomaExamRoom || "",
         "លេខតុ": s.diplomaExamTable || "",
+        "សាលាអតីត": s.formerSchool || "",
+        "ថ្នាក់ទីអតីត": s.formerGrade || "",
         "ឈ្មោះឪពុក": s.fatherName || "",
         "មុខរបរឪពុក": s.fatherOccupation || "",
         "ឈ្មោះម្ដាយ": s.motherName || "",
@@ -865,6 +873,8 @@ export default function StudentManagement({
           const diplomaExamCenter = String(row["មណ្ឌលប្រឡង"] || row["DIPLOMA_EXAM_CENTER"] || row["diplomaExamCenter"] || "").trim();
           const diplomaExamRoom = String(row["លេខបន្ទប់"] || row["DIPLOMA_EXAM_ROOM"] || row["diplomaExamRoom"] || "").trim();
           const diplomaExamTable = String(row["លេខតុ"] || row["DIPLOMA_EXAM_TABLE"] || row["diplomaExamTable"] || "").trim();
+          const formerSchool = String(row["សាលាអតីត"] || row["FORMER_SCHOOL"] || row["formerSchool"] || "").trim();
+          const formerGrade = String(row["ថ្នាក់ទីអតីត"] || row["FORMER_GRADE"] || row["formerGrade"] || "").trim();
 
           const fatherName = String(row["ឈ្មោះឪពុក"] || row["FATHER_NAME"] || row["fatherName"] || "").trim();
           const fatherOccupation = String(row["មុខរបរឪពុក"] || row["FATHER_OCCUPATION"] || row["fatherOccupation"] || "").trim();
@@ -923,6 +933,8 @@ export default function StudentManagement({
             diplomaExamCenter,
             diplomaExamRoom,
             diplomaExamTable,
+            formerSchool,
+            formerGrade,
             fatherName,
             fatherOccupation,
             motherName,
@@ -1021,6 +1033,8 @@ export default function StudentManagement({
           const diplomaExamCenter = String(row["មណ្ឌលប្រឡង"] || row["DIPLOMA_EXAM_CENTER"] || row["diplomaExamCenter"] || "").trim();
           const diplomaExamRoom = String(row["លេខបន្ទប់"] || row["DIPLOMA_EXAM_ROOM"] || row["diplomaExamRoom"] || "").trim();
           const diplomaExamTable = String(row["លេខតុ"] || row["DIPLOMA_EXAM_TABLE"] || row["diplomaExamTable"] || "").trim();
+          const formerSchool = String(row["សាលាអតីត"] || row["FORMER_SCHOOL"] || row["formerSchool"] || "").trim();
+          const formerGrade = String(row["ថ្នាក់ទីអតីត"] || row["FORMER_GRADE"] || row["formerGrade"] || "").trim();
 
           const fatherName = String(row["ឈ្មោះឪពុក"] || row["FATHER_NAME"] || row["fatherName"] || "").trim();
           const fatherOccupation = String(row["មុខរបរឪពុក"] || row["FATHER_OCCUPATION"] || row["fatherOccupation"] || "").trim();
@@ -1058,6 +1072,8 @@ export default function StudentManagement({
             diplomaExamCenter,
             diplomaExamRoom,
             diplomaExamTable,
+            formerSchool,
+            formerGrade,
             fatherName,
             fatherOccupation,
             motherName,
@@ -1132,40 +1148,26 @@ export default function StudentManagement({
       const rawExistingSubjects = customizedClass?.preStartConfig?.subjects || [];
       const existingSubjects = rawExistingSubjects.filter(ex => !isSubjectExcludedForCategory(cat.id, ex.name, ex.id));
 
-      // Merge layouts
-      const merged = defaultLayout.map(def => {
-        const match = existingSubjects.find(ex => ex.name === def.name || ex.id === def.id);
-        if (match) {
-          const maxScore = match.maxScore !== undefined ? match.maxScore : (match.coefficient !== undefined ? match.coefficient * 50 : def.maxScore);
-          return {
-            ...def,
-            isActive: match.isActive !== undefined ? match.isActive : def.isActive,
-            maxScore,
-            coefficient: maxScore / 50,
-            code: match.code || def.code || def.id.toUpperCase(),
-          };
-        }
-        return {
-          ...def,
-          code: def.code || def.id.toUpperCase(),
-        };
-      });
-
-      // Add any custom subjects from existingSubjects that are not in defaultLayout
-      existingSubjects.forEach(ex => {
-        const isStandard = defaultLayout.some(def => def.name === ex.name || def.id === ex.id);
-        if (!isStandard) {
+      // Merge layouts: if there is a customized classroom config, trust its existing subjects (which contains deletions, ordering, and edits). Otherwise, use default layout.
+      let merged: any[] = [];
+      if (customizedClass) {
+        merged = existingSubjects.map(ex => {
           const maxScore = ex.maxScore !== undefined ? ex.maxScore : (ex.coefficient !== undefined ? ex.coefficient * 50 : 50);
-          merged.push({
+          return {
             id: ex.id,
             name: ex.name,
             isActive: ex.isActive !== undefined ? ex.isActive : true,
             maxScore,
             coefficient: maxScore / 50,
             code: ex.code || ex.id.toUpperCase(),
-          });
-        }
-      });
+          };
+        });
+      } else {
+        merged = defaultLayout.map(def => ({
+          ...def,
+          code: def.code || def.id.toUpperCase(),
+        }));
+      }
 
       updatedCategorySubjects[cat.id] = merged;
     });
@@ -1477,7 +1479,7 @@ export default function StudentManagement({
   });
 
   // New Class List creation states
-  const [newListGrade, setNewListGrade] = useState<'៧' | '៨' | '៩' | '១០' | '១១' | '១២'>('៧');
+  const [newListGrade, setNewListGrade] = useState<'ជ្រើសរើស' | '៧' | '៨' | '៩' | '១០' | '១១' | '១២'>('ជ្រើសរើស');
   const [selectedListGroups, setSelectedListGroups] = useState<string[]>(['A']);
   const [newListType, setNewListType] = useState<string>('ទូទៅ');
   const [customTypeInput, setCustomTypeInput] = useState<string>('');
@@ -1535,6 +1537,8 @@ export default function StudentManagement({
     diplomaExamCenter: '',
     diplomaExamRoom: '',
     diplomaExamTable: '',
+    formerSchool: '',
+    formerGrade: '',
   });
   const [studentFormError, setStudentFormError] = useState<string | null>(null);
   const [duplicateIdError, setDuplicateIdError] = useState<string | null>(null);
@@ -1792,6 +1796,10 @@ export default function StudentManagement({
 
   const handleCreateClassFromList = (e: React.FormEvent) => {
     e.preventDefault();
+    if (newListGrade === 'ជ្រើសរើស') {
+      alert('សូមជ្រើសរើសកម្រិតថ្នាក់!');
+      return;
+    }
     if (selectedListGroups.length === 0) {
       alert('សូមជ្រើសរើស ឬបន្ថែមក្រុមថ្នាក់ជាមុនសិន!');
       return;
@@ -1894,6 +1902,8 @@ export default function StudentManagement({
       diplomaExamCenter: '',
       diplomaExamRoom: '',
       diplomaExamTable: '',
+      formerSchool: '',
+      formerGrade: '',
     });
     setIsStudentModalOpen(true);
   };
@@ -1941,6 +1951,8 @@ export default function StudentManagement({
       diplomaExamCenter: s.diplomaExamCenter || '',
       diplomaExamRoom: s.diplomaExamRoom || '',
       diplomaExamTable: s.diplomaExamTable || '',
+      formerSchool: s.formerSchool || '',
+      formerGrade: s.formerGrade || '',
     });
     setIsStudentModalOpen(true);
   };
@@ -2177,7 +2189,10 @@ export default function StudentManagement({
             
             <div className="flex gap-2">
               <button
-                onClick={() => setIsCreateClassListModalOpen(true)}
+                onClick={() => {
+                  setNewListGrade('ជ្រើសរើស');
+                  setIsCreateClassListModalOpen(true);
+                }}
                 className="px-4 py-2 bg-white border border-purple-600 text-purple-600 hover:bg-purple-50 hover:text-purple-700 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
                 id="btn-create-classroom"
               >
@@ -2219,22 +2234,58 @@ export default function StudentManagement({
                 </div>
 
                 <form onSubmit={handleCreateClassFromList} className="p-5 space-y-3.5 max-h-[85vh] overflow-y-auto">
-                  {/* កម្រិតថ្នាក់ Select Dropdown */}
-                  <div className="space-y-1.5">
-                    <label htmlFor="list-grade-select-field" className="text-xs font-bold text-slate-600 block">កម្រិតថ្នាក់</label>
-                    <select
-                      id="list-grade-select-field"
-                      value={newListGrade}
-                      onChange={e => setNewListGrade(e.target.value as any)}
-                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white cursor-pointer font-bold"
-                    >
-                      <option value="៧">ថ្នាក់ទី ៧ (Grade 7)</option>
-                      <option value="៨">ថ្នាក់ទី ៨ (Grade 8)</option>
-                      <option value="៩">ថ្នាក់ទី ៩ (Grade 9)</option>
-                      <option value="១០">ថ្នាក់ទី ១០ (Grade 10)</option>
-                      <option value="១១">ថ្នាក់ទី ១១ (Grade 11)</option>
-                      <option value="១២">ថ្នាក់ទី ១២ (Grade 12)</option>
-                    </select>
+                  {/* កម្រិតថ្នាក់ & ប្រភេទថ្នាក់ Row */}
+                  <div className={`grid gap-4 ${newListType === 'ផ្សេង' ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                    {/* កម្រិតថ្នាក់ Select Dropdown */}
+                    <div className="space-y-1.5">
+                      <label htmlFor="list-grade-select-field" className="text-xs font-bold text-slate-600 block">កម្រិតថ្នាក់</label>
+                      <select
+                        id="list-grade-select-field"
+                        value={newListGrade}
+                        onChange={e => setNewListGrade(e.target.value as any)}
+                        className={`w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white cursor-pointer font-bold appearance-none ${newListGrade === 'ជ្រើសរើស' ? 'text-slate-400' : 'text-slate-800'}`}
+                      >
+                        <option value="ជ្រើសរើស" className="text-slate-400 font-bold">ជ្រើសរើស</option>
+                        <option value="៧" className="text-slate-800 font-bold">ថ្នាក់ទី ៧</option>
+                        <option value="៨" className="text-slate-800 font-bold">ថ្នាក់ទី ៨</option>
+                        <option value="៩" className="text-slate-800 font-bold">ថ្នាក់ទី ៩</option>
+                        <option value="១០" className="text-slate-800 font-bold">ថ្នាក់ទី ១០</option>
+                        <option value="១១" className="text-slate-800 font-bold">ថ្នាក់ទី ១១</option>
+                        <option value="១២" className="text-slate-800 font-bold">ថ្នាក់ទី ១២</option>
+                      </select>
+                    </div>
+
+                    {/* ប្រភេទថ្នាក់ Select Dropdown */}
+                    <div className="space-y-1.5">
+                      <label htmlFor="type-select-field" className="text-xs font-bold text-slate-600 block">ប្រភេទថ្នាក់</label>
+                      <select
+                        id="type-select-field"
+                        value={newListType}
+                        onChange={e => setNewListType(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white cursor-pointer font-bold text-slate-800 appearance-none"
+                      >
+                        <option value="ទូទៅ" className="font-bold">ទូទៅ (General)</option>
+                        <option value="វិទ្យាសាស្ត្រ (SC)" className="font-bold">វិទ្យាសាស្ត្រ (SC)</option>
+                        <option value="សង្គម (SS)" className="font-bold">សង្គម (SS)</option>
+                        <option value="ផ្សេង" className="font-bold">ផ្សេង...</option>
+                      </select>
+                    </div>
+
+                    {/* ប្រភេទថ្នាក់ផ្សេងទៀត (Custom Input) */}
+                    {newListType === 'ផ្សេង' && (
+                      <div className="space-y-1.5 animate-fade-in">
+                        <label htmlFor="custom-class-type-input" className="text-xs font-bold text-slate-600 block">កំណត់ប្រភេទថ្នាក់</label>
+                        <input
+                          id="custom-class-type-input"
+                          type="text"
+                          required
+                          placeholder="ឧ. បច្ចេកទេស (TE)"
+                          value={customTypeInput}
+                          onChange={e => setCustomTypeInput(e.target.value)}
+                          className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white focus:border-teal-500 font-bold"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* ក្រុមថ្នាក់ Row of Selection with X buttons to delete options + Add Group Button */}
@@ -2329,38 +2380,6 @@ export default function StudentManagement({
                       </button>
                     </div>
                   </div>
-
-                  {/* ប្រភេទថ្នាក់ Select Dropdown */}
-                  <div className="space-y-1.5">
-                    <label htmlFor="type-select-field" className="text-xs font-bold text-slate-600 block">ប្រភេទថ្នាក់</label>
-                    <select
-                      id="type-select-field"
-                      value={newListType}
-                      onChange={e => setNewListType(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white cursor-pointer font-bold"
-                    >
-                      <option value="ទូទៅ">ទូទៅ (General)</option>
-                      <option value="វិទ្យាសាស្ត្រ (SC)">វិទ្យាសាស្ត្រ (Science - SC)</option>
-                      <option value="សង្គម (SS)">សង្គម (Social - SS)</option>
-                      <option value="ផ្សេង">កំណត់ខ្លួនឯង (ផ្សេង...)</option>
-                    </select>
-                  </div>
-
-                  {/* ប្រភេទថ្នាក់ផ្សេងទៀត (Custom Input) */}
-                  {newListType === 'ផ្សេង' && (
-                    <div className="space-y-1.5 animate-fade-in">
-                      <label htmlFor="custom-class-type-input" className="text-xs font-bold text-slate-600 block">បញ្ជាក់ប្រភេទថ្នាក់ផ្សេងទៀត</label>
-                      <input
-                        id="custom-class-type-input"
-                        type="text"
-                        required
-                        placeholder="ឧ. បច្ចេកវិទ្យា (IT)"
-                        value={customTypeInput}
-                        onChange={e => setCustomTypeInput(e.target.value)}
-                        className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:bg-white focus:border-teal-500 font-bold"
-                      />
-                    </div>
-                  )}
 
                   <div className="pt-4 border-t border-slate-100 flex justify-end gap-2">
                     <button
@@ -3199,6 +3218,16 @@ export default function StudentManagement({
                   className="hidden"
                 />
 
+                <button
+                  type="button"
+                  onClick={handleOpenAddStudent}
+                  className="flex-1 sm:flex-initial px-4 py-2 bg-white border border-purple-600 text-purple-600 hover:bg-purple-50 hover:text-purple-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer whitespace-nowrap animate-pulse-once"
+                  id="btn-add-student"
+                >
+                  <UserPlus className="w-4 h-4 text-purple-600 shrink-0" />
+                  បន្ថែមសិស្សថ្មី
+                </button>
+
                 <div className="relative animate-none flex-1 sm:flex-initial" ref={importExportDropdownRef}>
                   <button
                     type="button"
@@ -3258,16 +3287,6 @@ export default function StudentManagement({
                     </div>
                   )}
                 </div>
-
-                <button
-                  type="button"
-                  onClick={handleOpenAddStudent}
-                  className="flex-1 sm:flex-initial px-4 py-2 bg-white border border-purple-600 text-purple-600 hover:bg-purple-50 hover:text-purple-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer whitespace-nowrap animate-pulse-once"
-                  id="btn-add-student"
-                >
-                  <UserPlus className="w-4 h-4 text-purple-600 shrink-0" />
-                  បន្ថែមសិស្សថ្មី
-                </button>
                 <button
                   type="button"
                   onClick={() => {
@@ -3452,6 +3471,15 @@ export default function StudentManagement({
                       ប្រឡងសញ្ញាបត្រមធ្យមសិក្សាបឋមភូមិ
                     </th>
 
+                    {/* បន្ថែមជួរឈរ "អតីតសិស្ស" មាន ២ ជួរឈរតូច */}
+                    <th 
+                      colSpan={2} 
+                      className="px-4 py-2 text-center bg-emerald-700 border-r border-b border-white/30 font-bold whitespace-nowrap"
+                      style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}
+                    >
+                      អតីតសិស្ស
+                    </th>
+
                     <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>ឈ្មោះឪពុក</th>
                     <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>មុខរបរឪពុក</th>
                     <th className="px-4 py-3 bg-emerald-700 whitespace-nowrap border-r border-b border-white/30" rowSpan={2}>ឈ្មោះម្ដាយ</th>
@@ -3480,6 +3508,10 @@ export default function StudentManagement({
                     <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>លេខបន្ទប់</th>
                     <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>លេខតុ</th>
 
+                    {/* អតីតសិស្ស sub-headers */}
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>សាលារៀន</th>
+                    <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ថ្នាក់ទី</th>
+
                     {/* ទីលំនៅបច្ចុប្បន្ន sub-headers */}
                     <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>រាជធានី/ខេត្ត</th>
                     <th className="px-3 py-1.5 text-center border-r border-b border-white/30 whitespace-nowrap" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>ស្រុក/ក្រុង/ខណ្ឌ</th>
@@ -3490,7 +3522,7 @@ export default function StudentManagement({
                 <tbody>
                   {filteredStudents.length === 0 ? (
                     <tr>
-                      <td colSpan={30} className="px-4 py-12 text-center text-slate-400 text-xs font-semibold border-b border-slate-200">
+                      <td colSpan={35} className="px-4 py-12 text-center text-slate-400 text-xs font-semibold border-b border-slate-200">
                         រកមិនឃើញទិន្នន័យសិស្សានុសិស្សត្រូវបានកំណត់ឡើយ។
                       </td>
                     </tr>
@@ -3603,6 +3635,14 @@ export default function StudentManagement({
                           </td>
                           <td className="px-3 py-3 text-center font-mono text-slate-700 border-r border-slate-200 border-b border-slate-200 font-bold whitespace-nowrap">
                             {s.diplomaExamTable || '-'}
+                          </td>
+
+                          {/* ២ ជួរឈរទិន្នន័យ អតីតសិស្ស */}
+                          <td className="px-3 py-3 text-center text-slate-700 border-r border-slate-200 border-b border-slate-200 font-bold whitespace-nowrap">
+                            {s.formerSchool || '-'}
+                          </td>
+                          <td className="px-3 py-3 text-center text-slate-700 border-r border-slate-200 border-b border-slate-200 font-bold whitespace-nowrap">
+                            {s.formerGrade || '-'}
                           </td>
 
                           <td className="px-4 py-3 text-slate-700 font-bold whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
@@ -4297,6 +4337,38 @@ export default function StudentManagement({
                       onChange={e => setStudentForm({ ...studentForm, diplomaExamTable: e.target.value })}
                       placeholder="ឧ. 288"
                       className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-emerald-500 font-bold text-slate-800"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* ផ្នែកព័ត៌មានអតីតសិស្ស */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                <h4 className="text-xs font-bold text-slate-800 border-b border-slate-200 pb-1.5 flex items-center gap-2" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                  អតីតសិស្ស
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label htmlFor="student-former-school" className="text-xs font-bold text-slate-700 block">សាលារៀន</label>
+                    <input
+                      id="student-former-school"
+                      type="text"
+                      value={studentForm.formerSchool || ''}
+                      onChange={e => setStudentForm({ ...studentForm, formerSchool: e.target.value })}
+                      placeholder="ឧ. អនុវិទ្យាល័យ វត្តភ្នំ"
+                      className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 font-bold text-slate-800"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="student-former-grade" className="text-xs font-bold text-slate-700 block">ថ្នាក់ទី</label>
+                    <input
+                      id="student-former-grade"
+                      type="text"
+                      value={studentForm.formerGrade || ''}
+                      onChange={e => setStudentForm({ ...studentForm, formerGrade: e.target.value })}
+                      placeholder="ឧ. 7A"
+                      className="w-full px-3 h-[38px] bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-500 font-bold text-slate-800"
                     />
                   </div>
                 </div>
@@ -5218,6 +5290,26 @@ export default function StudentManagement({
                       <div>
                         <span className="font-bold block text-slate-500">លេខតុ:</span>
                         <span className="text-slate-800 font-bold">{viewingStudent.diplomaExamTable || '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ផ្នែកព័ត៌មានអតីតសិស្ស */}
+                {(viewingStudent.formerSchool || viewingStudent.formerGrade) && (
+                  <div className="bg-indigo-50/30 p-3 rounded-xl border border-indigo-100/50 space-y-1.5 text-[11px] mt-1.5">
+                    <h5 className="font-bold text-indigo-800 border-b border-indigo-100/30 pb-1 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                      ព័ត៌មានអតីតសិស្ស
+                    </h5>
+                    <div className="grid grid-cols-2 gap-y-1.5 gap-x-4 text-slate-600">
+                      <div>
+                        <span className="font-bold block text-slate-500">សាលារៀន:</span>
+                        <span className="text-slate-800 font-bold">{viewingStudent.formerSchool || '-'}</span>
+                      </div>
+                      <div>
+                        <span className="font-bold block text-slate-500">ថ្នាក់ទី:</span>
+                        <span className="text-slate-800 font-bold">{viewingStudent.formerGrade || '-'}</span>
                       </div>
                     </div>
                   </div>

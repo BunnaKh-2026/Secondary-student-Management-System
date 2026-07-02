@@ -106,6 +106,8 @@ export interface Student {
   diplomaExamCenter?: string;
   diplomaExamRoom?: string;
   diplomaExamTable?: string;
+  formerSchool?: string;
+  formerGrade?: string;
 }
 
 export interface StudentScore {

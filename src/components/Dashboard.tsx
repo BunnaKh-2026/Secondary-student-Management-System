@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, GraduationCap, School, CheckSquare, Calendar, Star, AlertCircle, Edit, FileText, Percent } from 'lucide-react';
+import { Users, GraduationCap, School, CheckSquare, Calendar, Star, AlertCircle, Edit, FileText, Percent, Award, BookOpen, Briefcase } from 'lucide-react';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid
@@ -128,7 +128,46 @@ export default function Dashboard({
   const leaveTeachers = todayTeacherAttList.filter(a => a.status === 'ច្បាប់').length;
   const absentTeachers = todayTeacherAttList.filter(a => a.status === 'អវត្តមាន').length;
 
-  const [dashboardTab, setDashboardTab] = React.useState<'overview' | 'stats'>('overview');
+  const [dashboardTab, setDashboardTab] = React.useState<'overview' | 'stats' | 'teacher_stats'>('overview');
+
+  // Teacher statistics computations
+  const totalTeachersCount = teachers.length;
+  const maleTeachersCount = teachersG_Male;
+  const femaleTeachersCount = teachersG_Female;
+  const maleTeachersPercent = totalTeachersCount > 0 ? parseFloat(((maleTeachersCount / totalTeachersCount) * 100).toFixed(1)) : 0;
+  const femaleTeachersPercent = totalTeachersCount > 0 ? parseFloat(((femaleTeachersCount / totalTeachersCount) * 100).toFixed(1)) : 0;
+
+  const teacherGenderData = [
+    { name: 'ប្រុស', value: maleTeachersCount, percentage: maleTeachersPercent, color: '#0ea5e9' },
+    { name: 'ស្រី', value: femaleTeachersCount, percentage: femaleTeachersPercent, color: '#ec4899' },
+  ];
+
+  // Distinct subjects
+  const distinctSubjectsMap: { [key: string]: number } = {};
+  teachers.forEach(t => {
+    if (t.subject) {
+      const subj = t.subject.trim();
+      distinctSubjectsMap[subj] = (distinctSubjectsMap[subj] || 0) + 1;
+    }
+  });
+  const subjectStatsData = Object.keys(distinctSubjectsMap).map(subj => ({
+    name: subj,
+    count: distinctSubjectsMap[subj],
+  })).sort((a, b) => b.count - a.count);
+
+  // Distinct degrees
+  const distinctDegreesMap: { [key: string]: number } = {};
+  teachers.forEach(t => {
+    const deg = (t.educationDegree || t.educationLevel || "មិនបានបញ្ជាក់").trim();
+    distinctDegreesMap[deg] = (distinctDegreesMap[deg] || 0) + 1;
+  });
+  const degreeStatsData = Object.keys(distinctDegreesMap).map(deg => ({
+    name: deg,
+    count: distinctDegreesMap[deg],
+  })).sort((a, b) => b.count - a.count);
+
+  // Home Teachers (គ្រូបន្ទុកថ្នាក់)
+  const homeTeachersCount = teachers.filter(t => t.classCharge && t.classCharge.trim() !== '').length;
 
   const boysPercent = totalStudents > 0 ? parseFloat(((boysCount / totalStudents) * 100).toFixed(1)) : 0;
   const girlsPercent = totalStudents > 0 ? parseFloat(((girlsCount / totalStudents) * 100).toFixed(1)) : 0;
@@ -195,9 +234,20 @@ export default function Dashboard({
           <GraduationCap className="w-4 h-4 shrink-0" />
           ស្ថិតិសិស្ស
         </button>
+        <button
+          onClick={() => setDashboardTab('teacher_stats')}
+          className={`px-5 py-2.5 text-xs font-bold transition-all border-b-2 -mb-[2px] cursor-pointer flex items-center gap-2 ${
+            dashboardTab === 'teacher_stats'
+              ? 'border-teal-600 text-teal-600 font-extrabold'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Users className="w-4 h-4 shrink-0" />
+          ស្ថិតិគ្រូ
+        </button>
       </div>
 
-      {dashboardTab === 'overview' ? (
+      {dashboardTab === 'overview' && (
         <>
           {/* Main Metric Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -405,7 +455,9 @@ export default function Dashboard({
         </div>
       </div>
         </>
-      ) : (
+      )}
+
+      {dashboardTab === 'stats' && (
         <div className="space-y-6 animate-fade-in">
           {/* Main Summary of stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
@@ -568,6 +620,214 @@ export default function Dashboard({
                 </table>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {dashboardTab === 'teacher_stats' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Main Summary of teacher stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex flex-col justify-between">
+              <span className="text-xs font-bold text-slate-400 block mb-1">បុគ្គលិក-គ្រូសរុប</span>
+              <div className="text-2xl font-black text-slate-800">{totalTeachersCount} នាក់</div>
+              <p className="text-[10px] text-slate-400 mt-2 font-semibold">ចំនួនបុគ្គលិក-គ្រូបង្រៀនទាំងអស់</p>
+            </div>
+            <div className="bg-sky-50/40 p-5 rounded-2xl border border-sky-100/60 flex flex-col justify-between">
+              <span className="text-xs font-bold text-sky-700 block mb-1">គ្រូបង្រៀនប្រុស</span>
+              <div className="text-2xl font-black text-sky-600">{maleTeachersCount} នាក់</div>
+              <p className="text-[10px] text-sky-500 mt-2 font-semibold">ស្មើនឹង {maleTeachersPercent}% នៃគ្រូទាំងអស់</p>
+            </div>
+            <div className="bg-pink-50/40 p-5 rounded-2xl border border-pink-100/60 flex flex-col justify-between">
+              <span className="text-xs font-bold text-pink-700 block mb-1">គ្រូបង្រៀនស្រី</span>
+              <div className="text-2xl font-black text-pink-600">{femaleTeachersCount} នាក់</div>
+              <p className="text-[10px] text-pink-500 mt-2 font-semibold">ស្មើនឹង {femaleTeachersPercent}% នៃគ្រូទាំងអស់</p>
+            </div>
+            <div className="bg-teal-50/40 p-5 rounded-2xl border border-teal-100/60 flex flex-col justify-between">
+              <span className="text-xs font-bold text-teal-700 block mb-1">គ្រូមានបន្ទុកថ្នាក់</span>
+              <div className="text-2xl font-black text-teal-600">{homeTeachersCount} នាក់</div>
+              <p className="text-[10px] text-teal-500 mt-2 font-semibold">សរុប {homeTeachersCount} ថ្នាក់មានគ្រូបន្ទុក</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Teacher Gender Pie Chart */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-4">
+              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-50 pb-3">
+                <span className="w-2.5 h-2.5 rounded-full bg-teal-600 block"></span>
+                ស្ថិតិគ្រូបង្រៀនតាមភេទ (ប្រុស-ស្រី)
+              </h3>
+              {totalTeachersCount === 0 ? (
+                <div className="h-[280px] flex flex-col items-center justify-center text-slate-400 text-xs">
+                  មិនទាន់មានទិន្នន័យបុគ្គលិក-គ្រូបង្រៀនឡើយ
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="h-[240px] w-full flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={teacherGenderData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={90}
+                          paddingAngle={3}
+                          dataKey="value"
+                        >
+                          {teacherGenderData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          formatter={(value, name, props: any) => [`${value} នាក់ (${props.payload.percentage}%)`, name]}
+                          contentStyle={{ borderRadius: '12px', fontSize: '11px', border: '1px solid #f1f5f9' }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  {/* Custom Legend */}
+                  <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-4">
+                    <div className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-sky-500 block shrink-0"></span>
+                        <span className="text-xs font-bold text-slate-600">ប្រុស</span>
+                      </div>
+                      <span className="text-xs font-extrabold text-slate-700">{maleTeachersCount} នាក់ ({maleTeachersPercent}%)</span>
+                    </div>
+                    <div className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-pink-500 block shrink-0"></span>
+                        <span className="text-xs font-bold text-slate-600">ស្រី</span>
+                      </div>
+                      <span className="text-xs font-extrabold text-slate-700">{femaleTeachersCount} នាក់ ({femaleTeachersPercent}%)</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Teachers by Subject Bar Chart */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-4">
+              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-50 pb-3">
+                <span className="w-2.5 h-2.5 rounded-full bg-teal-600 block"></span>
+                ស្ថិតិគ្រូបង្រៀនតាមមុខវិជ្ជាឯកទេស (នាក់)
+              </h3>
+              {subjectStatsData.length === 0 ? (
+                <div className="h-[280px] flex flex-col items-center justify-center text-slate-400 text-xs">
+                  មិនទាន់មានទិន្នន័យឯកទេសគ្រូឡើយ
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="h-[240px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={subjectStatsData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 'bold', fill: '#64748b' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 10, fontWeight: 'semibold', fill: '#64748b' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                        <Tooltip 
+                          formatter={(value) => [`${value} នាក់`, 'ចំនួនគ្រូបង្រៀន']}
+                          contentStyle={{ borderRadius: '12px', fontSize: '11px', border: '1px solid #f1f5f9' }}
+                        />
+                        <Bar dataKey="count" radius={[6, 6, 0, 0]} fill="#0d9488" maxBarSize={40} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="text-slate-400 text-[10px] text-center font-bold">
+                    ក្រាប់បង្ហាញពីចំនួនគ្រូបង្រៀនសរុបបែងចែកតាមមុខវិជ្ជាឯកទេសនីមួយៗក្នុងសាលា
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Educational Degrees list */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-4 lg:col-span-1">
+              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b border-slate-50 pb-3">
+                <Award className="w-4 h-4 text-teal-600" />
+                កម្រិតវប្បធម៌ / សញ្ញាបត្រ
+              </h3>
+              {degreeStatsData.length === 0 ? (
+                <div className="text-center py-10 text-slate-400 text-xs">
+                  មិនទាន់មានទិន្នន័យកម្រិតវប្បធម៌ឡើយ។
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {degreeStatsData.map((item, idx) => {
+                    const pct = totalTeachersCount > 0 ? ((item.count / totalTeachersCount) * 100).toFixed(0) : 0;
+                    return (
+                      <div key={idx} className="space-y-1">
+                        <div className="flex justify-between text-xs font-bold text-slate-700">
+                          <span>{item.name}</span>
+                          <span>{item.count} នាក់ ({pct}%)</span>
+                        </div>
+                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                          <div className="bg-teal-500 h-full rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Detailed table view */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs lg:col-span-2 space-y-4">
+              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b border-slate-50 pb-3">
+                <Briefcase className="w-4 h-4 text-teal-600" />
+                បញ្ជីឈ្មោះគ្រូបង្រៀន និងតួនាទីសង្ខេប
+              </h3>
+              {totalTeachersCount === 0 ? (
+                <div className="text-center py-10 text-slate-400 text-xs">
+                  មិនទាន់មានទិន្នន័យគ្រូបង្រៀននៅក្នុងប្រព័ន្ធឡើយ។
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="bg-slate-50 text-slate-500 font-bold border-b border-slate-100">
+                        <th className="px-3 py-2 text-slate-600">ឈ្មោះគ្រូបង្រៀន</th>
+                        <th className="px-3 py-2 text-center text-slate-600">ភេទ</th>
+                        <th className="px-3 py-2 text-slate-600">មុខវិជ្ជា</th>
+                        <th className="px-3 py-2 text-slate-600">តួនាទី</th>
+                        <th className="px-3 py-2 text-slate-600">បន្ទុកថ្នាក់</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {teachers.slice(0, 10).map((t, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-3 py-2.5 font-bold text-slate-800">{t.name}</td>
+                          <td className="px-3 py-2.5 text-center text-slate-600">
+                            <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                              t.gender === 'ប្រុស' ? 'bg-sky-50 text-sky-700' : 'bg-pink-50 text-pink-700'
+                            }`}>
+                              {t.gender}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2.5 text-slate-600 font-semibold">{t.subject || 'មិនមាន'}</td>
+                          <td className="px-3 py-2.5 text-slate-500 font-medium">{t.role || 'គ្រូបង្រៀន'}</td>
+                          <td className="px-3 py-2.5 text-slate-500 font-semibold">
+                            {t.classCharge ? (
+                              <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md">
+                                {t.classCharge}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {totalTeachersCount > 10 && (
+                    <div className="text-center pt-3 text-[11px] text-slate-400 font-bold">
+                      បង្ហាញត្រឹម ១០ នាក់ដំបូង។ សូមចូលទៅកាន់ទំព័រ "គ្រប់គ្រងបុគ្គលិក-គ្រូ" ដើម្បីមើលបញ្ជីពេញលេញ។
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
