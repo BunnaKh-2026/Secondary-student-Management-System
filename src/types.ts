@@ -66,6 +66,8 @@ export interface PreStartConfig {
   academicYear: string;
   semester1Months: string[]; // Months order for Sem 1, e.g. ["វិច្ឆិកា", "ធ្នូ", "មករា", "កុម្ភៈ", "មីនា"]
   semester2Months: string[]; // Months order for Sem 2, e.g. ["មេសា", "ឧសភា", "មិថុនា", "កក្កដា", "សីហា"]
+  semester1AttendanceMonths?: string[]; // Attendance months order for Sem 1
+  semester2AttendanceMonths?: string[]; // Attendance months order for Sem 2
   activeMonthsForAverage: string[]; // Which months' scores determine the semester average, e.g. ["វិច្ឆិកា", "ធ្នូ", "មករា", "កុម្ភៈ", "មីនា"]
   subjects: SubjectConfig[];
 }

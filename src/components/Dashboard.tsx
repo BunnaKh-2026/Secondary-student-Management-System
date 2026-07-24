@@ -807,14 +807,8 @@ export default function Dashboard({
                           </td>
                           <td className="px-3 py-2.5 text-slate-600 font-semibold">{t.subject || 'មិនមាន'}</td>
                           <td className="px-3 py-2.5 text-slate-500 font-medium">{t.role || 'គ្រូបង្រៀន'}</td>
-                          <td className="px-3 py-2.5 text-slate-500 font-semibold">
-                            {t.classCharge ? (
-                              <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md">
-                                {t.classCharge}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400">-</span>
-                            )}
+                          <td className="px-3 py-2.5 text-slate-600 font-bold">
+                            {t.classCharge || '-'}
                           </td>
                         </tr>
                       ))}

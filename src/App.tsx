@@ -486,7 +486,7 @@ export default function App() {
                   {[
                     { id: 'register', label: 'បញ្ជីឈ្មោះសិស្ស', icon: Users },
                     { id: 'config', label: 'ព័ត៌មានគ្រូបន្ទុក', icon: Settings },
-                    { id: 'tasks', label: 'កិច្ចការគ្រូបន្ទុក', icon: CheckSquare },
+                    { id: 'tasks', label: 'ភារកិច្ចគ្រូបន្ទុក', icon: CheckSquare },
                     { id: 'attendance', label: 'វត្តមានសិស្ស', icon: Calendar },
                     { id: 'scores', label: 'ស្រង់ពិន្ទុប្រឡង', icon: GraduationCap },
                     { id: 'results', label: 'លទ្ធផលសិក្សា', icon: Award },

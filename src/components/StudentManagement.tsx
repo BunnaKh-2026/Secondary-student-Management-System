@@ -97,6 +97,14 @@ const toArabicClassnameWithPrefix = (name: string): string => {
     .replace(/\s+/g, '');
 };
 
+const toKhmerNumerals = (str: string): string => {
+  const arabicToKhmerMap: { [key: string]: string } = {
+    '0': '០', '1': '១', '2': '២', '3': '៣', '4': '៤',
+    '5': '៥', '6': '៦', '7': '៧', '8': '៨', '9': '៩'
+  };
+  return str.split('').map(char => arabicToKhmerMap[char] || char).join('');
+};
+
 interface StudentManagementProps {
   students: Student[];
   classrooms: Classroom[];
@@ -1254,7 +1262,13 @@ export default function StudentManagement({
     }, 2000);
   };
 
-  const autoSaveCategoryMonths = (catId: string, updatedSem1: string[], updatedSem2: string[]) => {
+  const autoSaveCategoryMonths = (
+    catId: string, 
+    updatedSem1: string[], 
+    updatedSem2: string[],
+    updatedSem1Att?: string[],
+    updatedSem2Att?: string[]
+  ) => {
     const catClassrooms = getClassroomsForCategory(catId, classrooms);
     const catClassIds = catClassrooms.map(c => c.id);
 
@@ -1266,15 +1280,21 @@ export default function StudentManagement({
           academicYear: '២០២៥-២០២៦',
           semester1Months: ['វិច្ឆិកា', 'ធ្នូ', 'មករា', 'កុម្ភៈ', 'មីនា'],
           semester2Months: ['មេសា', 'ឧសភា', 'មិថុនា', 'កក្កដា', 'សីហា'],
+          semester1AttendanceMonths: ['វិច្ឆិកា', 'ធ្នូ', 'មករា', 'កុម្ភៈ', 'មីនា'],
+          semester2AttendanceMonths: ['មេសា', 'ឧសភា', 'មិថុនា', 'កក្កដា', 'សីហា'],
           activeMonthsForAverage: ['វិច្ឆិកា', 'ធ្នូ', 'មករា', 'កុម្ភៈ', 'មីនា'],
           subjects: []
         };
+        const sem1AttVal = updatedSem1Att !== undefined ? updatedSem1Att : (preStartConfig.semester1AttendanceMonths || preStartConfig.semester1Months);
+        const sem2AttVal = updatedSem2Att !== undefined ? updatedSem2Att : (preStartConfig.semester2AttendanceMonths || preStartConfig.semester2Months);
         return {
           ...c,
           preStartConfig: {
             ...preStartConfig,
             semester1Months: updatedSem1,
             semester2Months: updatedSem2,
+            semester1AttendanceMonths: sem1AttVal,
+            semester2AttendanceMonths: sem2AttVal,
             activeMonthsForAverage: [...updatedSem1, ...updatedSem2]
           }
         };
@@ -1455,7 +1475,7 @@ export default function StudentManagement({
     });
     onUpdateClassrooms(updatedClassrooms);
     setSuccessToast({
-      message: 'រក្សាទុកខែយកពិន្ទុរួចរាល់!',
+      message: 'រក្សាទុកខែក្នុងឆមាសរួចរាល់!',
       classroomId: classId
     });
     setTimeout(() => setSuccessToast(null), 3000);
@@ -2145,7 +2165,7 @@ export default function StudentManagement({
         };
       case 'months':
         return {
-          title: 'ខែយកពិន្ទុប្រចាំខែក្នុងឆមាស',
+          title: 'កំណត់ខែក្នុងឆមាស',
           desc: '',
         };
       case 'students':
@@ -2777,12 +2797,12 @@ export default function StudentManagement({
                   <div className="p-4 space-y-2">
                     <div className="flex justify-between items-start">
                       <span className="text-[10px] bg-teal-50 text-teal-800 font-extrabold px-2.5 py-1 rounded-lg uppercase tracking-wide whitespace-nowrap">
-                        កម្រិតថ្នាក់ទី {toArabicClassname(cls.grade || '')}
+                        កម្រិតថ្នាក់ទី {toKhmerNumerals(toArabicClassname(cls.grade || ''))}
                       </span>
                     </div>
 
                     <h3 className="text-base font-extrabold text-slate-800 truncate whitespace-nowrap">
-                      {toArabicClassnameWithPrefix(cls.name)}
+                      {toKhmerNumerals(toArabicClassnameWithPrefix(cls.name))}
                     </h3>
 
                     <div className="grid grid-cols-2 gap-2 text-[11px] font-bold text-slate-500 pt-0.5">
@@ -3028,7 +3048,7 @@ export default function StudentManagement({
             <h1 className="text-xl font-extrabold text-slate-800 tracking-tight">{header.title}</h1>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">
             {[
               { id: 'G7', name: 'កម្រិតថ្នាក់ទី៧' },
               { id: 'G8', name: 'កម្រិតថ្នាក់ទី៨' },
@@ -3045,9 +3065,13 @@ export default function StudentManagement({
               const refClass = catClassrooms[0];
               const sem1 = refClass?.preStartConfig?.semester1Months || ['វិច្ឆិកា', 'ធ្នូ', 'មករា', 'កុម្ភៈ', 'មីនា'];
               const sem2 = refClass?.preStartConfig?.semester2Months || ['មេសា', 'ឧសភា', 'មិថុនា', 'កក្កដា', 'សីហា'];
+              const sem1Att = refClass?.preStartConfig?.semester1AttendanceMonths || sem1;
+              const sem2Att = refClass?.preStartConfig?.semester2AttendanceMonths || sem2;
 
               const sem1Slots = Array.from({ length: 6 }, (_, i) => sem1[i] || '');
               const sem2Slots = Array.from({ length: 6 }, (_, i) => sem2[i] || '');
+              const sem1AttSlots = Array.from({ length: 6 }, (_, i) => sem1Att[i] || '');
+              const sem2AttSlots = Array.from({ length: 6 }, (_, i) => sem2Att[i] || '');
 
               const hasToast = successToast?.classroomId === cat.id;
 
@@ -3064,11 +3088,11 @@ export default function StudentManagement({
               };
 
               return (
-                <div key={cat.id} className="border border-slate-300 rounded-lg overflow-hidden shadow-2xs bg-white relative max-w-[240px] w-full mx-auto">
+                <div key={cat.id} className="border border-slate-300 rounded-lg overflow-hidden shadow-2xs bg-white relative max-w-[340px] w-full">
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-emerald-700 border-b border-emerald-800">
-                        <th colSpan={2} className="py-2.5 px-3 text-center text-sm text-white" style={{ fontFamily: '"Khmer OS Muol Light", "Moul", serif', fontWeight: 'normal' }}>
+                        <th colSpan={4} className="py-2.5 px-3 text-center text-sm text-white" style={{ fontFamily: '"Khmer OS Muol Light", "Moul", serif', fontWeight: 'normal' }}>
                           <div className="flex justify-center items-center gap-2">
                             <span>{cat.name}</span>
                             {hasToast && (
@@ -3079,58 +3103,116 @@ export default function StudentManagement({
                           </div>
                         </th>
                       </tr>
-                      <tr className="bg-emerald-600 border-b border-emerald-700 text-xs text-white font-bold">
-                        <th className="py-2 px-3 text-center border-r border-emerald-700 w-1/2">
+                      <tr className="bg-emerald-600 border-b border-emerald-750 text-xs text-white font-bold">
+                        <th colSpan={2} className="py-2 px-3 text-center border-r border-emerald-700">
                           ឆមាសទី១
                         </th>
-                        <th className="py-2 px-3 text-center w-1/2">
+                        <th colSpan={2} className="py-2 px-3 text-center">
                           ឆមាសទី២
+                        </th>
+                      </tr>
+                      <tr className="bg-emerald-500/90 border-b border-emerald-600 text-[10px] text-white font-bold">
+                        <th className="py-1 px-2 text-center border-r border-emerald-600 w-1/4">
+                          ពិន្ទុ
+                        </th>
+                        <th className="py-1 px-2 text-center border-r border-emerald-700 w-1/4">
+                          វត្តមាន
+                        </th>
+                        <th className="py-1 px-2 text-center border-r border-emerald-600 w-1/4">
+                          ពិន្ទុ
+                        </th>
+                        <th className="py-1 px-2 text-center w-1/4">
+                          វត្តមាន
                         </th>
                       </tr>
                     </thead>
                     <tbody>
                       {Array.from({ length: 6 }).map((_, rowIndex) => {
                         const m1 = sem1Slots[rowIndex];
+                        const m1Att = sem1AttSlots[rowIndex];
                         const m2 = sem2Slots[rowIndex];
+                        const m2Att = sem2AttSlots[rowIndex];
                         return (
                           <tr key={rowIndex} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50/40 transition-colors">
-                            {/* Semester 1 Select */}
+                            {/* Semester 1 Scoring Select */}
                             <td className="p-0 border-r border-slate-300 text-center">
                               <select
                                 value={m1}
                                 onChange={(e) => {
                                   const newVal = e.target.value;
-                                  const updatedSem1Slots = [...sem1Slots];
-                                  updatedSem1Slots[rowIndex] = newVal;
-                                  const updatedSem1 = updatedSem1Slots.filter(m => m !== '');
-                                  autoSaveCategoryMonths(cat.id, updatedSem1, sem2);
+                                  const updatedSlots = [...sem1Slots];
+                                  updatedSlots[rowIndex] = newVal;
+                                  const updated = updatedSlots.filter(m => m !== '');
+                                  autoSaveCategoryMonths(cat.id, updated, sem2, sem1Att, sem2Att);
                                 }}
                                 className={`w-full py-2 text-center text-xs font-bold bg-transparent border-0 outline-none focus:ring-0 focus:outline-none cursor-pointer appearance-none ${
-                                  m1 ? 'text-blue-600' : 'text-red-500'
+                                  m1 ? 'text-blue-600' : 'text-slate-400'
                                 }`}
                               >
-                                <option value="" className="text-red-500 font-bold">ជ្រើសរើស</option>
+                                <option value="">-</option>
                                 {khmerMonthsOptions.map(mon => (
                                   <option key={mon} value={mon} className="text-slate-700 font-bold">{mon}</option>
                                 ))}
                               </select>
                             </td>
-                            {/* Semester 2 Select */}
-                            <td className="p-0 text-center">
+                            {/* Semester 1 Attendance Select */}
+                            <td className="p-0 border-r border-slate-300 text-center">
+                              <select
+                                value={m1Att}
+                                onChange={(e) => {
+                                  const newVal = e.target.value;
+                                  const updatedSlots = [...sem1AttSlots];
+                                  updatedSlots[rowIndex] = newVal;
+                                  const updated = updatedSlots.filter(m => m !== '');
+                                  autoSaveCategoryMonths(cat.id, sem1, sem2, updated, sem2Att);
+                                }}
+                                className={`w-full py-2 text-center text-xs font-bold bg-transparent border-0 outline-none focus:ring-0 focus:outline-none cursor-pointer appearance-none ${
+                                  m1Att ? 'text-purple-600' : 'text-slate-400'
+                                }`}
+                              >
+                                <option value="">-</option>
+                                {khmerMonthsOptions.map(mon => (
+                                  <option key={mon} value={mon} className="text-slate-700 font-bold">{mon}</option>
+                                ))}
+                              </select>
+                            </td>
+                            {/* Semester 2 Scoring Select */}
+                            <td className="p-0 border-r border-slate-300 text-center">
                               <select
                                 value={m2}
                                 onChange={(e) => {
                                   const newVal = e.target.value;
-                                  const updatedSem2Slots = [...sem2Slots];
-                                  updatedSem2Slots[rowIndex] = newVal;
-                                  const updatedSem2 = updatedSem2Slots.filter(m => m !== '');
-                                  autoSaveCategoryMonths(cat.id, sem1, updatedSem2);
+                                  const updatedSlots = [...sem2Slots];
+                                  updatedSlots[rowIndex] = newVal;
+                                  const updated = updatedSlots.filter(m => m !== '');
+                                  autoSaveCategoryMonths(cat.id, sem1, updated, sem1Att, sem2Att);
                                 }}
                                 className={`w-full py-2 text-center text-xs font-bold bg-transparent border-0 outline-none focus:ring-0 focus:outline-none cursor-pointer appearance-none ${
-                                  m2 ? 'text-blue-600' : 'text-red-500'
+                                  m2 ? 'text-blue-600' : 'text-slate-400'
                                 }`}
                               >
-                                <option value="" className="text-red-500 font-bold">ជ្រើសរើស</option>
+                                <option value="">-</option>
+                                {khmerMonthsOptions.map(mon => (
+                                  <option key={mon} value={mon} className="text-slate-700 font-bold">{mon}</option>
+                                ))}
+                              </select>
+                            </td>
+                            {/* Semester 2 Attendance Select */}
+                            <td className="p-0 text-center">
+                              <select
+                                value={m2Att}
+                                onChange={(e) => {
+                                  const newVal = e.target.value;
+                                  const updatedSlots = [...sem2AttSlots];
+                                  updatedSlots[rowIndex] = newVal;
+                                  const updated = updatedSlots.filter(m => m !== '');
+                                  autoSaveCategoryMonths(cat.id, sem1, sem2, sem1Att, updated);
+                                }}
+                                className={`w-full py-2 text-center text-xs font-bold bg-transparent border-0 outline-none focus:ring-0 focus:outline-none cursor-pointer appearance-none ${
+                                  m2Att ? 'text-purple-600' : 'text-slate-400'
+                                }`}
+                              >
+                                <option value="">-</option>
                                 {khmerMonthsOptions.map(mon => (
                                   <option key={mon} value={mon} className="text-slate-700 font-bold">{mon}</option>
                                 ))}
@@ -3141,11 +3223,17 @@ export default function StudentManagement({
                       })}
                       {/* Total counts of selected months */}
                       <tr className="bg-slate-100 border-t border-slate-300 text-xs text-slate-700 font-semibold">
-                        <td className="py-2.5 px-3 text-center border-r border-slate-300 font-extrabold text-slate-800">
+                        <td className="py-2 px-1 text-center border-r border-slate-300 font-extrabold text-slate-800">
                           {toKhmerNumeral(sem1.length)} ខែ
                         </td>
-                        <td className="py-2.5 px-3 text-center font-extrabold text-slate-800">
+                        <td className="py-2 px-1 text-center border-r border-slate-300 font-extrabold text-slate-800">
+                          {toKhmerNumeral(sem1Att.length)} ខែ
+                        </td>
+                        <td className="py-2 px-1 text-center border-r border-slate-300 font-extrabold text-slate-800">
                           {toKhmerNumeral(sem2.length)} ខែ
+                        </td>
+                        <td className="py-2 px-1 text-center font-extrabold text-slate-800">
+                          {toKhmerNumeral(sem2Att.length)} ខែ
                         </td>
                       </tr>
                     </tbody>

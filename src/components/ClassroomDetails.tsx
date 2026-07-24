@@ -323,10 +323,20 @@ export default function ClassroomDetails({
 
   // General Month Selector helper mapping
   const allConfigMonths = useMemo(() => [...config.semester1Months, ...config.semester2Months], [config]);
+  const allAttendanceMonths = useMemo(() => {
+    const sem1Att = config.semester1AttendanceMonths || config.semester1Months;
+    const sem2Att = config.semester2AttendanceMonths || config.semester2Months;
+    return [...sem1Att, ...sem2Att];
+  }, [config]);
   const [selectedScoreMonth, setSelectedScoreMonth] = useState<string>(allConfigMonths[0] || 'វិច្ឆិកា');
 
   const selectedTeacher = useMemo(() => {
-    return teachers.find(t => t.classCharge === classroom.name) || null;
+    return teachers.find(t => {
+      if (!t.classCharge) return false;
+      const tChargeClean = toArabicClassname(t.classCharge).trim().toLowerCase();
+      const clsNameClean = toArabicClassname(classroom.name).trim().toLowerCase();
+      return tChargeClean === clsNameClean;
+    }) || null;
   }, [teachers, classroom.name]);
 
   // Keep homeTeacherName in PreStartConfig automatically synchronized with the matched teacher
@@ -545,8 +555,8 @@ export default function ClassroomDetails({
   const handleMarkStudentAttendance = (studentId: string, status: typeof studentAttendance[0]['status'], noteValue?: string) => {
     // Current semester designation
     let semester: 'ឆមាសទី១' | 'ឆមាសទី២' = 'ឆមាសទី១';
-    const monthIndex = allConfigMonths.indexOf(selectedScoreMonth);
-    if (monthIndex > config.semester1Months.length - 1) {
+    const sem1Att = config.semester1AttendanceMonths || config.semester1Months;
+    if (!sem1Att.includes(selectedScoreMonth)) {
       semester = 'ឆមាសទី២';
     }
 
@@ -579,7 +589,7 @@ export default function ClassroomDetails({
   };
 
   return (
-    <div id="classroom-details-roster" className={`space-y-6 ${activeTab === 'register' ? 'flex-1 flex flex-col h-full min-h-0' : ''}`}>
+    <div id="classroom-details-roster" className={`space-y-6 ${activeTab === 'register' ? 'flex-1 flex flex-col h-full min-h-0' : 'flex-1 overflow-y-auto min-h-0 h-full scrollbar-thin pr-1'}`}>
       {/* 2. REGISTER TAB - LIST OF CLASSROOM STUDENTS */}
       {activeTab === 'register' && (
         <div className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs space-y-5 animate-fade-in text-slate-755 w-full max-w-full overflow-hidden flex-1 flex flex-col min-h-0">
@@ -876,10 +886,10 @@ export default function ClassroomDetails({
                       src={selectedTeacher.photoUrl}
                       alt={selectedTeacher.name}
                       referrerPolicy="no-referrer"
-                      className="w-24 h-32 rounded-2xl object-contain bg-slate-100 border-4 border-white shadow-md"
+                      className="w-32 h-40 rounded-2xl object-contain bg-white border border-emerald-500 shadow-sm"
                     />
                   ) : (
-                    <div className="w-24 h-24 rounded-2xl bg-teal-600 text-white flex items-center justify-center text-3xl font-bold uppercase border-4 border-white shadow-md">
+                    <div className="w-32 h-40 rounded-2xl bg-white text-emerald-600 flex items-center justify-center text-5xl font-bold uppercase border border-emerald-500 shadow-sm">
                       {selectedTeacher.name.charAt(0)}
                     </div>
                   )}
@@ -887,14 +897,18 @@ export default function ClassroomDetails({
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-100/70 text-teal-800 font-bold text-[10px]">
                       គ្រូទទួលបន្ទុកថ្នាក់ផ្លូវការ
                     </span>
-                    <h3 className="font-bold text-slate-800 text-xl flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                      {selectedTeacher.name}
+                    <div className="space-y-1">
+                      <h3 className="font-bold text-slate-800 text-xl">
+                        {selectedTeacher.name}
+                      </h3>
                       {selectedTeacher.nameLatin && (
-                        <span className="font-mono text-xs text-slate-400 font-semibold uppercase bg-slate-200/60 px-2 py-0.5 rounded-md">
+                        <div className={`font-mono text-sm font-bold uppercase tracking-wider ${
+                          selectedTeacher.gender === 'ប្រុស' ? 'text-blue-600' : 'text-rose-500'
+                        }`}>
                           {selectedTeacher.nameLatin}
-                        </span>
+                        </div>
                       )}
-                    </h3>
+                    </div>
                     <p className="text-xs text-slate-500 font-medium">អត្តលេខបុគ្គលិក៖ {selectedTeacher.idNumber}</p>
                   </div>
                 </div>
@@ -944,17 +958,17 @@ export default function ClassroomDetails({
                       <span className="col-span-2 text-slate-800 font-semibold">{selectedTeacher.teachingSubjects || '-'}</span>
                       
                       <span className="col-span-1 font-bold">បន្ទុកថ្នាក់:</span>
-                      <span className="col-span-2 text-slate-800 font-semibold">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-800 font-bold text-[11px]">
-                          {selectedTeacher.classCharge ? toArabicClassnameWithPrefix(selectedTeacher.classCharge) : '-'}
-                        </span>
+                      <span className="col-span-2 text-slate-800 font-bold" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>
+                        {selectedTeacher.classCharge ? toArabicClassnameWithPrefix(selectedTeacher.classCharge) : '-'}
                       </span>
 
                       <span className="col-span-1 font-bold">ក្របខ័ណ្ឌ:</span>
                       <span className="col-span-2 text-slate-800 font-semibold">{selectedTeacher.framework || '-'}</span>
 
                       <span className="col-span-1 font-bold">កាំប្រាក់:</span>
-                      <span className="col-span-2 text-slate-800 font-mono font-semibold">{selectedTeacher.salaryRank || '-'}</span>
+                      <span className="col-span-2 text-slate-800 font-bold" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>
+                        {selectedTeacher.salaryRank || '-'}
+                      </span>
 
                       <span className="col-span-1 font-bold">ថ្ងៃចូលធ្វើការ:</span>
                       <span className="col-span-2 text-slate-800 font-semibold">{formatToDDMMYYYY(selectedTeacher.joinDate || '')}</span>
@@ -1200,7 +1214,7 @@ export default function ClassroomDetails({
                   onChange={e => setSelectedScoreMonth(e.target.value)}
                   className="px-3 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-teal-700 outline-none"
                 >
-                  {allConfigMonths.map(mon => (
+                  {allAttendanceMonths.map(mon => (
                     <option key={mon} value={mon}>{mon}</option>
                   ))}
                 </select>

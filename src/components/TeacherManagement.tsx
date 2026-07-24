@@ -1867,12 +1867,8 @@ export default function TeacherManagement({
                         <td className="px-4 py-3 text-slate-600 font-medium whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
                           {t.teachingSubjects || '-'}
                         </td>
-                        <td className="px-4 py-3 text-center whitespace-nowrap border-r border-slate-200 border-b border-slate-200">
-                          {t.classCharge ? (
-                            <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-amber-50 text-amber-800">
-                              {t.classCharge}
-                            </span>
-                          ) : '-'}
+                        <td className="px-4 py-3 text-center whitespace-nowrap border-r border-slate-200 border-b border-slate-200 font-bold text-slate-700">
+                          {t.classCharge || '-'}
                         </td>
                         <td className={`px-4 py-3 text-center whitespace-nowrap border-r border-slate-200 border-b border-slate-200 ${
                           t.ethnicity === 'បាទ/ចាស' ? 'text-amber-700 font-bold' : 'text-slate-500 font-medium'
@@ -2459,11 +2455,14 @@ export default function TeacherManagement({
                   >
                     <option value="" className="text-slate-400">ជ្រើសរើស</option>
                     {classrooms.length > 0 ? (
-                      classrooms.map(c => (
-                        <option key={c.id} value={c.name} className="text-slate-800 font-semibold">
-                          {c.name}
-                        </option>
-                      ))
+                      classrooms.map(c => {
+                        const shortName = toArabicClassname(c.name);
+                        return (
+                          <option key={c.id} value={shortName} className="text-slate-800 font-semibold">
+                            {shortName}
+                          </option>
+                        );
+                      })
                     ) : (
                       <option value="" disabled className="text-slate-400">មិនទាន់មានថ្នាក់រៀនក្នុងប្រព័ន្ធទេ</option>
                     )}

@@ -180,7 +180,25 @@ export default function GradingSettings() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-600" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>
+                ជ្រើសរើសនិទ្ទេស៖
+              </span>
+              <div className="relative">
+                <select
+                  value={activeScale}
+                  onChange={(e) => setActiveScale(e.target.value as any)}
+                  className="appearance-none bg-slate-50 border border-slate-200 hover:border-slate-300 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all outline-none text-center focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                  style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}
+                >
+                  <option value="english6">និទ្ទេស ៦ (អង់គ្លេស)</option>
+                  <option value="khmer6">និទ្ទេស ៦ (ភាសាខ្មែរ)</option>
+                  <option value="khmer4">និទ្ទេស ៤ (ភាសាខ្មែរ)</option>
+                </select>
+              </div>
+            </div>
+
             <button
               type="button"
               onClick={handleReset}
@@ -190,40 +208,6 @@ export default function GradingSettings() {
               <RotateCcw className="w-4 h-4 text-rose-600 shrink-0" />
               ស្ដារចន្លោះពិន្ទុដើម
             </button>
-          </div>
-        </div>
-
-        {/* Global Active Grading Scale Selector Panel */}
-        <div className="bg-slate-50 border-b border-slate-200 p-5">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5" style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}>
-                <Info className="w-4 h-4 text-slate-400 shrink-0" />
-                ជ្រើសរើសប្រភេទនិទ្ទេសសម្រាប់ប្រើប្រាស់ក្នុងប្រព័ន្ធ៖
-              </label>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { id: 'english6', label: 'និទ្ទេស ៦ (អង់គ្លេស)' },
-                { id: 'khmer6', label: 'និទ្ទេស ៦ (ភាសាខ្មែរ)' },
-                { id: 'khmer4', label: 'និទ្ទេស ៤ (ភាសាខ្មែរ)' },
-              ].map(scale => (
-                <button
-                  key={scale.id}
-                  type="button"
-                  onClick={() => setActiveScale(scale.id as any)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-2 ${
-                    activeScale === scale.id
-                      ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                  style={{ fontFamily: '"Khmer OS Siemreap", "Siemreap", sans-serif' }}
-                >
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${activeScale === scale.id ? 'bg-white' : 'bg-slate-300'}`} />
-                  {scale.label}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
 
